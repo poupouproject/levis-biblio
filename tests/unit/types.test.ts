@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import type {
   Work,
   Author,
@@ -51,6 +51,7 @@ describe('Type system — barrel exports', () => {
     expect(work.workId).toBe('OL1234W');
     expect(work.authors).toHaveLength(1);
     expect(work.series).toBeNull();
+    expectTypeOf(work).toExtend<Work>();
   });
 
   it('should allow creating a Work with SeriesInfo', () => {
@@ -62,6 +63,7 @@ describe('Type system — barrel exports', () => {
 
     expect(series.name).toBe('Harry Potter');
     expect(series.position).toBe(4);
+    expectTypeOf(series).toExtend<SeriesInfo>();
   });
 
   it('should support PhysicalStatus union type', () => {
@@ -102,6 +104,7 @@ describe('Type system — barrel exports', () => {
 
     expect(availability.physical.status).toBe('available');
     expect(availability.digital).toBeNull();
+    expectTypeOf(availability).toExtend<AggregatedAvailability>();
   });
 
   it('should allow creating valid OLSearchResponse', () => {
@@ -121,6 +124,7 @@ describe('Type system — barrel exports', () => {
 
     expect(response.numFound).toBe(1);
     expect(response.docs).toHaveLength(1);
+    expectTypeOf(response).toExtend<OLSearchResponse>();
   });
 
   it('should allow creating valid CantookItem', () => {
@@ -142,5 +146,6 @@ describe('Type system — barrel exports', () => {
 
     expect(item.availability.status).toBe('available');
     expect(item.formats).toHaveLength(1);
+    expectTypeOf(item).toExtend<CantookItem>();
   });
 });

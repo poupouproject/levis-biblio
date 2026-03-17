@@ -22,7 +22,7 @@ export interface WorkMetadata {
 export interface Author {
   readonly authorId: string; // ex: "OL123A"
   name: string;
-  photoKey?: string | undefined;
+  photoKey?: string;
 }
 
 export interface Edition {
