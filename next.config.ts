@@ -18,12 +18,12 @@ const nextConfig: NextConfig = {
   },
 
   rewrites() {
-    return Promise.resolve([
+    return [
       {
         source: '/api/proxy/sirsidynix/:path*',
         destination: 'https://levis.sirsidynix.net/:path*',
       },
-    ]);
+    ];
   },
 };
 
