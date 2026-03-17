@@ -1,24 +1,130 @@
 @import "tailwindcss";
 
+/* ===== Light Theme (default) ===== */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a;
+  --primary: #d4a853;
+  --primary-foreground: #1a1a1a;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f1f1f1;
+  --muted-foreground: #737373;
+  --accent: #d4a853;
+  --accent-foreground: #1a1a1a;
+  --border: #e5e5e5;
+  --ring: #d4a853;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --input: #e5e5e5;
+
+  /* Status colors - soft for light mode */
+  --status-available: #dcfce7;
+  --status-available-text: #166534;
+  --status-loaned: #fef9c3;
+  --status-loaned-text: #854d0e;
+  --status-unavailable: #fee2e2;
+  --status-unavailable-text: #991b1b;
+  --status-digital: #dbeafe;
+  --status-digital-text: #1e40af;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* ===== Dark Theme ===== */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --primary: #d4a853;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #ededed;
+  --muted: #1a1a1a;
+  --muted-foreground: #a3a3a3;
+  --accent: #d4a853;
+  --accent-foreground: #0a0a0a;
+  --border: #404040;
+  --ring: #d4a853;
+  --card: #171717;
+  --card-foreground: #ededed;
+  --input: #262626;
+
+  /* Status colors - more contrasted for dark mode */
+  --status-available: #166534;
+  --status-available-text: #dcfce7;
+  --status-loaned: #854d0e;
+  --status-loaned-text: #fef9c3;
+  --status-unavailable: #991b1b;
+  --status-unavailable-text: #fee2e2;
+  --status-digital: #1e40af;
+  --status-digital-text: #dbeafe;
 }
 
+/* ===== System Preference Support ===== */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --primary: #d4a853;
+    --primary-foreground: #0a0a0a;
+    --secondary: #262626;
+    --secondary-foreground: #ededed;
+    --muted: #1a1a1a;
+    --muted-foreground: #a3a3a3;
+    --accent: #d4a853;
+    --accent-foreground: #0a0a0a;
+    --border: #404040;
+    --ring: #d4a853;
+    --card: #171717;
+    --card-foreground: #ededed;
+    --input: #262626;
+
+    --status-available: #166534;
+    --status-available-text: #dcfce7;
+    --status-loaned: #854d0e;
+    --status-loaned-text: #fef9c3;
+    --status-unavailable: #991b1b;
+    --status-unavailable-text: #fee2e2;
+    --status-digital: #1e40af;
+    --status-digital-text: #dbeafe;
   }
 }
 
+/* ===== Tailwind v4 Theme Integration ===== */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-input: var(--input);
+
+  --color-status-available: var(--status-available);
+  --color-status-available-text: var(--status-available-text);
+  --color-status-loaned: var(--status-loaned);
+  --color-status-loaned-text: var(--status-loaned-text);
+  --color-status-unavailable: var(--status-unavailable);
+  --color-status-unavailable-text: var(--status-unavailable-text);
+  --color-status-digital: var(--status-digital);
+  --color-status-digital-text: var(--status-digital-text);
+}
+
+/* ===== Base Styles ===== */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
