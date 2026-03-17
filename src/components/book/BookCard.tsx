@@ -31,7 +31,7 @@ export function BookCard({ title, author, coverUrl, badge }: BookCardProps): Rea
 
       {/* Info */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <h3 className="truncate text-[15px] leading-snug font-bold">{title}</h3>
+        <h3 className="truncate font-bold text-[15px] leading-snug">{title}</h3>
         <p className="text-muted mb-2 truncate text-xs">{author}</p>
         {badge ? <Badge badge={badge} /> : null}
       </div>

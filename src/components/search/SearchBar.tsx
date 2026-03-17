@@ -56,7 +56,7 @@ export function SearchBar({ onSearch, onFilterChange }: SearchBarProps): React.J
             onClick={() => {
               handleFilterClick(filter);
             }}
-            className={`min-h-[36px] shrink-0 cursor-pointer rounded-full border-[1.5px] px-3.5 py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+            className={`min-h-[36px] shrink-0 cursor-pointer whitespace-nowrap rounded-full border-[1.5px] px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
               activeFilter === filter
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-surface text-muted hover:border-primary/50'
