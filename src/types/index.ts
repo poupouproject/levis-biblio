@@ -33,6 +33,7 @@ export type {
   ActionItemResult,
   ActionResult,
   CoverMap,
+  SessionStatus,
 } from './account';
 
 export type {

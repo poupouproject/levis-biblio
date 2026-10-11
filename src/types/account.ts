@@ -99,3 +99,8 @@ export interface ActionItemResult {
 export type ActionResult =
   | { status: 'success'; message: string; items: ActionItemResult[] }
   | { status: 'error'; message: string; items: ActionItemResult[] };
+
+/** État de connexion exposé à l'en-tête (`GET /compte/session`). `null` : personne n'est connecté. */
+export interface SessionStatus {
+  firstName: string | null;
+}

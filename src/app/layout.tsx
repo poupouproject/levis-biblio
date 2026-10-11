@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
-import { Library, UserRound } from 'lucide-react';
+import { Library } from 'lucide-react';
+import { AccountMenu } from '@/components/account/AccountMenu';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,13 +34,7 @@ export default function RootLayout({
                 Lévis<span className="text-[#d4a853]">Biblio</span>
               </span>
             </Link>
-            <Link
-              href="/compte"
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              <UserRound className="h-4 w-4" aria-hidden />
-              Mon dossier
-            </Link>
+            <AccountMenu />
           </div>
         </header>
 

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { ActionItemResult, ActionResult } from '@/types';
 import { LevisClient } from '@/lib/levis/client';
-import { login, logout } from '@/lib/levis/auth';
+import { login } from '@/lib/levis/auth';
 import {
   changePickupLibrary,
   renewCheckouts,
@@ -62,12 +62,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   redirect('/compte');
 }
 
-export async function logoutAction(): Promise<void> {
-  const session = await getAccountSession();
-  if (session.levis) await logout(session.levis);
-  session.destroy();
-  redirect(`${LOGIN_PATH}?raison=deconnecte`);
-}
+// La déconnexion est une route (src/app/compte/deconnexion/route.ts) : voir la raison là-bas.
 
 // ─── Actions sur le dossier ──────────────────────────────────────────────────
 
