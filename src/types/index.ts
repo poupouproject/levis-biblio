@@ -19,6 +19,23 @@ export type {
 export type { OLSearchResponse, OLDoc } from './open-library';
 
 export type {
+  Branch,
+  Checkout,
+  CheckoutsSummary,
+  Hold,
+  HoldStatus,
+  HoldsSummary,
+  HistoryEntry,
+  Fines,
+  FineLine,
+  Preferences,
+  Profile,
+  ActionItemResult,
+  ActionResult,
+  CoverMap,
+} from './account';
+
+export type {
   CantookItem,
   CantookAuthor,
   CantookFormat,

@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Library } from 'lucide-react';
+import Link from 'next/link';
+import { Library, UserRound } from 'lucide-react';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,13 +26,20 @@ export default function RootLayout({
         
         {/* En-tête (Header) simple et fixe */}
         <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md">
-          <div className="mx-auto flex h-14 max-w-3xl items-center px-4 sm:px-6">
-            <div className="flex items-center gap-2 text-[#d4a853]">
+          <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4 sm:px-6">
+            <Link href="/" className="flex items-center gap-2 text-[#d4a853]">
               <Library className="h-5 w-5" />
               <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                 Lévis<span className="text-[#d4a853]">Biblio</span>
               </span>
-            </div>
+            </Link>
+            <Link
+              href="/compte"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <UserRound className="h-4 w-4" aria-hidden />
+              Mon dossier
+            </Link>
           </div>
         </header>
 

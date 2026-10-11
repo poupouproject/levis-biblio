@@ -8,7 +8,7 @@
 [![Projet Citoyen](https://img.shields.io/badge/Projet-Citoyen-orange?style=flat-square)](#)
 [![wakatime](https://wakatime.com/badge/user/ff5b588b-03b4-48fc-be65-6f19cfbace08/project/a048fb6b-08fe-4c37-a34b-8bfecfaffaba.svg)](https://wakatime.com/badge/user/ff5b588b-03b4-48fc-be65-6f19cfbace08/project/a048fb6b-08fe-4c37-a34b-8bfecfaffaba)
 
-> **Projet citoyen open source · Sans but lucratif · Zéro BD · Zéro données personnelles**
+> **Projet citoyen open source · Sans but lucratif · Zéro BD · Aucune donnée personnelle stockée**
 
 LévisBiblio est une application web moderne conçue pour offrir aux citoyens de Lévis une expérience de consultation du catalogue de bibliothèques simplifiée et centrée sur le mobile. Ce projet agit comme une surcouche d'accélération par-dessus l'infrastructure SirsiDynix existante de la Ville, sans en modifier le fonctionnement.
 
@@ -40,6 +40,7 @@ L'objectif est de créer une interface unifiée qui :
 | Recherche fonctionnelle | 🚧 À implémenter |
 | Routage dynamique (page livre) | 🚧 À implémenter |
 | CI/CD (GitHub Actions) | 🚧 À implémenter |
+| Mon dossier : emprunts, réservations, historique, amendes, profil ([doc](docs/mon-compte.md)) | ✅ Complet |
 | PWA (manifest, service worker) | 🚧 À implémenter |
 | Tests E2E (Playwright) | 🚧 À implémenter |
 
@@ -71,6 +72,9 @@ cd levis-biblio
 # Installer les dépendances
 npm ci
 
+# Configurer l'environnement (LEVIS_SESSION_SECRET obligatoire pour Mon dossier)
+cp .env.example .env.local
+
 # Démarrer le serveur de développement
 npm run dev
 ```
@@ -88,6 +92,7 @@ L'application sera accessible sur `http://localhost:3000`.
 | `npm run test:unit` | Tests unitaires Vitest |
 | `npm run test:unit:watch` | Tests en mode watch |
 | `npm run test:coverage` | Couverture de code |
+| `npm run test:live` | Vérifie le portail des bibliothèques avec un vrai compte (lecture seule, local seulement) |
 | `npm run format` | Formatage Prettier |
 
 ## 📁 Structure du Projet
