@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# fichiers locaux de l'exploration scraper (branche Scrapper-et-BD)
+.scraper-checkpoint.json
+scraped-*.html
+supabase/.branches/
+supabase/.temp/
+supabase/snippets/
