@@ -25,9 +25,10 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ raison?: string }>;
 }): Promise<JSX.Element> {
-  const session = await getAccountSession();
-  if (session.levis) redirect('/compte');
   const { raison } = await searchParams;
+  const session = await getAccountSession();
+  // Après une expiration, on reste ici même si un cookie traîne : sinon, boucle avec le dossier.
+  if (session.levis && raison !== 'expiree') redirect('/compte');
   const reason = raison === 'expiree' || raison === 'deconnecte' ? REASONS[raison] : null;
 
   return (
