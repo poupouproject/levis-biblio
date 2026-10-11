@@ -36,7 +36,12 @@ export default function BookDetailPage(): JSX.Element {
       editionId: 'ED123', isbn13: '9782070543589', isbn10: null, language: 'fr',
       publishYear: 2001, publisher: 'Gallimard', pageCount: 768, coverKey: '10521270',
     },
-    allEditions: [mockDummyEdition, { ...mockDummyEdition, editionId: 'ED_MOCK2' }],
+    allEditions: [
+      mockDummyEdition, // fr
+      { ...mockDummyEdition, editionId: 'ED_MOCK2', publishYear: 2018 }, // fr
+      { ...mockDummyEdition, editionId: 'ED_MOCK3', language: 'en', publishYear: 2000, publisher: 'Scholastic' }, // en
+      { ...mockDummyEdition, editionId: 'ED_MOCK5', language: 'en', publishYear: 2014 }, // en
+    ],
     allIsbns: ['9782070543589', '9782070612360'],
     metadata: {
       description: "La quatrième année à l'école de sorcellerie Poudlard est marquée par le Tournoi des Trois Sorciers. Les participants sont choisis par la fameuse Coupe de Feu qui est à l'origine d'un scandale. Elle sélectionne Harry Potter alors qu'il n'a pas l'âge légal requis !",
@@ -177,6 +182,41 @@ export default function BookDetailPage(): JSX.Element {
               {work.metadata.description}
             </p>
           )}
+        </div>
+
+        {/* NOUVELLE SECTION : Synthèse des éditions regroupées */}
+        <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-6 sm:pt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
+              <Layers className="w-5 h-5 mr-2 text-[#d4a853]" />
+              Éditions et langues répertoriées
+            </h2>
+            <span className="text-xs sm:text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-full">
+              {work.allEditions.length} éditions
+            </span>
+          </div>
+
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Pour faciliter votre recherche, cette fiche regroupe {work.allEditions.length} éditions différentes de cette œuvre (formats, années de publication ou numéros ISBN différents). 
+          </p>
+
+          {/* Calcul et affichage dynamique des langues */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {Object.entries(
+              work.allEditions.reduce<Record<string, number>>((acc, edition) => {
+                // Traduction du code de langue pour l'affichage
+                const langMap: Record<string, string> = { fr: 'Français', en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien', other: 'Autre' };
+                const langName = langMap[edition.language] ?? edition.language;
+                acc[langName] = (acc[langName] ?? 0) + 1;
+                return acc;
+              }, {})
+            ).map(([lang, count]) => (
+              <div key={lang} className="flex items-center border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#1a1a1a] rounded-lg px-3 py-1.5 text-sm shadow-sm">
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100 mr-1.5">{lang}</span>
+                <span className="text-zinc-500 dark:text-zinc-400 text-xs">({count})</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* 5. Liste des Succursales V2 (Dense et riche en données) */}

@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraper (état local et pages brutes)
+.scraper-checkpoint.json
+scraped-*.html
+
+# supabase studio (requêtes locales)
+supabase/snippets/
