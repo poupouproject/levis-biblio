@@ -1,11 +1,9 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { ActionItemResult, ActionResult } from '@/types';
 import { LevisClient } from '@/lib/levis/client';
-import { login } from '@/lib/levis/auth';
 import {
   changePickupLibrary,
   renewCheckouts,
@@ -14,9 +12,8 @@ import {
   type HoldAction,
 } from '@/lib/levis/account';
 import { BRANCHES } from '@/lib/levis/config';
-import { InvalidCredentialsError, LevisError, SessionExpiredError } from '@/lib/levis/errors';
+import { LevisError, SessionExpiredError } from '@/lib/levis/errors';
 import { getAccountSession } from '@/lib/account/session';
-import { allowLoginAttempt, clearCardAttempts } from '@/lib/account/rate-limit';
 import { addDays, todayIso } from '@/lib/account/format';
 import { LOGIN_PATH } from '@/lib/account/dal';
 
@@ -26,43 +23,8 @@ function field(formData: FormData, name: string): string {
   return typeof value === 'string' ? value : '';
 }
 
-// ─── Connexion ───────────────────────────────────────────────────────────────
-
-export interface LoginState {
-  error: string | null;
-  card: string;
-}
-
-export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const card = field(formData, 'card').replace(/\s+/g, '');
-  const pin = field(formData, 'pin');
-
-  // Numéro de carte (code-barres) ou identifiant d'usager alphanumérique
-  if (!/^[A-Za-z0-9]{4,30}$/.test(card))
-    return { error: 'Entrez votre numéro de carte ou votre identifiant d’usager.', card };
-  if (pin.length === 0 || pin.length > 30) return { error: 'Entrez votre NIP.', card };
-
-  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
-  if (!allowLoginAttempt(ip, card)) {
-    return { error: 'Trop de tentatives. Patientez 15 minutes avant de réessayer.', card };
-  }
-
-  try {
-    const result = await login(card, pin);
-    clearCardAttempts(card);
-    const session = await getAccountSession();
-    session.levis = result.state;
-    session.firstName = result.firstName;
-    await session.save();
-  } catch (error) {
-    if (error instanceof InvalidCredentialsError) return { error: error.message, card };
-    if (error instanceof LevisError) return { error: error.message, card };
-    return { error: 'Connexion impossible pour le moment. Réessayez dans un instant.', card };
-  }
-  redirect('/compte');
-}
-
-// La déconnexion est une route (src/app/compte/deconnexion/route.ts) : voir la raison là-bas.
+// Connexion : route /compte/connexion/ouvrir. Déconnexion : route /compte/deconnexion.
+// (Envois de formulaire classiques : voir les routes pour les raisons.)
 
 // ─── Actions sur le dossier ──────────────────────────────────────────────────
 

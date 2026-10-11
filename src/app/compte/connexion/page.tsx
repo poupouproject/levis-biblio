@@ -1,9 +1,11 @@
 import type { JSX } from 'react';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { CheckCircle2, Clock, ExternalLink, Library } from 'lucide-react';
 import { LoginForm } from '@/components/account/LoginForm';
 import { getAccountSession } from '@/lib/account/session';
+import { CARD_FLASH_COOKIE, LOGIN_ERRORS, isLoginErrorCode } from '@/lib/account/login';
 import { LEVIS_ORIGIN, LEVIS_LOGIN_PATH } from '@/lib/levis/config';
 
 export const metadata: Metadata = {
@@ -23,13 +25,15 @@ const REASONS = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ raison?: string }>;
+  searchParams: Promise<{ raison?: string; erreur?: string }>;
 }): Promise<JSX.Element> {
-  const { raison } = await searchParams;
+  const { raison, erreur } = await searchParams;
   const session = await getAccountSession();
   // Après une expiration, on reste ici même si un cookie traîne : sinon, boucle avec le dossier.
   if (session.levis && raison !== 'expiree') redirect('/compte');
   const reason = raison === 'expiree' || raison === 'deconnecte' ? REASONS[raison] : null;
+  const error = isLoginErrorCode(erreur) ? LOGIN_ERRORS[erreur] : null;
+  const defaultCard = error ? ((await cookies()).get(CARD_FLASH_COOKIE)?.value ?? '') : '';
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6 pt-4 sm:pt-10">
@@ -61,7 +65,7 @@ export default async function LoginPage({
         </p>
       )}
 
-      <LoginForm />
+      <LoginForm error={error} defaultCard={defaultCard} />
 
       <a
         href={`${LEVIS_ORIGIN}${LEVIS_LOGIN_PATH}`}
