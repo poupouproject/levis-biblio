@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import {
   ExternalLink,
   KeyRound,
@@ -11,18 +11,39 @@ import {
 } from 'lucide-react';
 import { getProfile } from '@/lib/levis/account';
 import { BRANCHES, LEVIS_PORTAL_ACCOUNT_URL } from '@/lib/levis/config';
+import type { Profile } from '@/types';
 import { withAccount } from '@/lib/account/dal';
+import { PLACEHOLDER_PROFILE } from '@/lib/account/placeholders';
+import { SkeletonScope } from '@/components/ui/Skeleton';
 import { Card, PageHeader } from '@/components/account/PageParts';
 import { PreferencesForm } from '@/components/account/PreferencesForm';
 
-export default async function ProfilePage(): Promise<JSX.Element> {
-  const profile = await withAccount(getProfile);
-  const address = [profile.street, profile.city, profile.postalCode].filter(Boolean).join(', ');
-
+export default function ProfilePage(): JSX.Element {
   return (
     <>
       <PageHeader title="Profil" subtitle="Coordonnées et préférences de votre dossier." />
+      <Suspense
+        fallback={
+          <SkeletonScope label="Chargement de votre profil…">
+            <ProfileContent profile={PLACEHOLDER_PROFILE} />
+          </SkeletonScope>
+        }
+      >
+        <ProfileSection />
+      </Suspense>
+      <SecurityCard />
+    </>
+  );
+}
 
+async function ProfileSection(): Promise<JSX.Element> {
+  return <ProfileContent profile={await withAccount(getProfile)} />;
+}
+
+function ProfileContent({ profile }: { profile: Profile }): JSX.Element {
+  const address = [profile.street, profile.city, profile.postalCode].filter(Boolean).join(', ');
+  return (
+    <>
       <Card title="Coordonnées" icon={UserRound}>
         <dl className="flex flex-col gap-3 text-sm">
           <Row label="Nom" value={profile.fullName} icon={UserRound} />
@@ -38,7 +59,13 @@ export default async function ProfilePage(): Promise<JSX.Element> {
       <Card title="Préférences" icon={Settings2}>
         <PreferencesForm preferences={profile.preferences} branches={BRANCHES} />
       </Card>
+    </>
+  );
+}
 
+function SecurityCard(): JSX.Element {
+  return (
+    <>
       <Card title="Sécurité" icon={ShieldCheck}>
         <a
           href={LEVIS_PORTAL_ACCOUNT_URL}

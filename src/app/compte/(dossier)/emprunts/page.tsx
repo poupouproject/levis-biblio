@@ -1,13 +1,38 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import { BookOpen } from 'lucide-react';
-import { getCheckouts } from '@/lib/levis/account';
+import { getCheckouts, type CheckoutsResult } from '@/lib/levis/account';
 import { withAccount } from '@/lib/account/dal';
 import { plural, todayIso } from '@/lib/account/format';
+import { NO_COVERS, placeholderCheckouts } from '@/lib/account/placeholders';
 import { CheckoutsList } from '@/components/account/CheckoutsList';
 import { EmptyState, PageHeader } from '@/components/account/PageParts';
+import { SkeletonScope } from '@/components/ui/Skeleton';
 
-export default async function CheckoutsPage(): Promise<JSX.Element> {
-  const { checkouts, summary, covers } = await withAccount(getCheckouts);
+export default function CheckoutsPage(): JSX.Element {
+  return (
+    <Suspense
+      fallback={
+        <SkeletonScope label="Chargement de vos emprunts…">
+          <CheckoutsContent {...placeholderCheckouts(3)} covers={NO_COVERS} today={todayIso()} />
+        </SkeletonScope>
+      }
+    >
+      <CheckoutsSection />
+    </Suspense>
+  );
+}
+
+async function CheckoutsSection(): Promise<JSX.Element> {
+  const data = await withAccount(getCheckouts);
+  return <CheckoutsContent {...data} today={todayIso()} />;
+}
+
+function CheckoutsContent({
+  checkouts,
+  summary,
+  covers,
+  today,
+}: CheckoutsResult & { today: string }): JSX.Element {
   const subtitle =
     summary.overdue > 0
       ? `${plural(summary.total, 'document')} · ${plural(summary.overdue, 'en retard', 'en retard')}`
@@ -21,7 +46,7 @@ export default async function CheckoutsPage(): Promise<JSX.Element> {
           Les documents que vous empruntez apparaîtront ici avec leur date de retour.
         </EmptyState>
       ) : (
-        <CheckoutsList checkouts={checkouts} covers={covers} today={todayIso()} />
+        <CheckoutsList checkouts={checkouts} covers={covers} today={today} />
       )}
     </>
   );

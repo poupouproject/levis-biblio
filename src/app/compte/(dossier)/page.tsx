@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -9,24 +9,24 @@ import {
   PackageCheck,
   Receipt,
 } from 'lucide-react';
-import { getOverview } from '@/lib/levis/account';
+import { getOverview, type CheckoutsResult, type HoldsResult } from '@/lib/levis/account';
 import { requireAccount, withAccount } from '@/lib/account/dal';
 import { daysUntil, formatDate, plural, relativeDue, todayIso } from '@/lib/account/format';
+import {
+  NO_COVERS,
+  PLACEHOLDER_FINES,
+  placeholderCheckouts,
+  placeholderHolds,
+} from '@/lib/account/placeholders';
+import type { Fines } from '@/types';
 import { Card, PageHeader, StatCard } from '@/components/account/PageParts';
 import { StreamedCover } from '@/components/account/StreamedCover';
 import { DueBadge } from '@/components/account/DueBadge';
+import { SkeletonScope } from '@/components/ui/Skeleton';
 
 export default async function OverviewPage(): Promise<JSX.Element> {
-  const [{ firstName }, data] = await Promise.all([requireAccount(), withAccount(getOverview)]);
-  const today = todayIso();
-  const { fines } = data;
-  const { checkouts } = data.checkouts;
-  const { holds } = data.holds;
-  const overdue = checkouts.filter((c) => c.dueDate && daysUntil(c.dueDate, today) < 0);
-  const ready = holds.filter((h) => h.status === 'ready');
-  const nextDue = checkouts.find((c) => c.dueDate)?.dueDate ?? null;
-  const upcoming = checkouts.slice(0, 3);
-
+  const { firstName } = await requireAccount();
+  const placeholderHoldList = placeholderHolds(2);
   return (
     <>
       <PageHeader
@@ -38,7 +38,55 @@ export default async function OverviewPage(): Promise<JSX.Element> {
           timeZone: 'America/Toronto',
         })}
       />
+      <Suspense
+        fallback={
+          <SkeletonScope label="Chargement de votre dossier…">
+            <OverviewContent
+              checkouts={{ ...placeholderCheckouts(3), covers: NO_COVERS }}
+              holds={{
+                holds: placeholderHoldList,
+                summary: { total: placeholderHoldList.length, ready: 0 },
+                covers: NO_COVERS,
+              }}
+              fines={PLACEHOLDER_FINES}
+              today={todayIso()}
+            />
+          </SkeletonScope>
+        }
+      >
+        <OverviewSection />
+      </Suspense>
+    </>
+  );
+}
 
+async function OverviewSection(): Promise<JSX.Element> {
+  const data = await withAccount(getOverview);
+  return <OverviewContent {...data} today={todayIso()} />;
+}
+
+interface OverviewContentProps {
+  checkouts: CheckoutsResult;
+  holds: HoldsResult;
+  fines: Fines;
+  today: string;
+}
+
+function OverviewContent({
+  checkouts: c,
+  holds: h,
+  fines,
+  today,
+}: OverviewContentProps): JSX.Element {
+  const { checkouts } = c;
+  const { holds } = h;
+  const overdue = checkouts.filter((x) => x.dueDate && daysUntil(x.dueDate, today) < 0);
+  const ready = holds.filter((x) => x.status === 'ready');
+  const nextDue = checkouts.find((x) => x.dueDate)?.dueDate ?? null;
+  const upcoming = checkouts.slice(0, 3);
+
+  return (
+    <>
       {overdue.length > 0 && (
         <Link
           href="/compte/emprunts"
@@ -66,7 +114,7 @@ export default async function OverviewPage(): Promise<JSX.Element> {
             </strong>
             <span className="flex items-center gap-1 text-sm">
               <MapPin className="h-3.5 w-3.5" aria-hidden />
-              {[...new Set(ready.map((h) => h.pickupLibrary))].join(', ')}
+              {[...new Set(ready.map((x) => x.pickupLibrary))].join(', ')}
             </span>
           </span>
         </Link>
@@ -77,7 +125,7 @@ export default async function OverviewPage(): Promise<JSX.Element> {
           href="/compte/emprunts"
           icon={BookOpen}
           label="Emprunts"
-          value={String(data.checkouts.summary.total)}
+          value={String(c.summary.total)}
           {...(nextDue
             ? { detail: `Prochain retour : ${relativeDue(nextDue, today).toLowerCase()}` }
             : {})}
@@ -87,7 +135,7 @@ export default async function OverviewPage(): Promise<JSX.Element> {
           href="/compte/reservations"
           icon={BookMarked}
           label="Réservations"
-          value={String(data.holds.summary.total)}
+          value={String(h.summary.total)}
           detail={
             ready.length > 0 ? `${String(ready.length)} prête(s)` : 'Aucune prête pour l’instant'
           }
@@ -124,19 +172,14 @@ export default async function OverviewPage(): Promise<JSX.Element> {
           }
         >
           <ul className="flex flex-col gap-3">
-            {upcoming.map((c) => (
-              <li key={c.barcode} className="flex items-center gap-3">
-                <StreamedCover
-                  covers={data.checkouts.covers}
-                  id={c.barcode}
-                  title={c.title}
-                  size="sm"
-                />
+            {upcoming.map((x) => (
+              <li key={x.barcode} className="flex items-center gap-3">
+                <StreamedCover covers={c.covers} id={x.barcode} title={x.title} size="sm" />
                 <div className="flex min-w-0 flex-grow flex-col gap-1">
                   <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {c.title}
+                    {x.title}
                   </p>
-                  <DueBadge dueDate={c.dueDate} today={today} />
+                  <DueBadge dueDate={x.dueDate} today={today} />
                 </div>
               </li>
             ))}
@@ -147,16 +190,16 @@ export default async function OverviewPage(): Promise<JSX.Element> {
       {ready.length > 0 && (
         <Card title="À récupérer" icon={PackageCheck}>
           <ul className="flex flex-col gap-3">
-            {ready.map((h) => (
-              <li key={h.key} className="flex items-center gap-3">
-                <StreamedCover covers={data.holds.covers} id={h.holdId} title={h.title} size="sm" />
+            {ready.map((x) => (
+              <li key={x.key} className="flex items-center gap-3">
+                <StreamedCover covers={h.covers} id={x.holdId} title={x.title} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {h.title}
+                    {x.title}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    {h.pickupLibrary}
-                    {h.date ? ` · avant le ${formatDate(h.date, 'short', today)}` : ''}
+                    {x.pickupLibrary}
+                    {x.date ? ` · avant le ${formatDate(x.date, 'short', today)}` : ''}
                   </p>
                 </div>
               </li>

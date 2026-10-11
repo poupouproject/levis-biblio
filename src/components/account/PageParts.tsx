@@ -5,7 +5,10 @@ import { ChevronRight, type LucideIcon } from 'lucide-react';
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }): JSX.Element {
   return (
     <div className="space-y-1">
-      <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl dark:text-zinc-100">
+      <h1
+        data-skeleton-ignore=""
+        className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl dark:text-zinc-100"
+      >
         {title}
       </h1>
       {subtitle && (
@@ -44,7 +47,7 @@ export function StatCard({
       className="group flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-zinc-300 hover:shadow-md focus:ring-2 focus:ring-[#d4a853] focus:outline-none dark:border-zinc-800 dark:bg-[#1a1a1a] dark:hover:border-zinc-700"
     >
       <span className="flex items-center justify-between text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-        <span className="flex items-center gap-1.5">
+        <span data-skeleton-ignore="" className="flex items-center gap-1.5">
           <Icon className={`h-4 w-4 ${TONES[tone]}`} aria-hidden />
           {label}
         </span>
@@ -91,7 +94,10 @@ export function Card({
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-[#1a1a1a]">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100">
+        <h2
+          data-skeleton-ignore=""
+          className="flex items-center gap-2 font-bold text-zinc-900 dark:text-zinc-100"
+        >
           {Icon && <Icon className="h-5 w-5 text-[#d4a853]" aria-hidden />}
           {title}
         </h2>

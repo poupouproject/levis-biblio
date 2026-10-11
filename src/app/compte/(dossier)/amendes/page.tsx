@@ -1,18 +1,42 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import { CheckCircle2, CreditCard, ExternalLink, Receipt } from 'lucide-react';
+import type { Fines } from '@/types';
 import { getFines } from '@/lib/levis/account';
 import { LEVIS_PORTAL_ACCOUNT_URL } from '@/lib/levis/config';
 import { withAccount } from '@/lib/account/dal';
+import { PLACEHOLDER_FINES } from '@/lib/account/placeholders';
 import { Card, PageHeader } from '@/components/account/PageParts';
+import { SkeletonScope } from '@/components/ui/Skeleton';
 
-export default async function FinesPage(): Promise<JSX.Element> {
-  const fines = await withAccount(getFines);
-  const hasDue = fines.amountDue > 0;
-
+export default function FinesPage(): JSX.Element {
   return (
     <>
       <PageHeader title="Amendes" subtitle="Frais de retard et blocages au dossier." />
+      <Suspense
+        fallback={
+          <SkeletonScope label="Chargement de vos amendes…">
+            <FinesContent fines={PLACEHOLDER_FINES} />
+          </SkeletonScope>
+        }
+      >
+        <FinesSection />
+      </Suspense>
+      <p className="text-xs text-zinc-500">
+        Le paiement se fait sur le portail officiel des bibliothèques ou au comptoir de votre
+        succursale.
+      </p>
+    </>
+  );
+}
 
+async function FinesSection(): Promise<JSX.Element> {
+  return <FinesContent fines={await withAccount(getFines)} />;
+}
+
+function FinesContent({ fines }: { fines: Fines }): JSX.Element {
+  const hasDue = fines.amountDue > 0;
+  return (
+    <>
       <div
         className={`flex items-center gap-4 rounded-xl border p-5 ${
           hasDue
@@ -100,10 +124,6 @@ export default async function FinesPage(): Promise<JSX.Element> {
           <ExternalLink className="h-4 w-4" aria-hidden />
         </a>
       )}
-      <p className="text-xs text-zinc-500">
-        Le paiement se fait sur le portail officiel des bibliothèques ou au comptoir de votre
-        succursale.
-      </p>
     </>
   );
 }
