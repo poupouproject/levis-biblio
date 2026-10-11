@@ -7,6 +7,7 @@ import { renewAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { plural } from '@/lib/account/format';
 import { StreamedCover } from './StreamedCover';
+import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { DueBadge } from './DueBadge';
 import { ActionFeedback, ItemMessage } from './ActionFeedback';
 
@@ -62,16 +63,14 @@ export function CheckoutsList({ checkouts, covers, today }: CheckoutsListProps):
         {checkouts.map((checkout) => {
           const isSelected = selected.has(checkout.barcode);
           return (
-            <li
+            <DocumentCard
               key={checkout.barcode}
-              className={`rounded-xl border bg-white p-3 shadow-sm transition-colors sm:p-4 dark:bg-[#1a1a1a] ${
-                isSelected
-                  ? 'border-[#d4a853] ring-1 ring-[#d4a853]'
-                  : 'border-zinc-200 dark:border-zinc-800'
-              }`}
-            >
-              <div className="flex gap-3">
-                <label className="flex items-start pt-1">
+              tone={isSelected ? 'selected' : 'default'}
+              cover={<StreamedCover covers={covers} id={checkout.barcode} title={checkout.title} />}
+              title={checkout.title}
+              author={checkout.author}
+              corner={
+                <label className="flex h-11 w-11 cursor-pointer items-center justify-center">
                   <input
                     type="checkbox"
                     checked={isSelected}
@@ -82,53 +81,35 @@ export function CheckoutsList({ checkouts, covers, today }: CheckoutsListProps):
                     aria-label={`Sélectionner ${checkout.title}`}
                   />
                 </label>
-                <StreamedCover covers={covers} id={checkout.barcode} title={checkout.title} />
-                <div className="flex min-w-0 flex-grow flex-col gap-1.5">
-                  <h3 className="line-clamp-2 leading-snug font-semibold text-zinc-900 dark:text-zinc-100">
-                    {checkout.title}
-                  </h3>
-                  {checkout.author && (
-                    <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
-                      {checkout.author}
-                    </p>
+              }
+              meta={
+                <>
+                  <DueBadge dueDate={checkout.dueDate} today={today} />
+                  {checkout.renewals > 0 && (
+                    <MetaChip>Renouvelé {plural(checkout.renewals, 'fois', 'fois')}</MetaChip>
                   )}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <DueBadge dueDate={checkout.dueDate} today={today} />
-                    {checkout.renewals > 0 && (
-                      <span className="text-xs text-zinc-500">
-                        Renouvelé {plural(checkout.renewals, 'fois', 'fois')}
-                      </span>
-                    )}
-                  </div>
-                  {checkout.alert && (
-                    <p className="text-xs font-medium text-red-700 dark:text-red-400">
-                      {checkout.alert}
-                    </p>
-                  )}
-                  <ItemMessage result={result} id={checkout.barcode} />
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    {checkout.callNumber ? (
-                      <span className="truncate rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs whitespace-nowrap text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                        {checkout.callNumber}
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => {
-                        renew([checkout.barcode]);
-                      }}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:border-[#d4a853] hover:text-[#b88f42] disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                      Renouveler
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </li>
+                  {checkout.callNumber && <MetaChip mono>{checkout.callNumber}</MetaChip>}
+                </>
+              }
+              actions={
+                <CardAction
+                  disabled={pending}
+                  onClick={() => {
+                    renew([checkout.barcode]);
+                  }}
+                  icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+                >
+                  Renouveler
+                </CardAction>
+              }
+            >
+              {checkout.alert && (
+                <p className="text-xs font-medium text-red-700 dark:text-red-400">
+                  {checkout.alert}
+                </p>
+              )}
+              <ItemMessage result={result} id={checkout.barcode} />
+            </DocumentCard>
           );
         })}
       </ul>

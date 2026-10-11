@@ -3,7 +3,8 @@
 import { Suspense, use, useEffect, type JSX } from 'react';
 import type { CoverMap } from '@/types';
 import { SkeletonScope } from '@/components/ui/Skeleton';
-import { CoverThumb } from './CoverThumb';
+import { CoverThumb, type CoverSize } from './CoverThumb';
+import { ZoomableCover } from './ZoomableCover';
 
 /**
  * Couvertures déjà reçues pendant cette visite (id → URL, ou null si le portail n'en a pas).
@@ -16,17 +17,17 @@ interface StreamedCoverProps {
   covers: Promise<CoverMap>;
   id: string;
   title: string;
-  size?: 'sm' | 'md';
+  size?: CoverSize;
 }
 
 /**
  * Couverture qui arrive après la page : le portail met plusieurs secondes à les fournir,
- * on affiche donc la liste tout de suite avec une vignette neutre, remplacée dès réception.
+ * on affiche donc la liste tout de suite avec une vignette en squelette, remplacée dès réception.
  * Au retour sur une page, la couverture déjà connue s'affiche sans attendre le portail.
  */
 export function StreamedCover({ covers, id, title, size = 'md' }: StreamedCoverProps): JSX.Element {
   const known = knownCovers.get(id);
-  if (known !== undefined) return <CoverThumb src={known} title={title} size={size} />;
+  if (known !== undefined) return <ZoomableCover src={known} title={title} size={size} />;
   return (
     <Suspense
       fallback={
@@ -45,5 +46,5 @@ function ResolvedCover({ covers, id, title, size }: Required<StreamedCoverProps>
   useEffect(() => {
     knownCovers.set(id, src);
   }, [id, src]);
-  return <CoverThumb src={src} title={title} size={size} />;
+  return <ZoomableCover src={src} title={title} size={size} />;
 }

@@ -16,6 +16,7 @@ import { changePickupAction, holdAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { addDays, formatDate } from '@/lib/account/format';
 import { StreamedCover } from './StreamedCover';
+import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { Dialog } from './Dialog';
 import { ActionFeedback, ItemMessage } from './ActionFeedback';
 
@@ -105,101 +106,93 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
             </h2>
             <ul className="flex flex-col gap-3">
               {items.map((hold) => (
-                <li
+                <DocumentCard
                   key={hold.key}
-                  className={`rounded-xl border bg-white p-3 shadow-sm sm:p-4 dark:bg-[#1a1a1a] ${
-                    hold.status === 'ready'
-                      ? 'border-green-300 dark:border-green-800'
-                      : 'border-zinc-200 dark:border-zinc-800'
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <StreamedCover covers={covers} id={hold.holdId} title={hold.title} />
-                    <div className="flex min-w-0 flex-grow flex-col gap-1.5">
-                      <h3 className="line-clamp-2 leading-snug font-semibold text-zinc-900 dark:text-zinc-100">
-                        {hold.title}
-                      </h3>
-                      {hold.author && (
-                        <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
-                          {hold.author}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" aria-hidden />
-                          {hold.pickupLibrary}
+                  tone={hold.status === 'ready' ? 'success' : 'default'}
+                  cover={<StreamedCover covers={covers} id={hold.holdId} title={hold.title} />}
+                  title={hold.title}
+                  author={hold.author}
+                  meta={
+                    <>
+                      {hold.status === 'waiting' && hold.queuePosition !== null && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#d4a853]/15 px-2 py-0.5 text-xs font-semibold text-[#8a6a2c] dark:text-[#e2c07a]">
+                          <Users className="h-3.5 w-3.5" aria-hidden />
+                          {ordinal(hold.queuePosition)} en file
                         </span>
-                        {hold.status === 'waiting' && hold.queuePosition !== null && (
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                            {ordinal(hold.queuePosition)} en file
-                          </span>
-                        )}
-                      </div>
-                      {hold.status === 'ready' && (
-                        <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                          {hold.date
-                            ? `À récupérer avant le ${formatDate(hold.date, 'long', today)}`
-                            : hold.statusLabel}
-                        </p>
                       )}
-                      {hold.status !== 'ready' && hold.status !== 'waiting' && (
-                        <p className="text-xs text-zinc-500">
-                          {hold.statusLabel}
-                          {hold.dateLabel
-                            ? ` · ${hold.date ? formatDate(hold.date, 'short', today) : hold.dateLabel}`
-                            : ''}
-                        </p>
-                      )}
-                      <ItemMessage result={result} id={hold.key} />
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {hold.canChangePickup && (
-                          <ActionButton
-                            disabled={pending}
-                            onClick={() => {
-                              openPickup(hold);
-                            }}
-                            icon={<MapPin className="h-3.5 w-3.5" aria-hidden />}
-                          >
-                            Succursale
-                          </ActionButton>
-                        )}
-                        {hold.status === 'suspended' ? (
-                          <ActionButton
-                            disabled={pending}
-                            onClick={() => {
-                              run(() => holdAction('resume', [hold.key]));
-                            }}
-                            icon={<CirclePlay className="h-3.5 w-3.5" aria-hidden />}
-                          >
-                            Réactiver
-                          </ActionButton>
-                        ) : (
-                          hold.status !== 'ready' && (
-                            <ActionButton
-                              disabled={pending}
-                              onClick={() => {
-                                openSuspend(hold);
-                              }}
-                              icon={<CalendarOff className="h-3.5 w-3.5" aria-hidden />}
-                            >
-                              Suspendre
-                            </ActionButton>
-                          )
-                        )}
-                        <ActionButton
+                      <MetaChip>
+                        <MapPin className="h-3.5 w-3.5" aria-hidden />
+                        {hold.pickupLibrary}
+                      </MetaChip>
+                      {hold.callNumber && <MetaChip mono>{hold.callNumber}</MetaChip>}
+                    </>
+                  }
+                  actions={
+                    <>
+                      {hold.canChangePickup && (
+                        <CardAction
                           disabled={pending}
-                          danger
                           onClick={() => {
-                            setDialog({ kind: 'cancel', hold });
+                            openPickup(hold);
                           }}
-                          icon={<Trash2 className="h-3.5 w-3.5" aria-hidden />}
+                          icon={<MapPin className="h-4 w-4" aria-hidden />}
                         >
-                          Annuler
-                        </ActionButton>
-                      </div>
-                    </div>
-                  </div>
-                </li>
+                          Succursale
+                        </CardAction>
+                      )}
+                      {hold.status === 'suspended' ? (
+                        <CardAction
+                          disabled={pending}
+                          onClick={() => {
+                            run(() => holdAction('resume', [hold.key]));
+                          }}
+                          icon={<CirclePlay className="h-4 w-4" aria-hidden />}
+                        >
+                          Réactiver
+                        </CardAction>
+                      ) : (
+                        hold.status !== 'ready' && (
+                          <CardAction
+                            disabled={pending}
+                            onClick={() => {
+                              openSuspend(hold);
+                            }}
+                            icon={<CalendarOff className="h-4 w-4" aria-hidden />}
+                          >
+                            Suspendre
+                          </CardAction>
+                        )
+                      )}
+                      <CardAction
+                        disabled={pending}
+                        danger
+                        onClick={() => {
+                          setDialog({ kind: 'cancel', hold });
+                        }}
+                        icon={<Trash2 className="h-4 w-4" aria-hidden />}
+                      >
+                        Annuler
+                      </CardAction>
+                    </>
+                  }
+                >
+                  {hold.status === 'ready' && (
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                      {hold.date
+                        ? `À récupérer avant le ${formatDate(hold.date, 'long', today)}`
+                        : hold.statusLabel}
+                    </p>
+                  )}
+                  {hold.status !== 'ready' && hold.status !== 'waiting' && (
+                    <p className="text-xs text-zinc-500">
+                      {hold.statusLabel}
+                      {hold.dateLabel
+                        ? ` · ${hold.date ? formatDate(hold.date, 'short', today) : hold.dateLabel}`
+                        : ''}
+                    </p>
+                  )}
+                  <ItemMessage result={result} id={hold.key} />
+                </DocumentCard>
               ))}
             </ul>
           </section>
@@ -327,38 +320,6 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
         )}
       </Dialog>
     </div>
-  );
-}
-
-interface ActionButtonProps {
-  children: string;
-  icon: JSX.Element;
-  onClick: () => void;
-  disabled: boolean;
-  danger?: boolean;
-}
-
-function ActionButton({
-  children,
-  icon,
-  onClick,
-  disabled,
-  danger = false,
-}: ActionButtonProps): JSX.Element {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
-        danger
-          ? 'border-zinc-300 text-red-700 hover:border-red-400 hover:bg-red-50 dark:border-zinc-700 dark:text-red-400 dark:hover:bg-red-950/30'
-          : 'border-zinc-300 text-zinc-700 hover:border-[#d4a853] hover:text-[#b88f42] dark:border-zinc-700 dark:text-zinc-300'
-      }`}
-    >
-      {icon}
-      {children}
-    </button>
   );
 }
 
