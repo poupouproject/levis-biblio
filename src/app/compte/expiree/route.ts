@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { getAccountSession } from '@/lib/account/session';
+import { seeOther } from '@/lib/account/redirect';
 
 /**
  * Session du portail expirée. Une page (Server Component) ne peut pas modifier les cookies :
@@ -7,8 +7,8 @@ import { getAccountSession } from '@/lib/account/session';
  * le croirait valide et renverrait vers le dossier, en boucle.
  * GET sans danger : SameSite=Strict empêche un autre site de déclencher la suppression.
  */
-export async function GET(request: Request): Promise<Response> {
+export async function GET(): Promise<Response> {
   const session = await getAccountSession();
   session.destroy();
-  return NextResponse.redirect(new URL('/compte/connexion?raison=expiree', request.url), 303);
+  return seeOther('/compte/connexion?raison=expiree');
 }

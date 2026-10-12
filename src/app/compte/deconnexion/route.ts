@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
 import { logout } from '@/lib/levis/auth';
 import { getAccountSession } from '@/lib/account/session';
+import { isSameOrigin } from '@/lib/account/origin';
+import { seeOther } from '@/lib/account/redirect';
 
 /**
  * Déconnexion. Route plutôt que Server Action : le formulaire du menu de l'en-tête peut être
@@ -9,14 +10,13 @@ import { getAccountSession } from '@/lib/account/session';
  * Le rechargement complet qui suit vide l'état côté navigateur (couvertures en mémoire).
  */
 export async function POST(request: Request): Promise<Response> {
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('host');
-  if (origin && host && new URL(origin).host !== host) {
-    return new Response(null, { status: 403 });
+  // Refus : on reste connecté et on revient au dossier, sans page d'erreur muette.
+  if (!isSameOrigin(request, 'deconnexion')) {
+    return seeOther('/compte');
   }
 
   const session = await getAccountSession();
   if (session.levis) await logout(session.levis);
   session.destroy();
-  return NextResponse.redirect(new URL('/compte/connexion?raison=deconnecte', request.url), 303);
+  return seeOther('/compte/connexion?raison=deconnecte');
 }

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
 import { CARD_FLASH_COOKIE, attemptLogin } from '@/lib/account/login';
+import { isSameOrigin } from '@/lib/account/origin';
+import { seeOther } from '@/lib/account/redirect';
 
 /**
  * Connexion par envoi de formulaire classique, suivi d'une redirection 303.
@@ -8,10 +9,8 @@ import { CARD_FLASH_COOKIE, attemptLogin } from '@/lib/account/login';
  * mots de passe reconnaissent pour proposer l'enregistrement ; il marche aussi sans JavaScript.
  */
 export async function POST(request: Request): Promise<Response> {
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('host');
-  if (origin && host && new URL(origin).host !== host) {
-    return new Response(null, { status: 403 });
+  if (!isSameOrigin(request, 'connexion')) {
+    return seeOther('/compte/connexion?erreur=origine');
   }
 
   const form = await request.formData();
@@ -26,7 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   const jar = await cookies();
   if (result.ok) {
     jar.delete({ name: CARD_FLASH_COOKIE, path: '/compte/connexion' });
-    return NextResponse.redirect(new URL('/compte', request.url), 303);
+    return seeOther('/compte');
   }
 
   jar.set(CARD_FLASH_COOKIE, card.slice(0, 30), {
@@ -36,8 +35,5 @@ export async function POST(request: Request): Promise<Response> {
     path: '/compte/connexion',
     maxAge: 120,
   });
-  return NextResponse.redirect(
-    new URL(`/compte/connexion?erreur=${result.code}`, request.url),
-    303,
-  );
+  return seeOther(`/compte/connexion?erreur=${result.code}`);
 }

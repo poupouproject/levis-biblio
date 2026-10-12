@@ -8,7 +8,7 @@ import { getAccountSession } from './session';
 export const CARD_FLASH_COOKIE = 'lb_carte';
 
 export type LoginErrorCode =
-  'carte' | 'nip' | 'tentatives' | 'identifiants' | 'portail' | 'inattendu';
+  'carte' | 'nip' | 'tentatives' | 'identifiants' | 'portail' | 'inattendu' | 'origine';
 
 /** Messages affichés selon le code d'erreur passé dans l'URL (`?erreur=…`). */
 export const LOGIN_ERRORS: Record<LoginErrorCode, string> = {
@@ -18,6 +18,7 @@ export const LOGIN_ERRORS: Record<LoginErrorCode, string> = {
   identifiants: 'Numéro de carte ou NIP invalide.',
   portail: 'Le portail des bibliothèques ne répond pas. Réessayez dans un instant.',
   inattendu: 'Connexion impossible pour le moment. Réessayez dans un instant.',
+  origine: 'La demande a été refusée par sécurité. Rechargez la page, puis réessayez.',
 };
 
 export function isLoginErrorCode(value: string | undefined): value is LoginErrorCode {
