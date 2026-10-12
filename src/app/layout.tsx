@@ -4,6 +4,8 @@ import './globals.css';
 import Link from 'next/link';
 import { Library, MapPin } from 'lucide-react';
 import { AccountMenu } from '@/components/account/AccountMenu';
+import { ThemeSelector } from '@/components/ui/ThemeSelector';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,7 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>): React.JSX.Element {
   return (
-    <html lang="fr-CA" className="antialiased">
+    // suppressHydrationWarning : le script ci-dessous ajoute la classe `dark` avant React.
+    <html lang="fr-CA" className="antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${inter.className} min-h-screen bg-zinc-50 dark:bg-[#0f0f0f] text-zinc-900 dark:text-zinc-100 flex flex-col`}>
         
         {/* En-tête (Header) simple et fixe */}
@@ -55,6 +61,9 @@ export default function RootLayout({
         {/* Pied de page (Footer) avec le disclaimer */}
         <footer className="mt-auto border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1a1a1a] py-6">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+            <div className="mb-4 flex justify-center">
+              <ThemeSelector />
+            </div>
             <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
               Projet citoyen open source
             </p>
