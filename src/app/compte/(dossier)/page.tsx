@@ -22,6 +22,7 @@ import type { Fines } from '@/types';
 import { Card, PageHeader, StatCard } from '@/components/account/PageParts';
 import { StreamedCover } from '@/components/account/StreamedCover';
 import { DueBadge } from '@/components/account/DueBadge';
+import { BranchButton } from '@/components/branches/BranchButton';
 import { SkeletonScope } from '@/components/ui/Skeleton';
 
 export default async function OverviewPage(): Promise<JSX.Element> {
@@ -198,7 +199,7 @@ function OverviewContent({
                     {x.title}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    {x.pickupLibrary}
+                    <BranchButton code={x.pickupCode} label={x.pickupLibrary} variant="link" />
                     {x.date ? ` · avant le ${formatDate(x.date, 'short', today)}` : ''}
                   </p>
                 </div>

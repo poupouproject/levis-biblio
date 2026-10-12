@@ -1,9 +1,24 @@
 // Types du domaine « Mon dossier » (compte usager SirsiDynix de la Ville de Lévis).
 // Les dates sont des chaînes ISO `AAAA-MM-JJ` pour rester sérialisables entre serveur et client.
 
+/** Plage d'ouverture d'une journée, heures locales `HH:MM`. */
+export interface OpeningHours {
+  open: string;
+  close: string;
+}
+
 export interface Branch {
   code: string; // Code interne SirsiDynix (ex. « AMF »)
-  name: string; // Nom affiché (ex. « Anne-Marie-Filteau (St-Nicolas) »)
+  name: string; // Nom tel qu'affiché par le portail (ex. « Anne-Marie-Filteau (St-Nicolas) »)
+  title: string; // Nom usuel (ex. « Bibliothèque Anne-Marie-Filteau »)
+  sector: string; // Secteur de Lévis
+  address: string;
+  latitude: number;
+  longitude: number;
+  phone: string;
+  url: string; // Fiche officielle sur levis.ca
+  /** Horaire régulier, index 0 = dimanche ; `null` = fermé. */
+  hours: readonly (OpeningHours | null)[];
 }
 
 export interface Checkout {

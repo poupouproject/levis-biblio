@@ -16,6 +16,7 @@ import { changePickupAction, holdAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { addDays, formatDate } from '@/lib/account/format';
 import { StreamedCover, StreamedIsbn } from './StreamedCover';
+import { BranchButton } from '@/components/branches/BranchButton';
 import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { Dialog } from './Dialog';
 import { ActionFeedback, ItemMessage } from './ActionFeedback';
@@ -120,10 +121,7 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
                           {ordinal(hold.queuePosition)} en file
                         </span>
                       )}
-                      <MetaChip>
-                        <MapPin className="h-3.5 w-3.5" aria-hidden />
-                        {hold.pickupLibrary}
-                      </MetaChip>
+                      <BranchButton code={hold.pickupCode} label={hold.pickupLibrary} />
                       {hold.callNumber && <MetaChip mono>{hold.callNumber}</MetaChip>}
                       <StreamedIsbn covers={covers} id={hold.holdId} />
                     </>
@@ -235,7 +233,12 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
                     }}
                     className="accent-[#d4a853]"
                   />
-                  {b.name}
+                  <span>
+                    {b.title.replace('Bibliothèque ', '')}
+                    <span className="block text-xs text-zinc-500">
+                      {b.address} · {b.sector}
+                    </span>
+                  </span>
                 </label>
               ))}
             </fieldset>

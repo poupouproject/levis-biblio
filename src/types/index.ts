@@ -14,6 +14,7 @@ export type { OLSearchResponse, OLDoc } from './open-library';
 
 export type {
   Branch,
+  OpeningHours,
   Checkout,
   CheckoutsSummary,
   Hold,

@@ -1,4 +1,4 @@
-import type { Branch } from '@/types';
+import { BRANCHES } from './branches';
 
 export const LEVIS_ORIGIN = 'https://levi.ent.sirsidynix.net';
 export const LEVIS_BASE_PATH = '/client/fr_CA/accueil';
@@ -17,19 +17,8 @@ export const LEVIS_USER_AGENT =
   process.env.LEVIS_USER_AGENT ??
   'Mozilla/5.0 (compatible; LevisBiblio/1.0; +https://github.com/poupouproject/levis-biblio)';
 
-/** Succursales offertes comme lieu de retrait (codes de la liste `pickupLibrary`). */
-export const BRANCHES: readonly Branch[] = [
-  { code: 'AMF', name: 'Anne-Marie-Filteau (St-Nicolas)' },
-  { code: 'AR', name: 'Albert-Rousseau (St-Étienne de Lauzon)' },
-  { code: 'CV', name: 'Croque-Volumes (St-Rédempteur)' },
-  { code: 'FM', name: 'Francine-McKenzie (St-Jean-Chrysostome)' },
-  { code: 'JG', name: 'Jean-Gosselin (Charny)' },
-  { code: 'LC', name: 'La Clé (Breakeyville)' },
-  { code: 'LP', name: 'La Pintellect (Pintendre)' },
-  { code: 'LV', name: 'Lauréat-Vallière (St-Romuald)' },
-  { code: 'SD', name: 'Saint-David - Lévis' },
-  { code: 'PGR', name: 'Pierre-Georges-Roy (Lévis)' },
-];
+/** Succursales (adresses, heures, codes de la liste `pickupLibrary`) : voir branches.ts. */
+export { BRANCHES } from './branches';
 
 export function branchCodeFromName(name: string): string | null {
   const normalized = name.trim().toLowerCase();
