@@ -1,10 +1,4 @@
-export type {
-  Work,
-  WorkMetadata,
-  Author,
-  Edition,
-  SeriesInfo,
-} from './book';
+export type { Work, WorkMetadata, Author, Edition, SeriesInfo } from './book';
 
 export type {
   AggregatedAvailability,
@@ -32,13 +26,9 @@ export type {
   Profile,
   ActionItemResult,
   ActionResult,
+  CoverInfo,
   CoverMap,
   SessionStatus,
 } from './account';
 
-export type {
-  CantookItem,
-  CantookAuthor,
-  CantookFormat,
-  CantookAvailability,
-} from './cantook';
+export type { CantookItem, CantookAuthor, CantookFormat, CantookAvailability } from './cantook';

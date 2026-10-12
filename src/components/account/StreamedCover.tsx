@@ -5,19 +5,12 @@ import type { CoverMap } from '@/types';
 import { SkeletonScope } from '@/components/ui/Skeleton';
 import { CoverThumb, type CoverSize } from './CoverThumb';
 import { ZoomableCover } from './ZoomableCover';
+import { MetaChip } from './DocumentCard';
+import { knownCover, rememberCovers } from './coverCache';
 
-/**
- * Couvertures déjà reçues pendant cette visite (id → URL, ou null si le portail n'en a pas).
- * Vit dans l'onglet seulement : effacée au rechargement ou à la fermeture, jamais persistée.
- * N'est écrite que dans un effet, donc jamais côté serveur (où le module est partagé entre usagers).
- */
-const knownCovers = new Map<string, string | null>();
-
-interface StreamedCoverProps {
+interface StreamedProps {
   covers: Promise<CoverMap>;
   id: string;
-  title: string;
-  size?: CoverSize;
 }
 
 /**
@@ -25,9 +18,15 @@ interface StreamedCoverProps {
  * on affiche donc la liste tout de suite avec une vignette en squelette, remplacée dès réception.
  * Au retour sur une page, la couverture déjà connue s'affiche sans attendre le portail.
  */
-export function StreamedCover({ covers, id, title, size = 'md' }: StreamedCoverProps): JSX.Element {
-  const known = knownCovers.get(id);
-  if (known !== undefined) return <ZoomableCover src={known} title={title} size={size} />;
+export function StreamedCover({
+  covers,
+  id,
+  title,
+  size = 'md',
+}: StreamedProps & { title: string; size?: CoverSize }): JSX.Element {
+  const cached = knownCover(id);
+  if (cached !== undefined)
+    return <ZoomableCover src={cached?.url ?? null} title={title} size={size} />;
   return (
     <Suspense
       fallback={
@@ -41,10 +40,49 @@ export function StreamedCover({ covers, id, title, size = 'md' }: StreamedCoverP
   );
 }
 
-function ResolvedCover({ covers, id, title, size }: Required<StreamedCoverProps>): JSX.Element {
-  const src = use(covers)[id] ?? null;
+function ResolvedCover({
+  covers,
+  id,
+  title,
+  size,
+}: StreamedProps & { title: string; size: CoverSize }): JSX.Element {
+  const map = use(covers);
   useEffect(() => {
-    knownCovers.set(id, src);
-  }, [id, src]);
-  return <ZoomableCover src={src} title={title} size={size} />;
+    rememberCovers(map, id);
+  }, [map, id]);
+  return <ZoomableCover src={map[id]?.url ?? null} title={title} size={size} />;
+}
+
+/** Pastille ISBN : même source et même cache que les couvertures (le portail ne le donne pas ailleurs). */
+export function StreamedIsbn({ covers, id }: StreamedProps): JSX.Element | null {
+  const cached = knownCover(id);
+  if (cached !== undefined) return <IsbnChip isbn={cached?.isbn ?? null} />;
+  return (
+    <Suspense
+      fallback={
+        <SkeletonScope>
+          <MetaChip mono>ISBN 9780000000000</MetaChip>
+        </SkeletonScope>
+      }
+    >
+      <ResolvedIsbn covers={covers} id={id} />
+    </Suspense>
+  );
+}
+
+function ResolvedIsbn({ covers, id }: StreamedProps): JSX.Element | null {
+  const map = use(covers);
+  useEffect(() => {
+    rememberCovers(map, id);
+  }, [map, id]);
+  return <IsbnChip isbn={map[id]?.isbn ?? null} />;
+}
+
+function IsbnChip({ isbn }: { isbn: string | null }): JSX.Element | null {
+  if (!isbn) return null;
+  return (
+    <MetaChip mono>
+      <span className="font-sans font-medium">ISBN</span> {isbn}
+    </MetaChip>
+  );
 }

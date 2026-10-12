@@ -74,10 +74,16 @@ export function firstNameFrom(fullName: string): string {
 export interface ExtrasItem {
   identifier: string;
   image: string | null;
+  isbn: string | null;
   itemId: string | null;
 }
 
-/** Réponse JSON de `loadcheckoutsextras` / `loadholdsextras` : couvertures et codes-barres. */
+/** ISBN contenu dans l'adresse d'une couverture (`…/btlffile/{ISBN}/cover`). */
+export function isbnFromCoverUrl(url: string | null | undefined): string | null {
+  return /\/btlffile\/(\d{9}[\dX]|\d{13})\/cover/i.exec(url ?? '')?.[1]?.toUpperCase() ?? null;
+}
+
+/** Réponse JSON de `loadcheckoutsextras` / `loadholdsextras` : couvertures, ISBN et codes-barres. */
 export function parseExtras(text: string): ExtrasItem[] {
   let json: unknown;
   try {
@@ -92,9 +98,11 @@ export function parseExtras(text: string): ExtrasItem[] {
     if (typeof entry !== 'object' || entry === null) continue;
     const { identifier, image, itemID } = entry as Record<string, unknown>;
     if (typeof identifier !== 'string' && typeof identifier !== 'number') continue;
+    const rawImage = typeof image === 'string' ? image : null;
     items.push({
       identifier: String(identifier),
-      image: typeof image === 'string' ? normalizeCoverUrl(image) : null,
+      image: normalizeCoverUrl(rawImage),
+      isbn: isbnFromCoverUrl(rawImage),
       itemId: typeof itemID === 'string' ? itemID : null,
     });
   }

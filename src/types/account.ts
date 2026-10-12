@@ -87,7 +87,13 @@ export interface Profile {
 }
 
 /** Couvertures indexées par code-barres (emprunts) ou numéro de réservation. Chargées en différé. */
-export type CoverMap = Record<string, string>;
+export interface CoverInfo {
+  url: string | null;
+  /** ISBN tiré de l'adresse de la couverture : le portail ne le donne nulle part ailleurs. */
+  isbn: string | null;
+}
+
+export type CoverMap = Record<string, CoverInfo>;
 
 export interface ActionItemResult {
   id: string;

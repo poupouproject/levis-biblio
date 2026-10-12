@@ -15,7 +15,7 @@ import type { Branch, CoverMap, Hold, HoldStatus } from '@/types';
 import { changePickupAction, holdAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { addDays, formatDate } from '@/lib/account/format';
-import { StreamedCover } from './StreamedCover';
+import { StreamedCover, StreamedIsbn } from './StreamedCover';
 import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { Dialog } from './Dialog';
 import { ActionFeedback, ItemMessage } from './ActionFeedback';
@@ -125,6 +125,7 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
                         {hold.pickupLibrary}
                       </MetaChip>
                       {hold.callNumber && <MetaChip mono>{hold.callNumber}</MetaChip>}
+                      <StreamedIsbn covers={covers} id={hold.holdId} />
                     </>
                   }
                   actions={

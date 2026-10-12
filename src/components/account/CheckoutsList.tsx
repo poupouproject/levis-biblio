@@ -6,7 +6,7 @@ import type { Checkout, CoverMap } from '@/types';
 import { renewAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { plural } from '@/lib/account/format';
-import { StreamedCover } from './StreamedCover';
+import { StreamedCover, StreamedIsbn } from './StreamedCover';
 import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { DueBadge } from './DueBadge';
 import { ActionFeedback, ItemMessage } from './ActionFeedback';
@@ -89,6 +89,7 @@ export function CheckoutsList({ checkouts, covers, today }: CheckoutsListProps):
                     <MetaChip>Renouvelé {plural(checkout.renewals, 'fois', 'fois')}</MetaChip>
                   )}
                   {checkout.callNumber && <MetaChip mono>{checkout.callNumber}</MetaChip>}
+                  <StreamedIsbn covers={covers} id={checkout.barcode} />
                 </>
               }
               actions={

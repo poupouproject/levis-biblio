@@ -14,6 +14,7 @@ import { parseProfile } from '@/lib/levis/parsers/profile';
 import {
   decodeCfEmail,
   firstNameFrom,
+  isbnFromCoverUrl,
   normalizeCoverUrl,
   parseExtras,
   parseMoney,
@@ -68,15 +69,28 @@ describe('utilitaires de lecture', () => {
     expect(firstNameFrom('Madonna')).toBe('Madonna');
   });
 
+  it('tire l’ISBN de l’adresse d’une couverture (ISBN-13 et ISBN-10 avec X)', () => {
+    expect(isbnFromCoverUrl('https://h/client/accueil/search/btlffile/9782075187794/cover')).toBe(
+      '9782075187794',
+    );
+    expect(isbnFromCoverUrl('https://h/client/accueil/search/btlffile/272344404x/cover')).toBe(
+      '272344404X',
+    );
+    expect(isbnFromCoverUrl('/client/images/no_image.png')).toBeNull();
+    expect(isbnFromCoverUrl(null)).toBeNull();
+  });
+
   it('lit la réponse JSON des couvertures différées', () => {
     const items = parseExtras(
-      '{"array":[{"identifier":4000001,"itemID":"9902","image":"https://LEVI.ent.sirsidynix.net/c/cover"},{"identifier":"990300000001","image":"x"}]}',
+      '{"array":[{"identifier":4000001,"itemID":"9902","image":"https://LEVI.ent.sirsidynix.net/client/accueil/search/btlffile/9782075187794/cover"},{"identifier":"990300000001","image":"x"}]}',
     );
     expect(items[0]).toEqual({
       identifier: '4000001',
       itemId: '9902',
-      image: 'https://levi.ent.sirsidynix.net/c/cover',
+      image: 'https://levi.ent.sirsidynix.net/client/accueil/search/btlffile/9782075187794/cover',
+      isbn: '9782075187794',
     });
+    expect(items[1]?.isbn).toBeNull();
     expect(items[1]?.image).toBeNull();
     expect(parseExtras('pas du json')).toEqual([]);
   });

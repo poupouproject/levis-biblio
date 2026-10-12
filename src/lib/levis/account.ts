@@ -75,7 +75,7 @@ function zoneHtml(zone: ZoneResponse): string {
 }
 
 /**
- * Couvertures chargées en différé par le portail (recherche ISBN lente : 2 à 5 s), indexées par identifiant.
+ * Couvertures et ISBN chargés en différé par le portail (recherche lente : 2 à 5 s), indexés par identifiant.
  * Doit suivre le chargement de la zone correspondante. Ne lève jamais : les couvertures sont un plus.
  */
 async function loadExtras(client: LevisClient, kind: 'checkouts' | 'holds'): Promise<CoverMap> {
@@ -86,7 +86,9 @@ async function loadExtras(client: LevisClient, kind: 'checkouts' | 'holds'): Pro
       `${LEVIS_ACCOUNT_PATH}.accountnonmobile.${event}/${EMPTY_CONTEXT}?&sdcsrf=${client.csrf ?? ''}`,
     );
     const covers: CoverMap = {};
-    for (const item of parseExtras(res.text)) if (item.image) covers[item.identifier] = item.image;
+    for (const item of parseExtras(res.text)) {
+      if (item.image || item.isbn) covers[item.identifier] = { url: item.image, isbn: item.isbn };
+    }
     return covers;
   } catch {
     return {};
