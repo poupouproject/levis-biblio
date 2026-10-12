@@ -291,13 +291,14 @@ export function openStatus(branch: Branch, now = new Date()): OpenStatus {
   return { open: false, label: 'Fermé' };
 }
 
-/** Itinéraire vers la succursale : Google Maps (toutes plateformes) et Apple Plans. */
-export function directionsUrls(branch: Branch): { google: string; apple: string } {
-  const destination = `${String(branch.latitude)},${String(branch.longitude)}`;
-  return {
-    google: `https://www.google.com/maps/dir/?api=1&destination=${destination}`,
-    apple: `https://maps.apple.com/?daddr=${destination}&q=${encodeURIComponent(branch.title)}`,
-  };
+/**
+ * Itinéraire Google Maps vers la succursale (application si installée, sinon le web).
+ * Destination par nom et adresse plutôt que par coordonnées : Google reconnaît l'établissement
+ * et affiche sa fiche (nom, heures) au lieu d'un simple point.
+ */
+export function directionsUrl(branch: Branch): string {
+  const destination = `${branch.title}, ${branch.address}, Lévis, QC`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
 export function telUrl(phone: string): string {

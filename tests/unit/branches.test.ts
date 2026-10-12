@@ -3,7 +3,7 @@ import {
   BRANCHES,
   branchByCode,
   branchLocation,
-  directionsUrls,
+  directionsUrl,
   formatHour,
   formatHours,
   levisNow,
@@ -84,11 +84,12 @@ describe('ouvert maintenant', () => {
 });
 
 describe('liens', () => {
-  it('construit les itinéraires Google Maps et Apple Plans', () => {
-    const { google, apple } = directionsUrls(pgr);
-    expect(google).toBe('https://www.google.com/maps/dir/?api=1&destination=46.81225,-71.181462');
-    expect(apple).toContain('daddr=46.81225,-71.181462');
-    expect(apple).toContain('q=Biblioth%C3%A8que%20Pierre-Georges-Roy');
+  it('construit l’itinéraire Google Maps par nom et adresse', () => {
+    const url = directionsUrl(pgr);
+    expect(url.startsWith('https://www.google.com/maps/dir/?api=1&destination=')).toBe(true);
+    expect(decodeURIComponent(url.split('destination=')[1] ?? '')).toBe(
+      'Bibliothèque Pierre-Georges-Roy, 7, rue Monseigneur-Gosselin, Lévis, QC',
+    );
   });
 
   it('construit le lien d’appel', () => {

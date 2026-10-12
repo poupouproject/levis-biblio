@@ -7,7 +7,7 @@ import { useMinute } from '@/hooks/useMinute';
 import {
   branchLocation,
   dayName,
-  directionsUrls,
+  directionsUrl,
   formatHours,
   levisNow,
   openStatus,
@@ -40,7 +40,6 @@ export function BranchStatus({ branch }: { branch: Branch }): JSX.Element | null
 export function BranchDetails({ branch }: { branch: Branch }): JSX.Element {
   const minute = useMinute();
   const today = minute === null ? null : levisNow(new Date(minute * 60_000)).day;
-  const { google, apple } = directionsUrls(branch);
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,24 +85,15 @@ export function BranchDetails({ branch }: { branch: Branch }): JSX.Element {
         </dl>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-col gap-2">
         <a
-          href={google}
+          href={directionsUrl(branch)}
           target="_blank"
           rel="noopener noreferrer"
-          className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-[#d4a853] px-4 py-3 font-semibold text-white shadow-sm hover:bg-[#b88f42]"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#d4a853] px-4 py-3 font-semibold text-white shadow-sm hover:bg-[#b88f42]"
         >
           <Navigation className="h-4 w-4" aria-hidden />
           Itinéraire (Google Maps)
-        </a>
-        <a
-          href={apple}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-zinc-300 px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <MapPin className="h-4 w-4" aria-hidden />
-          Apple Plans
         </a>
         <a
           href={telUrl(branch.phone)}
