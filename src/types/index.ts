@@ -1,10 +1,4 @@
-export type {
-  Work,
-  WorkMetadata,
-  Author,
-  Edition,
-  SeriesInfo,
-} from './book';
+export type { Work, WorkMetadata, Author, Edition, SeriesInfo } from './book';
 
 export type {
   AggregatedAvailability,
@@ -19,8 +13,23 @@ export type {
 export type { OLSearchResponse, OLDoc } from './open-library';
 
 export type {
-  CantookItem,
-  CantookAuthor,
-  CantookFormat,
-  CantookAvailability,
-} from './cantook';
+  Branch,
+  OpeningHours,
+  Checkout,
+  CheckoutsSummary,
+  Hold,
+  HoldStatus,
+  HoldsSummary,
+  HistoryEntry,
+  Fines,
+  FineLine,
+  Preferences,
+  Profile,
+  ActionItemResult,
+  ActionResult,
+  CoverInfo,
+  CoverMap,
+  SessionStatus,
+} from './account';
+
+export type { CantookItem, CantookAuthor, CantookFormat, CantookAvailability } from './cantook';

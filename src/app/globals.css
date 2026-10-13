@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/*
+ * Mode sombre piloté par la classe `dark` sur <html> (et non plus seulement par le système) :
+ * l'usager peut forcer Clair ou Sombre. Un script dans <head> (layout.tsx) pose la classe
+ * avant l'affichage, selon la préférence enregistrée ou, à défaut, le réglage du système.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,17 +17,75 @@
   --color-foreground: var(--foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ─── Squelettes : <SkeletonScope> applique ces règles à n'importe quel composant ─── */
+:root {
+  --skeleton: #e4e4e7; /* zinc-200 */
+}
+
+html.dark {
+  --skeleton: #27272a; /* zinc-800 */
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Tout le texte devient invisible ; la structure (cartes, bordures, espacements) reste. */
+[data-skeleton] *:not([data-skeleton-ignore], [data-skeleton-ignore] *) {
+  color: transparent !important;
+  text-decoration-color: transparent !important;
+}
+
+/* Éléments « feuilles » portant du texte : une barre à la largeur du texte. */
+[data-skeleton] *:not(:has(*)):not(:empty):not(svg *):not([data-skeleton-ignore], [data-skeleton-ignore] *) {
+  max-inline-size: fit-content;
+  border-radius: 0.375rem;
+  background-color: var(--skeleton) !important;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* Icônes et champs : un bloc. */
+[data-skeleton] :is(svg, input, select, textarea, button:empty):not([data-skeleton-ignore], [data-skeleton-ignore] *) {
+  border-color: transparent !important;
+  border-radius: 0.375rem;
+  background-color: var(--skeleton) !important;
+  box-shadow: none !important;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+[data-skeleton] input:is([type='checkbox'], [type='radio']) {
+  appearance: none;
+}
+
+/* Bloc plein explicite (vignettes) : contenu caché, conteneur animé. */
+[data-skeleton] [data-skeleton-block] {
+  border-color: transparent !important;
+  background-color: var(--skeleton) !important;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+[data-skeleton] [data-skeleton-block] *,
+[data-skeleton] img {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skeleton] * {
+    animation: none !important;
+  }
 }
 
 @layer utilities {
