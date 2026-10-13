@@ -51,15 +51,6 @@ const nextConfig: NextConfig = {
       },
     ]);
   },
-
-  rewrites() {
-    return [
-      {
-        source: '/api/proxy/sirsidynix/:path*',
-        destination: 'https://levis.sirsidynix.net/:path*',
-      },
-    ];
-  },
 };
 
 export default nextConfig;

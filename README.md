@@ -1,8 +1,9 @@
 # 📚 LévisBiblio
 
-**Catalogue unifié et mobile-first pour les bibliothèques de la Ville de Lévis.**
+**Les bibliothèques de Lévis, simples et rapides sur téléphone.**
 
 [![Next.js](https://img.shields.io/badge/Next.js_16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React_19-149eca?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Licence MIT](https://img.shields.io/badge/Licence-MIT-green?style=flat-square)](LICENSE)
 [![Projet Citoyen](https://img.shields.io/badge/Projet-Citoyen-orange?style=flat-square)](#)
@@ -10,133 +11,150 @@
 
 > **Projet citoyen open source · Sans but lucratif · Zéro BD · Aucune donnée personnelle stockée**
 
-LévisBiblio est une application web moderne conçue pour offrir aux citoyens de Lévis une expérience de consultation du catalogue de bibliothèques simplifiée et centrée sur le mobile. Ce projet agit comme une surcouche d'accélération par-dessus l'infrastructure SirsiDynix existante de la Ville, sans en modifier le fonctionnement.
+LévisBiblio est une application web pensée d'abord pour le téléphone. Elle permet aux citoyens de Lévis de gérer leur dossier de bibliothèque (emprunts, réservations, renouvellements) et de trouver leurs succursales, en quelques touchers. Elle s'appuie sur les outils existants de la Ville (portail SirsiDynix) sans les remplacer ni en modifier le fonctionnement.
 
-> ⚠️ **Ce projet est en développement actif.** L'interface UI et le système de types sont en place; la couche de données (API, scraping, recherche) est en cours de construction. Les pages affichent actuellement des données de démonstration.
+> ℹ️ **Phase 1 en cours.** « Mon dossier » et les succursales fonctionnent. Une mise en ligne publique attend une entente avec la Ville de Lévis : son portail est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx).
 
-## ✨ Vision du Projet
+## ✨ Fonctionnalités
 
-L'objectif est de créer une interface unifiée qui :
-
-* **Vision Unifiée :** Fusionne les inventaires physiques (SirsiDynix) et numériques (Cantook Station / PrêtNumérique) dans une seule interface.
-* **Déduplication :** Regroupe toutes les éditions d'une œuvre sous une seule fiche d'affichage.
-* **Vue par Série :** Affiche les tomes d'une série avec la disponibilité individuelle (physique et numérique) en un coup d'œil.
-* **Zéro Base de Données :** Application 100% *stateless* — aucune donnée personnelle stockée sur le serveur.
-* **Chargement Progressif :** Métadonnées affichées instantanément, suivies des disponibilités physiques et numériques en asynchrone.
-
-## 🎯 État Actuel
-
-| Composant | Statut |
+| Fonctionnalité | État |
 |---|---|
-| Système de types (domaine, Open Library, Cantook) | ✅ Complet |
-| Composants UI (BookCard, Badge, SearchBar) | ✅ Complet |
-| Layout responsive, dark mode, design mobile-first | ✅ Complet |
-| Configuration Next.js (images, proxy SirsiDynix) | ✅ Complet |
-| ESLint strict + Prettier + Vitest | ✅ Configuré |
-| Tests unitaires sur les types | ✅ En place |
-| Clients API (Open Library, Cantook, SirsiDynix) | 🚧 À implémenter |
-| Server Actions (recherche, disponibilité) | 🚧 À implémenter |
-| Parser HTML SirsiDynix (Cheerio) | 🚧 À implémenter |
-| Recherche fonctionnelle | 🚧 À implémenter |
-| Routage dynamique (page livre) | 🚧 À implémenter |
-| CI/CD (GitHub Actions) | 🚧 À implémenter |
-| Mon dossier : emprunts, réservations, historique, amendes, profil ([doc](docs/mon-compte.md)) | ✅ Complet |
-| PWA (manifest, service worker) | 🚧 À implémenter |
-| Tests E2E (Playwright) | 🚧 À implémenter |
+| **Mon dossier** : sommaire, alertes (retards, réservations prêtes) | ✅ |
+| **Emprunts** : échéances en clair, renouvellement d'un ou plusieurs documents, couvertures, ISBN | ✅ |
+| **Réservations** : rang dans la file, annuler, suspendre, réactiver, changer de succursale | ✅ |
+| **Historique, amendes, profil et préférences** | ✅ |
+| **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel ([/bibliotheques](src/app/bibliotheques/page.tsx)) | ✅ |
+| **Apparence** Auto / Clair / Sombre, squelettes de chargement, accessibilité | ✅ |
+| **Recherche dans le catalogue** | 🟡 Prévue, sous réserve d'accord |
+| **Disponibilité par succursale, réserver depuis le catalogue** | ⏳ Accès officiel requis |
 
-## 🏗️ Architecture Prévue
+Détails techniques de « Mon dossier » : [docs/mon-compte.md](docs/mon-compte.md).
 
-LévisBiblio agrégera en temps réel trois sources de données distinctes :
+## 🔭 Vision
 
-1. **Open Library (API REST) :** Métadonnées, couvertures, résumés, genres, séries et agrégation des ISBNs.
-2. **Cantook Station (API REST) :** Catalogue numérique de la Ville (De Marque) — matching par titre et auteur.
-3. **SirsiDynix WebPAC (Scraping HTML) :** Requêtes multi-ISBNs proxifiées et parsées côté serveur pour la disponibilité en rayon par succursale.
+À court terme : simplifier la vie des usagers, avec des pages rapides, une charge minimale sur les serveurs de la Ville et une sécurité soignée. À plus long terme :
 
-## 🛠️ Stack Technique
+* **Un seul catalogue** réunissant les livres imprimés et numériques (PrêtNumérique).
+* **Une œuvre, une fiche** : les éditions multiples d'un même livre regroupées.
+* **Vue par série** : tous les tomes et leur disponibilité d'un coup d'œil.
+* **Plus tard** : films, musique et jeux ; avis de disponibilité ; utilisation hors ligne.
+
+## 🤝 Principes
+
+* **Respect des systèmes de la Ville** : aucune tentative de contourner leurs protections ; on respecte leurs règles d'accès aux robots (`robots.txt`) ; appels ciblés, uniquement quand un usager consulte une page ; requêtes identifiées (`LevisBiblio/1.0`). L'objectif est un accès officiel.
+* **Zéro base de données** : aucune donnée d'usager conservée côté serveur.
+* **Sécurité** : numéro de carte et NIP jamais conservés ni journalisés ; session chiffrée (`httpOnly`, `SameSite=Strict`, 30 min) ; tentatives de connexion limitées ; contrôle de l'origine des formulaires.
+
+## 🏗️ Architecture
+
+* **Next.js 16 (App Router), React 19.** Server Components pour les lectures, routes et Server Actions pour les actions.
+* **Chargement partiel** : chaque page affiche tout de suite son en-tête et des squelettes (`<SkeletonScope>`), puis les données en streaming (`Suspense`). Les couvertures, plus lentes, arrivent en dernier.
+* **Cache** : couvertures et ISBN gardés en mémoire dans l'onglet ; préchargement des pages sans appel au portail ; données publiques servies en statique.
+* **Accès au portail** (`src/lib/levis`) : client HTTP, utilitaires Tapestry, parseurs testés, sur l'**espace usager** du portail seulement.
+
+| Source | Usage | Statut |
+|---|---|---|
+| Portail SirsiDynix, espace usager | Mon dossier | Utilisé (usage personnel) |
+| levis.ca (fiches des lieux) | Adresses et heures des succursales, relevées à la main | Utilisé |
+| API officielle de la Ville | Recherche, disponibilité, réservation | Demandée |
+| BAnQ, « Documents publiés au Québec » (données ouvertes) | Enrichir les notices (ISBN, auteurs) | Envisagé |
+| PrêtNumérique (Cantook) | Catalogue numérique | Sous réserve d'accord |
+
+## 🛠️ Pile technique
 
 * **Framework :** [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
-* **Langage :** [TypeScript](https://www.typescriptlang.org/) — mode ultra-strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
-* **UI :** [React 19](https://react.dev/), [Tailwind CSS 4](https://tailwindcss.com/), [Lucide Icons](https://lucide.dev/)
-* **Tests :** [Vitest](https://vitest.dev/) + Testing Library, couverture via v8
-* **Qualité :** ESLint (strict + stylistic type-checked), Prettier
+* **Langage :** [TypeScript](https://www.typescriptlang.org/) en mode ultra-strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
+* **UI :** [React 19](https://react.dev/), [Tailwind CSS 4](https://tailwindcss.com/), [Lucide](https://lucide.dev/)
+* **Serveur :** [cheerio](https://cheerio.js.org/) (lecture du HTML), [iron-session](https://github.com/vvo/iron-session) (cookie chiffré)
+* **Tests :** [Vitest](https://vitest.dev/) + Testing Library ; fixtures synthétiques, aucune donnée personnelle
+* **Qualité :** ESLint (strict + stylistic type-checked, zéro avertissement), Prettier
 
 ## 🚀 Installation
 
-Prérequis : **Node.js v22+**
+Prérequis : **Node.js 24**
 
 ```bash
-# Cloner le dépôt
 git clone https://github.com/poupouproject/levis-biblio.git
 cd levis-biblio
-
-# Installer les dépendances
 npm ci
 
-# Configurer l'environnement (LEVIS_SESSION_SECRET obligatoire pour Mon dossier)
+# Configurer l'environnement (LEVIS_SESSION_SECRET est obligatoire)
 cp .env.example .env.local
 
-# Démarrer le serveur de développement
 npm run dev
 ```
 
-L'application sera accessible sur `http://localhost:3000`.
+L'application est accessible sur `http://localhost:3000`.
 
-### Scripts disponibles
+### Variables d'environnement
+
+| Variable | Rôle |
+|---|---|
+| `LEVIS_SESSION_SECRET` | **Obligatoire.** Clé de chiffrement du cookie de session (32 caractères minimum). |
+| `LEVIS_USER_AGENT` | Optionnel. Remplace le User-Agent envoyé au portail. |
+| `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`. |
+
+### Tester sur un téléphone
+
+En mode dev, le téléphone peut ouvrir `http://<adresse-du-PC>:3000` sur le même réseau Wi-Fi (les adresses locales du poste sont autorisées automatiquement). **Attention :** en HTTP, le numéro de carte et le NIP circulent en clair sur le réseau. Pour un usage régulier, passer par HTTPS (par exemple Tailscale Serve).
+
+### Scripts
 
 | Commande | Description |
 |---|---|
 | `npm run dev` | Serveur de développement (Turbopack) |
 | `npm run build` | Build de production |
-| `npm run lint` | Linting ESLint (zero warnings) |
-| `npm run typecheck` | Vérification des types TypeScript |
-| `npm run test:unit` | Tests unitaires Vitest |
-| `npm run test:unit:watch` | Tests en mode watch |
+| `npm run lint` | ESLint (zéro avertissement) |
+| `npm run typecheck` | Vérification des types |
+| `npm run test:unit` | Tests unitaires |
+| `npm run test:unit:watch` | Tests en continu |
 | `npm run test:coverage` | Couverture de code |
-| `npm run test:live` | Vérifie le portail des bibliothèques avec un vrai compte (lecture seule, local seulement) |
+| `npm run test:live` | Vérifie le portail avec un vrai compte (lecture seule, en local seulement) |
 | `npm run format` | Formatage Prettier |
 
-## 📁 Structure du Projet
+## 📁 Structure
 
 ```text
 levis-biblio/
+├── docs/mon-compte.md            # Protocole du portail et choix techniques de « Mon dossier »
+├── levis-biblio-fonctionnel-v4.docx
 ├── src/
-│   ├── app/               # Routes Next.js (App Router)
-│   │   ├── page.tsx       # Page d'accueil (recherche)
-│   │   ├── book/[workId]/ # Fiche détaillée d'un livre
-│   │   └── demo/          # Laboratoire de design UI
-│   ├── components/        # Composants React
-│   │   ├── book/          # BookCard
-│   │   ├── search/        # SearchBar
-│   │   └── ui/            # Badge, éléments réutilisables
-│   ├── hooks/             # Hooks React (à venir)
-│   ├── lib/               # Logique métier (à venir)
-│   │   ├── actions/       # Server Actions
-│   │   ├── api/           # Clients API
-│   │   └── parsers/       # Parsers HTML
-│   └── types/             # Types TypeScript centralisés
-│       ├── book.ts        # Work, Edition, SeriesInfo
-│       ├── availability.ts # Disponibilité physique/numérique
-│       ├── open-library.ts # Types API Open Library
-│       └── cantook.ts     # Types API Cantook Station
+│   ├── app/
+│   │   ├── compte/               # Mon dossier : connexion, pages, routes, Server Actions
+│   │   ├── bibliotheques/        # Succursales (page publique)
+│   │   ├── page.tsx, book/, demo/  # Maquettes de la future recherche (données fictives)
+│   │   └── layout.tsx            # En-tête, menu de compte, thème
+│   ├── components/
+│   │   ├── account/              # Cartes, listes, menu, dialogues du dossier
+│   │   ├── branches/             # Fiche de succursale
+│   │   ├── ui/                   # Skeleton, ThemeSelector, Badge
+│   │   └── book/, search/        # Composants des maquettes
+│   ├── hooks/                    # useAccountAction, useMinute
+│   ├── lib/
+│   │   ├── levis/                # Accès au portail : client, auth, parseurs, succursales
+│   │   ├── account/              # Session, connexion, sécurité, formatage
+│   │   └── theme.ts
+│   └── types/
 └── tests/
-    ├── unit/              # Tests unitaires (Vitest)
-    └── e2e/               # Tests E2E (à venir)
+    ├── unit/                     # Tests unitaires (fixtures synthétiques)
+    └── live/                     # Vérification du portail avec un vrai compte (local)
 ```
 
 ## 🤝 Contribuer
 
-Ce projet est un effort citoyen ouvert à tous. Toute contribution est la bienvenue — que ce soit pour l'UI, le scraping, les tests ou une simple coquille.
+Ce projet citoyen est ouvert à tous : UI, accessibilité, tests ou simple coquille.
 
 1. *Fork* le projet
 2. Crée ta branche (`git checkout -b feature/ma-contribution`)
-3. Assure-toi que les types et le linter passent :
+3. Vérifie que tout passe :
    ```bash
-   npm run typecheck && npm run lint
+   npm run typecheck && npm run lint && npm run test:unit
    ```
-4. *Commit* tes changements
-5. *Push* et ouvre une Pull Request
+4. *Commit* tes changements, puis ouvre une Pull Request
 
-## ☕ Soutenir le Projet
+Merci de ne jamais committer de données personnelles (numéro de carte, NIP, captures du portail) : les tests utilisent des données fictives.
+
+## ☕ Soutenir le projet
 
 Si tu trouves ce projet utile, tu peux me soutenir :
 

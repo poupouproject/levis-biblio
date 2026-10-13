@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import Image from 'next/image';
-import { ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronRight } from 'lucide-react';
 import type { Work, AggregatedAvailability } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
@@ -13,7 +13,7 @@ interface BookCardProps {
 export function BookCard({ work, availability, priority = false }: BookCardProps): JSX.Element {
   const coverUrl = work.primaryEdition.coverKey 
     ? `https://covers.openlibrary.org/b/id/${work.primaryEdition.coverKey}-M.jpg`
-    : '/placeholder-cover.png';
+    : null;
 
   // Calcul du nombre total d'éditions regroupées par notre algorithme
   const editionsCount = work.allEditions.length > 0 ? work.allEditions.length : 1;
@@ -28,14 +28,20 @@ export function BookCard({ work, availability, priority = false }: BookCardProps
         <div className="flex gap-4">
           {/* Zone Image — format livre complet (object-contain, pas de recadrage) */}
           <div className="relative w-24 sm:w-28 flex-shrink-0 aspect-[2/3] bg-zinc-100 dark:bg-zinc-800 rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-800/50">
-            <Image 
-              src={coverUrl}
-              alt={`Couverture de ${work.title}`}
-              fill
-              sizes="(max-width: 640px) 96px, 112px"
-              className="object-contain"
-              priority={priority}
-            />
+            {coverUrl ? (
+              <Image
+                src={coverUrl}
+                alt={`Couverture de ${work.title}`}
+                fill
+                sizes="(max-width: 640px) 96px, 112px"
+                className="object-contain"
+                priority={priority}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-zinc-400 dark:text-zinc-600">
+                <BookOpen className="h-8 w-8" aria-hidden />
+              </div>
+            )}
           </div>
 
           {/* Zone Texte (Titre, Auteurs, Année) */}

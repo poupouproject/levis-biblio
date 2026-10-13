@@ -93,7 +93,7 @@ export default function BookDetailPage(): JSX.Element {
 
   const coverUrl = work.primaryEdition.coverKey 
     ? `https://covers.openlibrary.org/b/id/${work.primaryEdition.coverKey}-L.jpg`
-    : '/placeholder-cover.png';
+    : null;
 
   return (
     <div className="flex flex-col min-h-screen pb-20 sm:pb-8">
@@ -111,14 +111,20 @@ export default function BookDetailPage(): JSX.Element {
         {/* 2. En-tête : Couverture et Infos de base */}
         <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
           <div className="relative w-32 sm:w-48 flex-shrink-0 aspect-[2/3] mx-auto sm:mx-0 bg-zinc-100 dark:bg-zinc-800 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-md">
-            <Image 
-              src={coverUrl}
-              alt={`Couverture de ${work.title}`}
-              fill
-              sizes="(max-width: 640px) 128px, 192px"
-              className="object-contain"
-              priority
-            />
+            {coverUrl ? (
+              <Image
+                src={coverUrl}
+                alt={`Couverture de ${work.title}`}
+                fill
+                sizes="(max-width: 640px) 128px, 192px"
+                className="object-contain"
+                priority
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-zinc-400 dark:text-zinc-600">
+                <BookOpen className="h-10 w-10" aria-hidden />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col text-center sm:text-left">

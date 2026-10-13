@@ -20,25 +20,29 @@ Hors de portée, volontairement : paiement en ligne, changement de NIP, placer u
 ## 2. Architecture
 
 ```
-Navigateur ──(Server Action loginAction : carte + NIP)──▶ Next.js (serveur)
+Navigateur ──(POST /compte/connexion/ouvrir : carte + NIP)──▶ Next.js (serveur)
                                                    │ ouvre la session sur le portail (fetch)
                                                    │ oublie carte et NIP
-           ◀── cookie scellé `lb_dossier` ─────────┘  (cookies du portail + sdcsrf, chiffrés)
+           ◀── 303 /compte + cookie scellé `lb_dossier` ┘  (cookies du portail + sdcsrf, chiffrés)
 Navigateur ── GET /compte/emprunts ──▶ Server Component → withAccount() → LevisClient → cheerio → rendu
 Navigateur ── Server Action renewAction(codes-barres) ──▶ portail → relecture → résultat par document
 ```
 
 - **Aucune BD, aucun cache serveur.** Le seul état est le cookie `lb_dossier` : `iron-session` (chiffré + signé), `httpOnly`, `SameSite=Strict`, `Secure` en production, `Path=/compte`, durée 30 min renouvelée à chaque action. Il ne contient ni la carte ni le NIP.
-- **Lectures** : Server Components + `withAccount()` (`src/lib/account/dal.ts`). Session expirée côté portail → redirection vers `/compte/connexion?raison=expiree`.
+- **Connexion et déconnexion** : envois de formulaire classiques vers des routes (`/compte/connexion/ouvrir`, `/compte/deconnexion`), suivis d'une redirection 303 **relative**. C'est le parcours que reconnaissent les gestionnaires de mots de passe, il marche sans JavaScript, et la déconnexion reçoit toujours le cookie (chemin sous `/compte`) depuis n'importe quelle page. Ne jamais construire une redirection à partir de `request.url` : en dev, elle pointerait vers `localhost`.
+- **Lectures** : Server Components + `withAccount()` (`src/lib/account/dal.ts`). Session expirée côté portail → `/compte/expiree`, qui supprime le cookie périmé (une page ne peut pas le faire) puis renvoie à la connexion ; sinon, boucle de redirections.
 - **Écritures** : Server Actions (`src/app/compte/actions.ts`), protégées par la vérification d'origine intégrée de Next. Toutes les entrées sont revalidées côté serveur (formats de clés, codes de succursale, dates).
-- **Couvertures en streaming** : le portail met 2 à 5 s à fournir les couvertures. Les listes s'affichent en ~0,4 s ; les couvertures arrivent ensuite (promesse passée au client, `use()` + `Suspense`, `StreamedCover`).
+- **Menu de compte** : `GET /compte/session` ne renvoie que le prénom, pour l'en-tête ; le reste du site reste statique.
+- **Couvertures et ISBN en streaming** : le portail met 2 à 5 s à les fournir (l'ISBN n'existe que dans l'adresse de la couverture). Les listes s'affichent en ~0,4 s ; couvertures et ISBN arrivent ensuite (`use()` + `Suspense`, `StreamedCover`, `StreamedIsbn`) et restent en mémoire dans l'onglet (`coverCache.ts`).
+- **Squelettes** : `<SkeletonScope>` affiche le vrai composant en squelette pendant le chargement.
 - Tout le code qui touche la session importe `server-only`.
 
 ### Fichiers
 
 ```
 src/lib/levis/                 Accès au portail (serveur seulement)
-  config.ts                    URL, User-Agent, succursales (codes)
+  config.ts                    URL, User-Agent
+  branches.ts                  succursales : codes, adresses, heures, itinéraire (relevé levis.ca)
   errors.ts                    InvalidCredentials, SessionExpired, Upstream, Parse
   tapestry.ts                  encodeTapestry, addPathParams, zones JSON, snapshotForm, CSRF
   client.ts                    LevisClient : jarre de cookies, redirections, délais, sdcsrf
@@ -47,8 +51,11 @@ src/lib/levis/                 Accès au portail (serveur seulement)
   parsers/*.ts                 HTML → types du domaine (fonctions pures, testées)
 src/lib/account/
   session.ts                   cookie scellé
+  login.ts                     validation, limite de tentatives, ouverture de session
   dal.ts                       requireAccount, withAccount
   rate-limit.ts                limite des tentatives de connexion
+  origin.ts                    contrôle d'origine des formulaires (Sec-Fetch-Site, repli Origin)
+  redirect.ts                  redirections 303 relatives
   format.ts                    dates relatives, échéances (partagé client/serveur)
 src/app/compte/                pages, actions, chargement, erreurs
 src/components/account/        composants UI
@@ -97,7 +104,8 @@ Après chaque action, la liste est relue et le résultat de chaque document est 
 
 ## 4. Sécurité et vie privée
 
-- [x] Carte et NIP uniquement dans une Server Action (POST HTTPS), gardés en mémoire le temps de la connexion, jamais journalisés.
+- [x] Carte et NIP uniquement dans un POST vers `/compte/connexion/ouvrir`, gardés en mémoire le temps de la connexion, jamais journalisés. Après une erreur, la carte est préremplie via un cookie `httpOnly` de 2 min, jamais dans l'URL.
+- [x] Contrôle d'origine des formulaires : `Sec-Fetch-Site: same-origin` exigé ; repli sur `Origin` quand l'en-tête est absent (HTTP local) ; `Origin: null` refusé dans le repli.
 - [x] Cookie scellé `httpOnly; SameSite=Strict; Path=/compte`, clé `LEVIS_SESSION_SECRET` (≥ 32 caractères).
 - [x] Limite de tentatives : 5 par carte (hachée) et 10 par IP sur 15 min, en mémoire par instance.
 - [x] Déconnexion : fermeture de la session du portail + destruction du cookie.
