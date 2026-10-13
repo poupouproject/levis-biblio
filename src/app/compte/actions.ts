@@ -175,13 +175,18 @@ export async function preferencesAction(
 
   const result = await withSession(
     async (client) => {
-      const profile = await updatePreferences(client, {
+      const wanted = {
         language,
         defaultTab,
         pickupLibrary,
         showCheckoutHistory: formData.get('showCheckoutHistory') === 'on',
-      });
-      const ok = profile.preferences.pickupLibrary === pickupLibrary;
+      };
+      const { preferences: saved } = await updatePreferences(client, wanted);
+      const ok =
+        saved.language === wanted.language &&
+        saved.defaultTab === wanted.defaultTab &&
+        saved.pickupLibrary === wanted.pickupLibrary &&
+        saved.showCheckoutHistory === wanted.showCheckoutHistory;
       return [
         {
           id: 'preferences',

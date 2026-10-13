@@ -1,7 +1,7 @@
 import 'server-only';
 import { login } from '@/lib/levis/auth';
 import { InvalidCredentialsError, LevisError } from '@/lib/levis/errors';
-import { allowLoginAttempt, clearCardAttempts } from './rate-limit';
+import { allowLoginAttempt, recordLoginSuccess } from './rate-limit';
 import { getAccountSession } from './session';
 
 /** Numéro de carte gardé 2 minutes pour préremplir le formulaire après une erreur (jamais dans l'URL). */
@@ -22,7 +22,7 @@ export const LOGIN_ERRORS: Record<LoginErrorCode, string> = {
 };
 
 export function isLoginErrorCode(value: string | undefined): value is LoginErrorCode {
-  return value !== undefined && value in LOGIN_ERRORS;
+  return value !== undefined && Object.hasOwn(LOGIN_ERRORS, value);
 }
 
 /**
@@ -42,7 +42,7 @@ export async function attemptLogin(
 
   try {
     const result = await login(card, pin);
-    clearCardAttempts(card);
+    recordLoginSuccess(ip, card);
     const session = await getAccountSession();
     session.levis = result.state;
     session.firstName = result.firstName;

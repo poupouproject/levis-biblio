@@ -19,7 +19,13 @@ export async function POST(request: Request): Promise<Response> {
     return typeof value === 'string' ? value : '';
   };
   const card = field('card');
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
+  // `x-real-ip` (posé par Vercel), sinon la dernière entrée de X-Forwarded-For : celle ajoutée
+  // par notre proxy. La première entrée vient du client et peut être inventée.
+  const ip =
+    [
+      request.headers.get('x-real-ip')?.trim(),
+      request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim(),
+    ].find(Boolean) ?? 'local';
   const result = await attemptLogin(card, field('pin'), ip);
 
   const jar = await cookies();

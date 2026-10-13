@@ -20,7 +20,17 @@ export function useAccountAction(): AccountAction {
   const run = useCallback<AccountAction['run']>(
     (action, onDone) => {
       startTransition(async () => {
-        const res = await action();
+        let res: ActionResult;
+        try {
+          res = await action();
+        } catch {
+          // Réseau coupé ou nouvelle version déployée : message en ligne plutôt que la page d'erreur.
+          res = {
+            status: 'error',
+            message: 'La demande n’a pas abouti. Vérifiez votre connexion, puis réessayez.',
+            items: [],
+          };
+        }
         if (res.status === 'error' && res.message === 'session_expiree') {
           router.push('/compte/connexion?raison=expiree');
           return;

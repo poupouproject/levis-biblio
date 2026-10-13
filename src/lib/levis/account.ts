@@ -12,6 +12,7 @@ import type {
   Preferences,
   Profile,
 } from '@/types';
+import { formatDate } from '@/lib/account/format';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
 import { LevisError, ParseError } from './errors';
@@ -409,12 +410,4 @@ export async function getOverview(
     getFines(client),
   ]);
   return { checkouts, holds, fines };
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return '';
-  const date = new Date(`${iso}T12:00:00`);
-  return Number.isNaN(date.getTime())
-    ? iso
-    : date.toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
 }

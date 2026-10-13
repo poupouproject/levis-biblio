@@ -9,7 +9,7 @@ import {
   todayIso,
 } from '@/lib/account/format';
 import { toPortalDate } from '@/lib/levis/account';
-import { allowLoginAttempt, clearCardAttempts } from '@/lib/account/rate-limit';
+import { allowLoginAttempt, recordLoginSuccess } from '@/lib/account/rate-limit';
 
 const TODAY = '2026-10-10';
 
@@ -69,7 +69,7 @@ describe('limite des tentatives de connexion', () => {
     for (let i = 0; i < 5; i++) expect(allowLoginAttempt(`ip-${String(i)}`, card, now)).toBe(true);
     expect(allowLoginAttempt('ip-autre', card, now)).toBe(false);
     expect(allowLoginAttempt('ip-autre', card, now + 16 * 60 * 1000)).toBe(true);
-    clearCardAttempts(card);
+    recordLoginSuccess('ip-autre', card);
   });
 
   it('bloque une même adresse IP après 10 essais', () => {
@@ -77,5 +77,21 @@ describe('limite des tentatives de connexion', () => {
     for (let i = 0; i < 10; i++)
       expect(allowLoginAttempt('10.0.0.1', `carte-${String(i)}`, now)).toBe(true);
     expect(allowLoginAttempt('10.0.0.1', 'carte-x', now)).toBe(false);
+  });
+
+  it('ne compte pas les connexions réussies contre l’adresse IP', () => {
+    const now = 9_000_000;
+    for (let i = 0; i < 15; i++) {
+      expect(allowLoginAttempt('10.0.0.2', `carte-${String(i)}`, now)).toBe(true);
+      recordLoginSuccess('10.0.0.2', `carte-${String(i)}`);
+    }
+  });
+
+  it('partage le compteur d’une carte quelle que soit la casse', () => {
+    const now = 13_000_000;
+    const ids = ['jdoe1', 'JDOE1', 'Jdoe1', 'jDoe1', 'jdOe1'];
+    for (const [i, id] of ids.entries())
+      expect(allowLoginAttempt(`ip-casse-${String(i)}`, id, now)).toBe(true);
+    expect(allowLoginAttempt('ip-casse-x', 'JdOe1', now)).toBe(false);
   });
 });
