@@ -1,6 +1,6 @@
 # 📚 LévisBiblio
 
-**Les bibliothèques de Lévis, simples et rapides sur téléphone.**
+**Trouver une œuvre facilement dans les bibliothèques de Lévis : une interface moderne, une recherche simple et rapide.**
 
 [![Next.js](https://img.shields.io/badge/Next.js_16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React_19-149eca?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
@@ -11,33 +11,38 @@
 
 > **Projet citoyen open source · Sans but lucratif · Zéro BD · Aucune donnée personnelle stockée**
 
-LévisBiblio est une application web pensée d'abord pour le téléphone. Elle permet aux citoyens de Lévis de gérer leur dossier de bibliothèque (emprunts, réservations, renouvellements) et de trouver leurs succursales, en quelques touchers. Elle s'appuie sur les outils existants de la Ville (portail SirsiDynix) sans les remplacer ni en modifier le fonctionnement.
+LévisBiblio est une interface moderne pour les bibliothèques de Lévis. Son but : **trouver une œuvre facilement**, grâce à une recherche simple et rapide, sur téléphone comme sur ordinateur. Elle s'appuie sur les outils existants de la Ville (catalogue SirsiDynix, PrêtNumérique) sans les remplacer ni en modifier le fonctionnement.
 
-> ℹ️ **Phase 1 en cours.** « Mon dossier » et les succursales fonctionnent. Une mise en ligne publique attend une entente avec la Ville de Lévis : son portail est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx).
+## 🎯 Pourquoi
 
-## ✨ Fonctionnalités
+Chercher un livre dans le catalogue actuel demande de la patience :
+
+* **Une même œuvre apparaît plusieurs fois** : chaque édition, traduction ou format a sa propre fiche, qu'il faut vérifier une par une.
+* **Les séries sont éparpillées** : impossible de voir d'un coup d'œil quels tomes sont disponibles.
+* **L'imprimé et le numérique sont séparés** : les livres numériques sont sur une autre plateforme, invisibles depuis le catalogue.
+* **L'interface est lente et peu pratique**, surtout sur téléphone.
+
+## ✨ Ce que LévisBiblio veut offrir
+
+* **Une recherche simple et rapide** : des résultats clairs dès la saisie, avec couvertures et résumés.
+* **Une œuvre, une fiche** : toutes les éditions d'un livre regroupées, avec la disponibilité réunie.
+* **Vue par série** : tous les tomes et leur disponibilité, imprimée comme numérique.
+* **Un seul catalogue** pour l'imprimé et le numérique (PrêtNumérique).
+* **Une interface moderne** : rapide (chargement partiel, cache), accessible, en mode clair ou sombre, pensée d'abord pour le téléphone.
+* **Plus tard** : films, musique et jeux ; avis de disponibilité ; utilisation hors ligne.
+
+## 🚦 Où en est le projet
+
+La recherche dans le catalogue est le cœur du projet, mais elle dépend d'un accès officiel aux données de la Ville : son catalogue est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Une demande d'accès est en cours (voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx)). En attendant, les premières pièces de l'interface sont livrées.
 
 | Fonctionnalité | État |
 |---|---|
-| **Mon dossier** : sommaire, alertes (retards, réservations prêtes) | ✅ |
-| **Emprunts** : échéances en clair, renouvellement d'un ou plusieurs documents, couvertures, ISBN | ✅ |
-| **Réservations** : rang dans la file, annuler, suspendre, réactiver, changer de succursale | ✅ |
-| **Historique, amendes, profil et préférences** | ✅ |
-| **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel ([/bibliotheques](src/app/bibliotheques/page.tsx)) | ✅ |
-| **Apparence** Auto / Clair / Sombre, squelettes de chargement, accessibilité | ✅ |
-| **Recherche dans le catalogue** | 🟡 Prévue, sous réserve d'accord |
-| **Disponibilité par succursale, réserver depuis le catalogue** | ⏳ Accès officiel requis |
-
-Détails techniques de « Mon dossier » : [docs/mon-compte.md](docs/mon-compte.md).
-
-## 🔭 Vision
-
-À court terme : simplifier la vie des usagers, avec des pages rapides, une charge minimale sur les serveurs de la Ville et une sécurité soignée. À plus long terme :
-
-* **Un seul catalogue** réunissant les livres imprimés et numériques (PrêtNumérique).
-* **Une œuvre, une fiche** : les éditions multiples d'un même livre regroupées.
-* **Vue par série** : tous les tomes et leur disponibilité d'un coup d'œil.
-* **Plus tard** : films, musique et jeux ; avis de disponibilité ; utilisation hors ligne.
+| **Recherche dans le catalogue** : résultats rapides, une fiche par œuvre | 🟡 Maquettes prêtes ; en attente d'un accès officiel |
+| **Vue par série, imprimé et numérique réunis** | 🔭 Phase 2 |
+| **Disponibilité par succursale, réservation depuis le catalogue** | ⏳ Accès officiel requis |
+| **Mon dossier** : emprunts et renouvellements, réservations (rang, suspension, succursale), historique, amendes, profil | ✅ Livré ([détails](docs/mon-compte.md)) |
+| **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel | ✅ Livré |
+| **Interface** : squelettes de chargement, mode clair / sombre, accessibilité | ✅ Livré |
 
 ## 🤝 Principes
 
