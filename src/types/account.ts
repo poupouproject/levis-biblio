@@ -54,6 +54,7 @@ export interface Hold {
   dateLabel: string | null; // Texte brut si la date n'est pas interprétable
   queuePosition: number | null;
   canChangePickup: boolean;
+  canCancel: boolean; // Faux quand le portail n'offre pas de case à cocher (réservation prête)
 }
 
 export interface HoldsSummary {

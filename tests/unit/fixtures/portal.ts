@@ -34,7 +34,7 @@ export const checkoutsZoneHtml = `
 </form>`;
 
 export const holdsZoneHtml = `
-<div>Documents réservés : 3<br>Prêt pour le retrait : 1</div>
+<div>Documents réservés : 4<br>Prêt pour le retrait : 2</div>
 <form id="HoldsSelectionForm_abc" method="post" action="/client/fr_CA/accueil/search/account.accountnonmobile.holds.holdslistnonmobile.holdsselectionform/0?&amp;sdcsrf=${CSRF}">
   <div class="t-invisible"><input value="${CSRF}" name="sdcsrf" type="hidden"><input value="OPAQUE2==" name="t:formdata" type="hidden"></div>
   <div id="myHolds_holdslistnonmobile_ids_holder"><input class="hidden" name="myHolds_holdslistnonmobile_ids" type="text"></div>
@@ -65,6 +65,15 @@ export const holdsZoneHtml = `
       <td class="holdsStatus">Suspendue</td>
       <td class="holdsPickup">Succursale inconnue</td>
       <td class="holdsDate">26-12-01</td>
+      <td class="holdsRank">1</td>
+    </tr>
+    <tr class="pickupHoldsLine">
+      <td sorttable_customkey="0" class="holdsAlert"><img alt="Prêt depuis le 26-10-20" title="Prêt depuis le 26-10-20" src="/client/images/account-icons/green!.png"/></td>
+      <td class="holdsCoverArt"><div id="holdInitialCover_4000004" class="accountCoverArtNoCheckbox"><img src="/no_image.png" alt="Image de couverture de Arrivé" class="accountCoverImage" id="holdsImage_4"/></div></td>
+      <td class="holdsID"><a onclick="$J(this).focus();return checkBeforeLoadingDetail('detailZone3','/client/fr_CA/accueil/search/account.accountnonmobile.holds.holdslistnonmobile.detaillink:detailclick/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:666666/0/Arriv$00e9?d=ent%3A%2F%2FSD_ILS%2F0%2FSD_ILS%3A666666%7Enull%7E0');" title="Arrivé" id="detailClick" href="#">Arrivé</a><div class="holds_author">Auteur, Arrivé</div></td>
+      <td class="holdsStatus">Retirer avant le : 26-10-27  </td>
+      <td class="holdsPickup">Anne-Marie-Filteau (St-Nicolas)</td>
+      <td class="holdsDate"></td>
       <td class="holdsRank">1</td>
     </tr>
   </tbody></table>

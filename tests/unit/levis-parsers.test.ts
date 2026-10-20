@@ -129,7 +129,7 @@ describe('réservations', () => {
   const holds = parseHolds(holdsZoneHtml);
 
   it('lit statut, lieu de retrait, code de succursale et rang', () => {
-    expect(holds).toHaveLength(3);
+    expect(holds).toHaveLength(4);
     expect(holds[0]).toMatchObject({
       key: 'ent://SD_ILS/0/SD_ILS:333333|4000001',
       holdId: '4000001',
@@ -149,13 +149,29 @@ describe('réservations', () => {
     expect(holds[2]).toMatchObject({ status: 'suspended', pickupCode: null });
   });
 
+  it('garde une réservation prête sans case à cocher, avec son échéance de retrait', () => {
+    expect(holds[3]).toMatchObject({
+      key: 'ent://SD_ILS/0/SD_ILS:666666|4000004',
+      holdId: '4000004',
+      titleId: '666666',
+      title: 'Arrivé',
+      author: 'Auteur, Arrivé',
+      status: 'ready',
+      pickupCode: 'AMF',
+      date: '2026-10-27',
+      canChangePickup: false,
+      canCancel: false,
+    });
+    expect(holds[0]?.canCancel).toBe(true);
+  });
+
   it('reconnaît les statuts usuels', () => {
     expect(holdStatusFrom('En transit', '')).toBe('in_transit');
     expect(holdStatusFrom('Inconnu', '')).toBe('other');
   });
 
   it('lit le résumé', () => {
-    expect(parseHoldsSummary(holdsZoneHtml, holds)).toEqual({ total: 3, ready: 1 });
+    expect(parseHoldsSummary(holdsZoneHtml, holds)).toEqual({ total: 4, ready: 2 });
   });
 
   it('extrait les clés d’action et l’URL de changement de succursale', () => {
