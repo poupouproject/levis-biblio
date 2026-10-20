@@ -58,6 +58,7 @@ export function placeholderHolds(count = 3): Hold[] {
     dateLabel: null,
     queuePosition: i + 1,
     canChangePickup: true,
+    canCancel: true,
   }));
 }
 

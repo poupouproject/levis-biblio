@@ -14,7 +14,10 @@ export const HOLDS_TABLE = '#myHolds_holdslistnonmobile_table';
 
 export function holdStatusFrom(label: string, classes: string): HoldStatus {
   const text = label.toLowerCase();
-  if (classes.includes('readyHoldsCheckbox') || /retrait|disponible|prêt|available/.test(text))
+  if (
+    classes.includes('readyHoldsCheckbox') ||
+    /retrait|retirer|disponible|prêt|available/.test(text)
+  )
     return 'ready';
   if (classes.includes('suspended') || text.includes('suspend')) return 'suspended';
   if (text.includes('transit')) return 'in_transit';
@@ -22,25 +25,36 @@ export function holdStatusFrom(label: string, classes: string): HoldStatus {
   return 'other';
 }
 
-/** Réservations, à partir du HTML de la zone `libraryHoldsAccordion`. */
+/**
+ * Réservations, à partir du HTML de la zone `libraryHoldsAccordion`.
+ * Une réservation prête pour le retrait n'a pas de case à cocher (le portail ne permet plus de l'annuler) :
+ * sa clé est alors reconstituée à partir du lien de détail et de l'identifiant de la couverture.
+ */
 export function parseHolds(html: string): Hold[] {
   const $ = load(html);
   const holds: Hold[] = [];
   $(`${HOLDS_TABLE} tbody tr`).each((_, el) => {
     const row = $(el);
     const checkbox = row.find('input[value^="ent:"]').first();
-    const key = checkbox.attr('value');
-    if (!key) return;
     const info = row.find('td.holdsID');
     const link = info.find('a[onclick*="detailclick"]').first();
+    const titleId = titleIdFrom(checkbox.attr('value') ?? link.attr('onclick'));
+    const holdId =
+      checkbox.attr('value')?.split('|')[1] ??
+      /^holdInitialCover_(\d+)$/.exec(row.find('[id^="holdInitialCover_"]').attr('id') ?? '')?.[1];
+    if (!titleId || !holdId) return;
+    const key = checkbox.attr('value') ?? `ent://SD_ILS/0/SD_ILS:${titleId}|${holdId}`;
     const statusLabel = cleanText(row.find('td.holdsStatus').text());
     const status = holdStatusFrom(statusLabel, checkbox.attr('class') ?? '');
     const pickupLibrary = cleanText(row.find('td.holdsPickup').text());
-    const dateText = cleanText(row.find('td.holdsDate').text());
+    // « Retirer avant le : 26-10-27 » : l'échéance de retrait est dans le statut, la colonne de date est vide.
+    const dateText =
+      cleanText(row.find('td.holdsDate').text()) || (status === 'ready' ? statusLabel : '');
+    const date = parsePortalDate(dateText);
     holds.push({
       key,
-      holdId: key.split('|')[1] ?? '',
-      titleId: titleIdFrom(key),
+      holdId,
+      titleId,
       title:
         cleanText(link.attr('title')) || cleanText(link.text()) || cleanText(checkbox.attr('alt')),
       author: textOrNull(info.find('.holds_author').text()),
@@ -49,10 +63,11 @@ export function parseHolds(html: string): Hold[] {
       statusLabel,
       pickupLibrary,
       pickupCode: branchCodeFromName(pickupLibrary),
-      date: parsePortalDate(dateText),
+      date,
       dateLabel: dateText === '' ? null : dateText,
       queuePosition: parseIntOrNull(row.find('td.holdsRank').text()),
       canChangePickup: status !== 'ready',
+      canCancel: checkbox.length > 0,
     });
   });
   return holds;

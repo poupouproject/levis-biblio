@@ -247,7 +247,9 @@ export async function runHoldAction(
   dates?: { start: string; end: string },
 ): Promise<ActionItemResult[]> {
   const before = await loadHolds(client);
-  const targets = before.holds.filter((h) => keys.includes(h.key));
+  const targets = before.holds.filter(
+    (h) => keys.includes(h.key) && (action !== 'cancel' || h.canCancel),
+  );
   if (targets.length === 0)
     throw new LevisError('Aucune des réservations sélectionnées n’a été trouvée.');
 

@@ -162,16 +162,18 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
                           </CardAction>
                         )
                       )}
-                      <CardAction
-                        disabled={pending}
-                        danger
-                        onClick={() => {
-                          setDialog({ kind: 'cancel', hold });
-                        }}
-                        icon={<Trash2 className="h-4 w-4" aria-hidden />}
-                      >
-                        Annuler
-                      </CardAction>
+                      {hold.canCancel && (
+                        <CardAction
+                          disabled={pending}
+                          danger
+                          onClick={() => {
+                            setDialog({ kind: 'cancel', hold });
+                          }}
+                          icon={<Trash2 className="h-4 w-4" aria-hidden />}
+                        >
+                          Annuler
+                        </CardAction>
+                      )}
                     </>
                   }
                 >
