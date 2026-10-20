@@ -1,4 +1,4 @@
-import { getAccountSession } from '@/lib/account/session';
+import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { seeOther } from '@/lib/account/redirect';
 
 /**
@@ -10,6 +10,6 @@ import { seeOther } from '@/lib/account/redirect';
  */
 export async function GET(): Promise<Response> {
   const session = await getAccountSession();
-  if (session.levis) session.destroy();
+  if (isSignedIn(session)) session.destroy();
   return seeOther('/compte/connexion?raison=expiree');
 }

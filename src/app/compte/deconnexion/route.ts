@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const session = await getAccountSession();
-  if (session.levis) await logout(session.levis);
+  if (session.levis) await logout(session.levis); // Rien à fermer sur le portail en démo
   session.destroy();
   return seeOther('/compte/connexion?raison=deconnecte');
 }

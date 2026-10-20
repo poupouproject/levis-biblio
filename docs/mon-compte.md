@@ -53,6 +53,7 @@ src/lib/account/
   session.ts                   cookie scellé
   login.ts                     validation, limite de tentatives, ouverture de session
   dal.ts                       requireAccount, withAccount
+  demo.ts                      mode démonstration : dossier fictif et actions simulées
   rate-limit.ts                limite des tentatives de connexion
   origin.ts                    contrôle d'origine des formulaires (Sec-Fetch-Site, repli Origin)
   redirect.ts                  redirections 303 relatives
@@ -122,6 +123,17 @@ Après chaque action, la liste est relue et le résultat de chaque document est 
 | `LEVIS_SESSION_SECRET` | Obligatoire. Clé du cookie scellé (voir `.env.example`). |
 | `LEVIS_USER_AGENT` | Optionnel. Remplace le User-Agent envoyé au portail. |
 | `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`. |
+| `LEVIS_DEMO` | Optionnel. `1` : mode démonstration (voir ci-dessous). |
+
+### Mode démonstration (`LEVIS_DEMO=1`)
+
+Le portail de la Ville refuse les requêtes venant de Vercel : en production, Mon dossier tourne donc en mode démonstration. Il sert aussi aux captures d'écran.
+
+- La page de connexion remplace la carte et le NIP par un bouton « Explorer le dossier de démonstration ». **Aucune requête n'est envoyée au portail.**
+- Le dossier fictif (`src/lib/account/demo.ts`) : 5 emprunts, 7 réservations (une prête à récupérer, une en transit), un historique et un profil inventé. Les dates sont calculées à partir d'aujourd'hui.
+- Les actions (renouveler, annuler, suspendre, réactiver, changer de succursale, préférences) fonctionnent. Leurs effets sont gardés dans le cookie de session : chaque visiteur a sa propre démo, remise à zéro à la déconnexion.
+- Les couvertures sont servies depuis `public/maquette/couvertures/` : rien ne vient du portail.
+- Un bandeau « Démonstration : dossier fictif » s'affiche en haut de chaque page du dossier.
 
 ## 6. Tests
 

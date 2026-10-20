@@ -2,9 +2,10 @@ import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Clock, ExternalLink, Library } from 'lucide-react';
+import { CheckCircle2, Clock, ExternalLink, FlaskConical, Library, LogIn } from 'lucide-react';
 import { LoginForm } from '@/components/account/LoginForm';
-import { getAccountSession } from '@/lib/account/session';
+import { isDemoMode } from '@/lib/account/demo';
+import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { CARD_FLASH_COOKIE, LOGIN_ERRORS, isLoginErrorCode } from '@/lib/account/login';
 import { LEVIS_ORIGIN, LEVIS_LOGIN_PATH } from '@/lib/levis/config';
 
@@ -30,7 +31,7 @@ export default async function LoginPage({
   const { raison, erreur } = await searchParams;
   const session = await getAccountSession();
   // Après une expiration, on reste ici même si un cookie traîne : sinon, boucle avec le dossier.
-  if (session.levis && raison !== 'expiree') redirect('/compte');
+  if (isSignedIn(session) && raison !== 'expiree') redirect('/compte');
   const reason = raison === 'expiree' || raison === 'deconnecte' ? REASONS[raison] : null;
   const error = isLoginErrorCode(erreur) ? LOGIN_ERRORS[erreur] : null;
   const defaultCard = error ? ((await cookies()).get(CARD_FLASH_COOKIE)?.value ?? '') : '';
@@ -65,17 +66,46 @@ export default async function LoginPage({
         </p>
       )}
 
-      <LoginForm error={error} defaultCard={defaultCard} />
-
-      <a
-        href={`${LEVIS_ORIGIN}${LEVIS_LOGIN_PATH}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-600 hover:text-[#b88f42] dark:text-zinc-400"
-      >
-        NIP oublié? Le récupérer sur le portail des bibliothèques
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-      </a>
+      {isDemoMode() ? (
+        <DemoLogin />
+      ) : (
+        <>
+          <LoginForm error={error} defaultCard={defaultCard} />
+          <a
+            href={`${LEVIS_ORIGIN}${LEVIS_LOGIN_PATH}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-zinc-600 hover:text-[#b88f42] dark:text-zinc-400"
+          >
+            NIP oublié? Le récupérer sur le portail des bibliothèques
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        </>
+      )}
     </div>
+  );
+}
+
+/** Mode démonstration : pas de carte ni de NIP, un dossier fictif s'ouvre directement. */
+function DemoLogin(): JSX.Element {
+  return (
+    <form action="/compte/connexion/ouvrir" method="post" className="flex flex-col gap-4">
+      <div className="flex gap-3 rounded-xl border border-[#d4a853]/40 bg-[#d4a853]/10 p-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+        <FlaskConical className="h-5 w-5 flex-shrink-0 text-[#d4a853]" aria-hidden />
+        <p>
+          <strong className="font-semibold">Mode démonstration.</strong> En attendant un accès
+          officiel au portail de la Ville, Mon dossier s’ouvre sur un dossier fictif : emprunts,
+          réservations et historique d’exemple. Vous pouvez tout essayer, rien n’est envoyé aux
+          bibliothèques.
+        </p>
+      </div>
+      <button
+        type="submit"
+        className="flex items-center justify-center gap-2 rounded-xl bg-[#d4a853] px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-[#b88f42]"
+      >
+        <LogIn className="h-5 w-5" aria-hidden />
+        Explorer le dossier de démonstration
+      </button>
+    </form>
   );
 }

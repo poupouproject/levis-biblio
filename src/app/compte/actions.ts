@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import type { ActionItemResult, ActionResult } from '@/types';
+import type { ActionItemResult, ActionResult, Profile } from '@/types';
 import { LevisClient } from '@/lib/levis/client';
 import {
   changePickupLibrary,
@@ -14,6 +14,13 @@ import {
 import { BRANCHES } from '@/lib/levis/config';
 import { LevisError, SessionExpiredError } from '@/lib/levis/errors';
 import { getAccountSession } from '@/lib/account/session';
+import {
+  demoChangePickup,
+  demoHoldAction,
+  demoRenew,
+  demoUpdatePreferences,
+  type DemoState,
+} from '@/lib/account/demo';
 import { addDays, todayIso } from '@/lib/account/format';
 import { LOGIN_PATH } from '@/lib/account/dal';
 
@@ -30,17 +37,29 @@ function field(formData: FormData, name: string): string {
 
 const SESSION_EXPIRED = 'session_expiree';
 
+/** Une action sur le portail et son équivalent sur le dossier fictif (mode démonstration). */
+interface AccountAction {
+  portal: (client: LevisClient) => Promise<ActionItemResult[]>;
+  demo: (state: DemoState) => ActionItemResult[];
+}
+
 /** Exécute une action avec la session de l'usager, puis renouvelle le cookie scellé. */
 async function withSession(
-  run: (client: LevisClient) => Promise<ActionItemResult[]>,
+  run: AccountAction,
   successMessage: (items: ActionItemResult[]) => string,
 ): Promise<ActionResult> {
   const session = await getAccountSession();
-  if (!session.levis) return { status: 'error', message: SESSION_EXPIRED, items: [] };
-  const client = new LevisClient(session.levis);
+  const { levis, demo } = session;
+  if (!levis && !demo) return { status: 'error', message: SESSION_EXPIRED, items: [] };
   try {
-    const items = await run(client);
-    session.levis = client.toState();
+    let items: ActionItemResult[] = [];
+    if (demo) {
+      items = run.demo(demo);
+    } else if (levis) {
+      const client = new LevisClient(levis);
+      items = await run.portal(client);
+      session.levis = client.toState();
+    }
     await session.save();
     revalidatePath('/compte', 'layout');
     const failed = items.filter((i) => !i.ok).length;
@@ -88,7 +107,10 @@ export async function renewAction(barcodes: string[]): Promise<ActionResult> {
   if (!isStringArray(barcodes, BARCODE))
     return { status: 'error', message: 'Sélection invalide.', items: [] };
   return withSession(
-    (client) => renewCheckouts(client, barcodes),
+    {
+      portal: (client) => renewCheckouts(client, barcodes),
+      demo: (state) => demoRenew(state, barcodes),
+    },
     (items) => summarize(items, 'renouvelé'),
   );
 }
@@ -127,7 +149,10 @@ export async function holdAction(
     resume: 'réactivé',
   };
   return withSession(
-    (client) => runHoldAction(client, action, keys, dates),
+    {
+      portal: (client) => runHoldAction(client, action, keys, dates),
+      demo: (state) => demoHoldAction(state, action, keys, dates),
+    },
     (items) =>
       summarize(items, verb[action])
         .replace('Document', 'Réservation')
@@ -143,7 +168,10 @@ export async function changePickupAction(
     return { status: 'error', message: 'Sélection invalide.', items: [] };
   }
   return withSession(
-    (client) => changePickupLibrary(client, keys, branchCode),
+    {
+      portal: (client) => changePickupLibrary(client, keys, branchCode),
+      demo: (state) => demoChangePickup(state, keys, branchCode),
+    },
     (items) =>
       summarize(items, 'modifié')
         .replace('Document', 'Lieu de retrait')
@@ -173,28 +201,31 @@ export async function preferencesAction(
     return { status: 'error', message: 'Préférences invalides.' };
   }
 
+  const wanted = {
+    language,
+    defaultTab,
+    pickupLibrary,
+    showCheckoutHistory: formData.get('showCheckoutHistory') === 'on',
+  };
+  const outcome = ({ preferences: saved }: Profile): ActionItemResult[] => {
+    const ok =
+      saved.language === wanted.language &&
+      saved.defaultTab === wanted.defaultTab &&
+      saved.pickupLibrary === wanted.pickupLibrary &&
+      saved.showCheckoutHistory === wanted.showCheckoutHistory;
+    return [
+      {
+        id: 'preferences',
+        title: 'Préférences',
+        ok,
+        message: ok ? 'Préférences enregistrées.' : 'La bibliothèque a refusé la modification.',
+      },
+    ];
+  };
   const result = await withSession(
-    async (client) => {
-      const wanted = {
-        language,
-        defaultTab,
-        pickupLibrary,
-        showCheckoutHistory: formData.get('showCheckoutHistory') === 'on',
-      };
-      const { preferences: saved } = await updatePreferences(client, wanted);
-      const ok =
-        saved.language === wanted.language &&
-        saved.defaultTab === wanted.defaultTab &&
-        saved.pickupLibrary === wanted.pickupLibrary &&
-        saved.showCheckoutHistory === wanted.showCheckoutHistory;
-      return [
-        {
-          id: 'preferences',
-          title: 'Préférences',
-          ok,
-          message: ok ? 'Préférences enregistrées.' : 'La bibliothèque a refusé la modification.',
-        },
-      ];
+    {
+      portal: async (client) => outcome(await updatePreferences(client, wanted)),
+      demo: (state) => outcome(demoUpdatePreferences(state, wanted)),
     },
     (items) => items[0]?.message ?? '',
   );

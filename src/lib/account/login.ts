@@ -1,6 +1,7 @@
 import 'server-only';
 import { login } from '@/lib/levis/auth';
 import { InvalidCredentialsError, LevisError } from '@/lib/levis/errors';
+import { DEMO_FIRST_NAME, isDemoMode, newDemoState } from './demo';
 import { allowLoginAttempt, recordLoginSuccess } from './rate-limit';
 import { getAccountSession } from './session';
 
@@ -34,6 +35,15 @@ export async function attemptLogin(
   pin: string,
   ip: string,
 ): Promise<{ ok: true } | { ok: false; code: LoginErrorCode }> {
+  if (isDemoMode()) {
+    // Dossier fictif : rien n'est envoyé au portail, la carte et le NIP sont ignorés.
+    const session = await getAccountSession();
+    session.demo = newDemoState();
+    session.firstName = DEMO_FIRST_NAME;
+    await session.save();
+    return { ok: true };
+  }
+
   const card = rawCard.replace(/\s+/g, '');
   // Numéro de carte (code-barres) ou identifiant d'usager alphanumérique
   if (!/^[A-Za-z0-9]{4,30}$/.test(card)) return { ok: false, code: 'carte' };

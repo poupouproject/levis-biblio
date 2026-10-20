@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { SessionStatus } from '@/types';
-import { getAccountSession } from '@/lib/account/session';
+import { getAccountSession, isSignedIn } from '@/lib/account/session';
 
 /**
  * État de connexion pour le menu de l'en-tête. Le cookie de session n'est envoyé que
@@ -10,7 +10,7 @@ import { getAccountSession } from '@/lib/account/session';
 export async function GET(): Promise<NextResponse<SessionStatus>> {
   const session = await getAccountSession();
   return NextResponse.json(
-    { firstName: session.levis ? (session.firstName ?? '') : null },
+    { firstName: isSignedIn(session) ? (session.firstName ?? '') : null },
     { headers: { 'Cache-Control': 'private, no-store' } },
   );
 }
