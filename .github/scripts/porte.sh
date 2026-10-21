@@ -26,7 +26,7 @@ release_lock_if_held() {
   if has_label "$LOCK"; then
     gh pr edit "$pr" --repo "$repo" --remove-label "$LOCK" > /dev/null || true
     echo "Verrou libéré."
-    bash "$(dirname "$0")/suivante.sh"
+    SAUF="$pr" bash "$(dirname "$0")/suivante.sh"
   fi
 }
 
@@ -39,6 +39,12 @@ if [ "$EVENT" = "pull_request" ]; then
       exit 0
       ;;
     synchronize)
+      # Le commit de version de la préparation peut, lui aussi, émettre
+      # `synchronize` (constaté sur la PR #14): il ne doit rien défaire.
+      if [ "$(gh api "repos/$repo/commits/$sha" --jq ".author.login // empty")" = "github-actions[bot]" ]; then
+        echo "Commit de version de la CI: rien à faire."
+        exit 0
+      fi
       # Un commit poussé par quelqu'un: ce qui avait été validé ne vaut plus.
       gh pr edit "$pr" --repo "$repo" --remove-label "$READY" > /dev/null 2>&1 || true
       release_lock_if_held
@@ -65,6 +71,12 @@ if [ "$(field .state)" != "OPEN" ] || [ "$(field .baseRefName)" != "main" ]; the
 fi
 if ! has_label "$READY"; then
   status pending "En attente du label « ready »"
+  exit 0
+fi
+if has_label "$LOCK"; then
+  # Une relance (fin de « Vérifier la PR ») pendant que la préparation tourne:
+  # ne pas en lancer une seconde, ni toucher au statut qu'elle gère.
+  echo "Préparation déjà en cours pour cette PR."
   exit 0
 fi
 if [ "$(field .isDraft)" = "true" ]; then

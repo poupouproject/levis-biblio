@@ -285,3 +285,22 @@ tag, release avec la section du journal → verrou libéré.
 
 À tester avec des PR jetables (changeset vide) avant de compter dessus.
 `actionlint` et `shellcheck` passent sur les fichiers de référence.
+
+## 8. Constaté dans `levis-biblio` (PR #14)
+
+Contrairement au § 3.3, le commit de version poussé avec `GITHUB_TOKEN` **a
+émis `synchronize`** (exécution attribuée à la personne qui avait posé
+`ready`) : « Vérifier la PR » et la porte ont tourné sur ce commit. Effets
+observés, et corrections apportées :
+
+- La porte a pris ce commit pour un commit humain et retiré `ready` →
+  `porte.sh` ignore désormais un `synchronize` dont le commit est de
+  `github-actions[bot]`, et ne relance pas de préparation si la PR tient déjà
+  le verrou.
+- « Un changeset accompagne la branche » a échoué : le commit de version
+  supprime les changesets, absents alors du diff de la branche → la
+  vérification cherche les changesets ajoutés **commit par commit**
+  (`git log --diff-filter=A`).
+- `gh workflow run` répond 422 tant que `pret-a-publier.yml` n'est pas sur
+  `main` (amorçage) → `suivante.sh` n'en fait plus un échec, et écarte la PR
+  qui vient de perdre `ready` (liste des labels pas encore à jour).

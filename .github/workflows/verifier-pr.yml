@@ -44,8 +44,10 @@ jobs:
 
           # Uniquement les fichiers AJOUTÉS : modifier le README du dossier
           # .changeset ne compte pas comme une description de changement.
-          added="$(git diff --name-only --diff-filter=A "$base...HEAD" \
-            -- '.changeset/*.md' | grep -v '/README\.md$' || true)"
+          # Cherchés commit par commit : le commit de version de la CI consomme
+          # (supprime) les changesets, absents alors du diff de la branche.
+          added="$(git log --format= --name-only --diff-filter=A "$base..HEAD" \
+            -- '.changeset/*.md' | grep -v -e '^$' -e '/README\.md$' | sort -u || true)"
           if [ -n "$added" ]; then
             echo "Changeset trouvé :"
             echo "$added" | sed 's/^/  - /'
