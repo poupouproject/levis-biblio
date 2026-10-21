@@ -12,11 +12,49 @@ export function fold(value: string): string {
     .trim();
 }
 
-/** Mots de la requête, sans les mots vides trop courts pour discriminer. */
+/**
+ * Mots de la requête, sans les mots vides trop courts pour discriminer.
+ * Une requête faite seulement de mots vides (« Les », « La ») les garde : sinon elle ne
+ * chercherait rien et renverrait tout le catalogue.
+ */
 export function tokenize(query: string): string[] {
-  return fold(query)
-    .split(' ')
-    .filter((t) => t.length > 0 && !STOP_WORDS.has(t));
+  const words = fold(query).split(' ').filter(Boolean);
+  const meaningful = words.filter((t) => !STOP_WORDS.has(t));
+  return meaningful.length > 0 ? meaningful : words;
+}
+
+/** Somme des chiffres pondérés (clé de contrôle ISBN). */
+function weightedSum(digits: string, weight: (index: number) => number): number {
+  let sum = 0;
+  for (let i = 0; i < digits.length; i++) sum += Number(digits.charAt(i)) * weight(i);
+  return sum;
+}
+
+/** ISBN nettoyé (chiffres et « x » minuscule), ou null si la saisie n'en est pas un. */
+export function normalizeIsbn(value: string): string | null {
+  const clean = value.replace(/[\s-]/g, '').toLowerCase();
+  return /^(\d{9}[\dx]|\d{13})$/.test(clean) ? clean : null;
+}
+
+/**
+ * Formes d'un ISBN sous lesquelles le retrouver : la forme nettoyée et, pour les livres
+ * en 978, l'équivalent ISBN-10 ↔ ISBN-13 (le catalogue mélange les deux).
+ */
+export function isbnForms(value: string | null | undefined): string[] {
+  const isbn = value ? normalizeIsbn(value) : null;
+  if (!isbn) return [];
+  if (isbn.length === 10) {
+    const body = `978${isbn.slice(0, 9)}`;
+    const sum = weightedSum(body, (i) => (i % 2 === 0 ? 1 : 3));
+    return [isbn, `${body}${String((10 - (sum % 10)) % 10)}`];
+  }
+  if (isbn.startsWith('978')) {
+    const body = isbn.slice(3, 12);
+    const sum = weightedSum(body, (i) => 10 - i);
+    const check = (11 - (sum % 11)) % 11;
+    return [isbn, `${body}${check === 10 ? 'x' : String(check)}`];
+  }
+  return [isbn];
 }
 
 const STOP_WORDS = new Set(['le', 'la', 'les', 'l', 'de', 'des', 'du', 'd', 'un', 'une', 'et']);
@@ -45,7 +83,9 @@ export function parseTitle(raw: string): ParsedTitle {
   let volume: number | null = null;
 
   const seriesMatch = /^(.+?)\.\s+(\d{1,4})(?:\s*[,.:]\s*(.*))?$/.exec(text);
-  if (seriesMatch?.[1] && seriesMatch[2]) {
+  // « Histoire du Québec. 1960, … » : une année, pas un tome
+  const isYear = /^(1[0-9]|20)\d{2}$/.test(seriesMatch?.[2] ?? '');
+  if (seriesMatch?.[1] && seriesMatch[2] && !isYear) {
     series = seriesMatch[1].trim();
     volume = Number.parseInt(seriesMatch[2], 10);
     text = (seriesMatch[3] ?? '').trim();

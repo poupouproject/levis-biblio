@@ -109,35 +109,82 @@ async function loadDemo(): Promise<{ rows: RawEdition[]; totalEditions: number }
   return { rows, totalEditions: file.totalEditions };
 }
 
-async function load(): Promise<Loaded> {
-  const url = process.env.DATABASE_URL;
-  if (url) {
-    try {
-      const rows = await loadPostgres(url);
-      return { catalog: new Catalog(rows), source: 'postgres', totalEditions: rows.length };
-    } catch (error) {
-      console.warn(
-        `[catalogue] Base inaccessible (${error instanceof Error ? error.message : 'erreur'}) : jeu de démo utilisé.`,
-      );
-    }
-  }
+/** Délai avant de réessayer la base quand elle n'a pas répondu (le jeu de démo sert entre-temps). */
+export const DATABASE_RETRY_MS = 30_000;
+
+async function loadFromDatabase(url: string): Promise<Loaded> {
+  const rows = await loadPostgres(url);
+  return { catalog: new Catalog(rows), source: 'postgres', totalEditions: rows.length };
+}
+
+async function loadFromDemo(): Promise<Loaded> {
   const demo = await loadDemo();
   return { catalog: new Catalog(demo.rows), source: 'demo', totalEditions: demo.totalEditions };
 }
 
+interface Entry {
+  engine: typeof Catalog;
+  loaded: Promise<Loaded>;
+  /** Base injoignable : heure à partir de laquelle la réessayer. */
+  retryAt: number | null;
+  retrying: boolean;
+}
+
 // Conservé entre les rechargements à chaud du serveur de développement. Si le code du moteur
 // change (nouvelle classe Catalog), le catalogue est reconstruit.
-const store = globalThis as typeof globalThis & {
-  __levisCatalog?: { engine: typeof Catalog; loaded: Promise<Loaded> } | undefined;
-};
+const store = globalThis as typeof globalThis & { __levisCatalog?: Entry | undefined };
+
+function warn(error: unknown): void {
+  console.warn(
+    `[catalogue] Base inaccessible (${error instanceof Error ? error.message : 'erreur'}) : jeu de démo utilisé, nouvel essai dans ${String(DATABASE_RETRY_MS / 1000)} s.`,
+  );
+}
+
+function start(): Entry {
+  const url = process.env.DATABASE_URL;
+  const entry: Omit<Entry, 'loaded'> = { engine: Catalog, retryAt: null, retrying: false };
+  const loaded = (
+    url
+      ? loadFromDatabase(url).catch((error: unknown) => {
+          warn(error);
+          entry.retryAt = Date.now() + DATABASE_RETRY_MS;
+          return loadFromDemo();
+        })
+      : loadFromDemo()
+  ).catch((error: unknown) => {
+    if (store.__levisCatalog === entry) store.__levisCatalog = undefined;
+    throw error;
+  });
+  return Object.assign(entry, { loaded });
+}
+
+/** Réessaie la base en arrière-plan ; le jeu de démo reste servi tant qu'elle ne répond pas. */
+function retryDatabase(entry: Entry, url: string): void {
+  entry.retrying = true;
+  loadFromDatabase(url)
+    .then((loaded) => {
+      entry.loaded = Promise.resolve(loaded);
+      entry.retryAt = null;
+      console.info('[catalogue] Base de nouveau accessible : catalogue complet chargé.');
+    })
+    .catch((error: unknown) => {
+      warn(error);
+      entry.retryAt = Date.now() + DATABASE_RETRY_MS;
+    })
+    .finally(() => {
+      entry.retrying = false;
+    });
+}
 
 export function getCatalog(): Promise<Loaded> {
-  if (store.__levisCatalog?.engine !== Catalog) {
-    const loaded = load().catch((error: unknown) => {
-      store.__levisCatalog = undefined;
-      throw error;
-    });
-    store.__levisCatalog = { engine: Catalog, loaded };
+  let entry = store.__levisCatalog;
+  if (entry?.engine !== Catalog) {
+    entry = start();
+    store.__levisCatalog = entry;
   }
-  return store.__levisCatalog.loaded;
+  const url = process.env.DATABASE_URL;
+  if (url && entry.retryAt !== null && !entry.retrying && Date.now() >= entry.retryAt) {
+    retryDatabase(entry, url);
+  }
+  return entry.loaded;
 }

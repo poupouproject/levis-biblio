@@ -12,14 +12,14 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { BookOpen, Clock, Layers, Loader2, Search, TrendingUp, User, X } from 'lucide-react';
 import type { Suggestion } from '@/lib/catalog/types';
 import { searchHref } from '@/lib/catalog/query';
 import { fold, tokenize } from '@/lib/catalog/normalize';
+import { Cover } from '@/components/catalog/Cover';
 
 const RECENT_KEY = 'lb_recherches';
-const DIRECT = process.env.NEXT_PUBLIC_VERCEL_ENV !== undefined;
+/** Réponses réussies seulement : une erreur passagère ne bloque pas les essais suivants. */
 const cache = new Map<string, Suggestion[]>();
 
 function readRecent(): string[] {
@@ -47,13 +47,21 @@ function Highlight({ text, query }: { text: string; query: string }): ReactNode 
   // Mêmes mots que la recherche : « de », « la »… ne sont pas mis en évidence
   const tokens = tokenize(query).filter((t) => t.length > 1);
   if (tokens.length === 0) return text;
-  // Repli caractère par caractère : les positions restent alignées sur le texte d'origine
-  const folded = Array.from(text, (c) => fold(c).charAt(0) || ' ').join('');
+  // Repli unité par unité, en retenant pour chaque caractère replié sa position d'origine :
+  // « œ » devient « oe » (deux caractères, une position), un emoji ne décale rien.
+  let folded = '';
+  const origin: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    for (const c of fold(text.charAt(i)) || ' ') {
+      folded += c;
+      origin.push(i);
+    }
+  }
   const marks = new Array<boolean>(text.length).fill(false);
   for (const t of tokens) {
     let from = 0;
     for (let at = folded.indexOf(t, from); at !== -1; at = folded.indexOf(t, from)) {
-      for (let i = at; i < at + t.length && i < marks.length; i++) marks[i] = true;
+      for (let k = at; k < at + t.length; k++) marks[origin[k] ?? 0] = true;
       from = at + t.length;
     }
   }
@@ -80,6 +88,28 @@ function Highlight({ text, query }: { text: string; query: string }): ReactNode 
 
 const KIND_ICON = { serie: Layers, auteur: User, oeuvre: BookOpen } as const;
 
+/** Contenu d'une ligne de suggestion : vignette, libellé avec mots en gras, détail. */
+function SuggestionContent({ s, query }: { s: Suggestion; query: string }): JSX.Element {
+  const Icon = KIND_ICON[s.kind];
+  return (
+    <>
+      {s.cover ? (
+        <Cover src={s.cover} title={s.label} sizes="32px" className="w-8 flex-shrink-0 rounded" />
+      ) : (
+        <span className="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800">
+          <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm text-zinc-900 dark:text-zinc-100">
+          <Highlight text={s.label} query={query} />
+        </span>
+        <span className="block truncate text-xs text-zinc-500">{s.detail}</span>
+      </span>
+    </>
+  );
+}
+
 type Option =
   { type: 'suggestion'; suggestion: Suggestion } | { type: 'query'; q: string; recent: boolean };
 
@@ -102,7 +132,10 @@ export function SearchBox({
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [lastFetched, setLastFetched] = useState<Suggestion[]>([]);
+  const [lastFetched, setLastFetched] = useState<{ key: string; list: Suggestion[] }>({
+    key: '',
+    list: [],
+  });
   const [loading, setLoading] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const [navigating, startNavigation] = useTransition();
@@ -117,8 +150,10 @@ export function SearchBox({
 
   const key = fold(value.trim());
   const typed = key.length >= 2;
-  // Réponse en mémoire si on l'a déjà ; sinon la précédente reste affichée pendant le chargement
-  const suggestions = typed ? (cache.get(key) ?? lastFetched) : [];
+  // Seules les suggestions de la saisie actuelle sont sélectionnables. Pendant le chargement,
+  // celles de la saisie précédente restent visibles, estompées et inertes (pas de saut d'affichage).
+  const suggestions = typed ? (cache.get(key) ?? []) : [];
+  const stale = typed && !cache.has(key) && lastFetched.key !== key ? lastFetched.list : [];
 
   // « / » place le curseur dans la recherche, comme sur les grands sites
   useEffect(() => {
@@ -143,13 +178,18 @@ export function SearchBox({
       fetch(`/api/catalogue/suggestions?q=${encodeURIComponent(key)}`, {
         signal: controller.signal,
       })
-        .then((res) => (res.ok ? (res.json() as Promise<Suggestion[]>) : []))
-        .then((list) => {
+        .then(async (res) => {
+          if (!res.ok) throw new Error(String(res.status));
+          const list = (await res.json()) as Suggestion[];
           cache.set(key, list);
-          setLastFetched(list);
+          setLastFetched({ key, list });
           setActive(-1);
         })
-        .catch(() => undefined)
+        .catch(() => {
+          // Erreur ou requête annulée : rien en mémoire, la même saisie sera réessayée.
+          // L'ancienne liste disparaît plutôt que de rester affichée sous la nouvelle saisie.
+          if (!controller.signal.aborted) setLastFetched({ key, list: [] });
+        })
         .finally(() => {
           setLoading(false);
         });
@@ -172,7 +212,7 @@ export function SearchBox({
           .slice(0, 6 - recent.length)
           .map((q) => ({ type: 'query' as const, q, recent: false })),
       ];
-  const showList = open && options.length > 0;
+  const showList = open && options.length + stale.length > 0;
 
   const go = (href: string, q?: string): void => {
     if (q) saveRecent(q);
@@ -343,7 +383,6 @@ export function SearchBox({
               );
             }
             const s = option.suggestion;
-            const Icon = KIND_ICON[s.kind];
             return (
               <li
                 key={`${s.kind}-${s.href}`}
@@ -358,29 +397,20 @@ export function SearchBox({
                 }}
                 className={base}
               >
-                <span className="relative flex h-11 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
-                  {s.cover ? (
-                    <Image
-                      src={s.cover}
-                      alt=""
-                      fill
-                      sizes="32px"
-                      unoptimized={DIRECT}
-                      className="object-cover"
-                    />
-                  ) : (
-                    <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-zinc-900 dark:text-zinc-100">
-                    <Highlight text={s.label} query={value} />
-                  </span>
-                  <span className="block truncate text-xs text-zinc-500">{s.detail}</span>
-                </span>
+                <SuggestionContent s={s} query={value} />
               </li>
             );
           })}
+          {stale.map((s) => (
+            <li
+              key={`ancien-${s.kind}-${s.href}`}
+              role="presentation"
+              aria-hidden
+              className="pointer-events-none flex items-center gap-3 rounded-xl px-3 py-2 opacity-40"
+            >
+              <SuggestionContent s={s} query={value} />
+            </li>
+          ))}
         </ul>
       )}
     </form>

@@ -3,7 +3,8 @@ import { FORMAT_LABELS, type FormatGroup } from './normalize';
 import type { Period, SearchQuery, SortOrder } from './types';
 
 export const PAGE_SIZE = 24;
-const MAX_LIMIT = 240;
+/** Au-delà, on invite à préciser la recherche plutôt que d'afficher toujours plus. */
+export const MAX_LIMIT = 240;
 const PERIODS: Period[] = ['recent', '2010', '2000', 'older'];
 const SORTS: SortOrder[] = ['pertinence', 'recent', 'titre'];
 

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchX } from 'lucide-react';
 import { getCatalog } from '@/lib/catalog/source';
-import { PAGE_SIZE, parseSearchParams, searchHref } from '@/lib/catalog/query';
+import { MAX_LIMIT, PAGE_SIZE, parseSearchParams, searchHref } from '@/lib/catalog/query';
 import { PERIOD_LABELS } from '@/lib/catalog/engine';
 import { FORMAT_LABELS } from '@/lib/catalog/normalize';
 import { RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
@@ -128,16 +128,23 @@ export default async function SearchPage({
                       </li>
                     ))}
                   </ol>
-                  {result.total > result.works.length && (
-                    <Link
-                      href={searchHref({ ...query, limit: query.limit + PAGE_SIZE })}
-                      scroll={false}
-                      className="mx-auto mt-2 rounded-xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-800 hover:border-[#d4a853] dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-200"
-                    >
-                      Afficher plus ({(result.total - result.works.length).toLocaleString('fr-CA')}{' '}
-                      autres)
-                    </Link>
-                  )}
+                  {result.total > result.works.length &&
+                    (query.limit < MAX_LIMIT ? (
+                      <Link
+                        href={searchHref({ ...query, limit: query.limit + PAGE_SIZE })}
+                        scroll={false}
+                        className="mx-auto mt-2 rounded-xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-800 hover:border-[#d4a853] dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-200"
+                      >
+                        Afficher plus (
+                        {(result.total - result.works.length).toLocaleString('fr-CA')} autres)
+                      </Link>
+                    ) : (
+                      // Plafond atteint : le lien ne ferait que réafficher les mêmes résultats
+                      <p className="mx-auto mt-2 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                        {(result.total - result.works.length).toLocaleString('fr-CA')} autres
+                        résultats. Précisez la recherche ou ajoutez un filtre pour les voir.
+                      </p>
+                    ))}
                 </section>
               ) : (
                 <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-zinc-300 px-6 py-12 text-center dark:border-zinc-700">

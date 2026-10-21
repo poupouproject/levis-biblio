@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   fold,
   formatGroup,
+  isbnForms,
   parseAuthor,
   parseTitle,
   plausibleYear,
@@ -202,6 +203,79 @@ describe('recherche ↔ URL', () => {
       '/recherche?q=one+piece&format=livre',
     );
     expect(searchHref({ ...EMPTY_QUERY })).toBe('/recherche');
+  });
+});
+
+describe('corrections de la revue', () => {
+  it('garde les mots vides quand la requête n’a que ça', () => {
+    expect(tokenize('Les')).toEqual(['les']);
+    expect(tokenize('Les années')).toEqual(['annees']);
+    const catalog = new Catalog(ROWS, NOW);
+    expect(catalog.search({ ...EMPTY_QUERY, q: 'Les' }).works.map((w) => w.id)).toEqual(['201']);
+  });
+
+  it('ne prend pas une année pour un tome', () => {
+    expect(parseTitle('Histoire du Québec. 1960, la révolution tranquille')).toMatchObject({
+      series: null,
+      title: 'Histoire du Québec. 1960, la révolution tranquille',
+    });
+    expect(parseTitle('Astérix. 39, Astérix et le griffon').volume).toBe(39);
+  });
+
+  it('donne les formes ISBN-10 et ISBN-13', () => {
+    expect(isbnForms('2-07-054127-X')).toEqual(['207054127x', '9782070541270']);
+    expect(isbnForms('9782723434621')).toEqual(['9782723434621', '2723434621']);
+    expect(isbnForms('abc')).toEqual([]);
+  });
+
+  it('retrouve un ISBN terminé par X, et un ISBN-10 enregistré en 978', () => {
+    const catalog = new Catalog(
+      [
+        row('Le petit prince', 'Saint-Exupéry, Antoine de', { titleId: '900', isbn: '207054127X' }),
+        ...ROWS,
+      ],
+      NOW,
+    );
+    expect(catalog.search({ ...EMPTY_QUERY, q: '2-07-054127-x' }).works[0]?.id).toBe('900');
+    expect(catalog.search({ ...EMPTY_QUERY, q: '978-2-07-054127-0' }).works[0]?.id).toBe('900');
+    expect(catalog.search({ ...EMPTY_QUERY, q: '2723434621' }).works[0]?.id).toBe('101');
+  });
+
+  it('sépare les tomes homonymes d’auteurs différents', () => {
+    const catalog = new Catalog(
+      [
+        row('Coeur. 1, Premier', 'Tremblay, Michel', { titleId: '1' }),
+        row('Coeur. 1, Autre', 'Roy, Gabrielle', { titleId: '2' }),
+        row('Coeur. 1, Premier', null, { titleId: '3' }),
+      ],
+      NOW,
+    );
+    expect(catalog.getWork('1')?.id).not.toBe(catalog.getWork('2')?.id);
+    expect(catalog.getWork('1')?.authors).toEqual(['Michel Tremblay']);
+    // Sans auteur et avec deux candidats : reste à part plutôt que de fusionner au hasard
+    expect(catalog.getWork('3')?.editions).toHaveLength(1);
+  });
+
+  it('relie « Goscinny » et « René Goscinny » pour le filtre et les suggestions', () => {
+    const catalog = new Catalog(
+      [
+        row('Astérix. 1, Astérix le Gaulois', 'Goscinny, René', { titleId: '10' }),
+        row('Astérix. 2, La serpe d’or', 'Goscinny.', { titleId: '11' }),
+        row('Le petit Nicolas', 'Goscinny, René, 1926-1977', { titleId: '12' }),
+      ],
+      NOW,
+    );
+    const ids = (author: string): string[] =>
+      catalog
+        .search({ ...EMPTY_QUERY, author })
+        .works.map((w) => w.id)
+        .sort();
+    expect(ids('René Goscinny')).toEqual(['10', '11', '12']);
+    expect(ids('Goscinny')).toEqual(['10', '11', '12']);
+    const authors = catalog.suggest('goscinny').filter((s) => s.kind === 'auteur');
+    expect(authors).toEqual([
+      expect.objectContaining({ label: 'René Goscinny', detail: 'Auteur · 3 œuvres' }),
+    ]);
   });
 });
 

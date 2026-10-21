@@ -39,11 +39,21 @@ function random(seed: string): () => number {
   };
 }
 
+// Cache du jour : vidé seulement quand la date change. Sa taille est bornée par le nombre
+// d'œuvres ; le vider en cours de route ferait tout recalculer à chaque filtre (dispo, succursale).
 const cache = new Map<string, SimulatedAvailability>();
+let dayStart = 0;
+let dayEnd = 0;
 
 export function simulateAvailability(workId: string, today = new Date()): SimulatedAvailability {
-  const key = `${workId}|${today.toISOString().slice(0, 10)}`;
-  const cached = cache.get(key);
+  // Comparaison d'horodatages plutôt que de dates formatées : appelé pour chaque œuvre d'une recherche
+  const time = today.getTime();
+  if (time < dayStart || time >= dayEnd) {
+    cache.clear();
+    dayStart = Math.floor(time / 86_400_000) * 86_400_000;
+    dayEnd = dayStart + 86_400_000;
+  }
+  const cached = cache.get(workId);
   if (cached) return cached;
 
   const rand = random(workId);
@@ -74,7 +84,6 @@ export function simulateAvailability(workId: string, today = new Date()): Simula
         : null,
     holds: available === 0 ? Math.floor(rand() * 6) : 0,
   };
-  if (cache.size > 50_000) cache.clear();
-  cache.set(key, result);
+  cache.set(workId, result);
   return result;
 }

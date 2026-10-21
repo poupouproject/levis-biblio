@@ -5,6 +5,8 @@ import {
   FORMAT_LABELS,
   fold,
   formatGroup,
+  isbnForms,
+  normalizeIsbn,
   parseAuthor,
   parseTitle,
   plausibleYear,
@@ -67,19 +69,44 @@ export class Catalog {
   private readonly byId = new Map<string, IndexedWork>();
   private readonly seriesBySlug = new Map<string, SeriesEntry>();
   private readonly authors: AuthorEntry[];
+  private readonly authorAliases = new Map<string, string[]>();
   private readonly recentYear: number;
   readonly stats: CatalogStats;
 
   constructor(rows: RawEdition[], now = new Date()) {
     this.recentYear = now.getFullYear() - 1;
-    const groups = new Map<string, { raw: RawEdition[]; parsed: ReturnType<typeof parseTitle> }>();
+    // Une œuvre = même titre (ou même tome de série) ET même auteur : deux « Coeur. 1 »
+    // d'auteurs différents restent distincts.
+    interface Group {
+      raw: RawEdition[];
+      parsed: ReturnType<typeof parseTitle>;
+    }
+    const groups = new Map<string, Group>();
+    const orphanTomes: { row: RawEdition; parsed: Group['parsed']; tome: string }[] = [];
+    const tomeAuthors = new Map<string, string[]>(); // tome → clés des groupes avec auteur
     for (const row of rows) {
       if (!row.title) continue;
       const parsed = parseTitle(row.title);
       const author = parseAuthor(row.author);
-      const key = parsed.series
-        ? `s:${fold(parsed.series)}|${String(parsed.volume)}`
+      const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+      if (tome && !author) {
+        orphanTomes.push({ row, parsed, tome });
+        continue;
+      }
+      const key = tome
+        ? `${tome}|${author?.key ?? ''}`
         : `t:${fold(parsed.title)}|${author?.key ?? ''}`;
+      const group = groups.get(key);
+      if (group) group.raw.push(row);
+      else {
+        groups.set(key, { raw: [row], parsed });
+        if (tome) tomeAuthors.set(tome, [...(tomeAuthors.get(tome) ?? []), key]);
+      }
+    }
+    // Un tome sans auteur rejoint le tome de même numéro s'il n'y en a qu'un
+    for (const { row, parsed, tome } of orphanTomes) {
+      const candidates = tomeAuthors.get(tome) ?? [];
+      const key = candidates.length === 1 ? (candidates[0] ?? tome) : `${tome}|`;
       const group = groups.get(key);
       if (group) group.raw.push(row);
       else groups.set(key, { raw: [row], parsed });
@@ -101,6 +128,8 @@ export class Catalog {
         if (entry) {
           entry.count++;
           entry.cover ??= item.work.cover;
+          // « René » plutôt que « Rene » : on garde la graphie la plus accentuée
+          if (accents(name) > accents(entry.name)) entry.name = name;
         } else authorMap.set(f, { name, fold: f, count: 1, cover: item.work.cover });
       }
     }
@@ -111,6 +140,7 @@ export class Catalog {
         (b.work.year ?? 0) - (a.work.year ?? 0) ||
         b.popularity - a.popularity,
     );
+    this.mergeAuthorAliases(authorMap);
     this.authors = [...authorMap.values()].sort((a, b) => b.count - a.count);
     this.buildSeries();
     this.stats = {
@@ -119,6 +149,38 @@ export class Catalog {
       series: this.seriesBySlug.size,
       authors: this.authors.length,
     };
+  }
+
+  /**
+   * Un nom seul (« Goscinny ») est la même personne que le nom complet (« René Goscinny »)
+   * quand ce dernier domine ce nom de famille (au moins 75 % des œuvres signées d'un nom
+   * complet : René plutôt qu'Anne Goscinny). Les deux formes deviennent des alias :
+   * le filtre auteur les accepte toutes, la suggestion n'en garde qu'une avec le total.
+   * (« J. K. Rowling » et « J.K. Rowling » sont déjà identiques une fois repliés.)
+   */
+  private mergeAuthorAliases(authorMap: Map<string, AuthorEntry>): void {
+    const bySurname = new Map<string, AuthorEntry[]>();
+    for (const entry of authorMap.values()) {
+      const surname = entry.fold.split(' ').at(-1) ?? entry.fold;
+      bySurname.set(surname, [...(bySurname.get(surname) ?? []), entry]);
+    }
+    for (const entries of bySurname.values()) {
+      const full = entries
+        .filter((e) => e.fold.includes(' '))
+        .sort((a, b) => b.count - a.count);
+      const bare = entries.filter((e) => !e.fold.includes(' '));
+      const canonical = full[0];
+      const fullTotal = full.reduce((n, e) => n + e.count, 0);
+      // Nom complet dominant (≥ 75 % des formes complètes) : « René » face à « Anne » Goscinny
+      if (bare.length === 0 || !canonical || canonical.count < fullTotal * 0.75) continue;
+      const group = [canonical.fold, ...bare.map((b) => b.fold)];
+      for (const b of bare) {
+        canonical.count += b.count;
+        canonical.cover ??= b.cover;
+        authorMap.delete(b.fold);
+      }
+      for (const f of group) this.authorAliases.set(f, group);
+    }
   }
 
   private buildSeries(): void {
@@ -200,18 +262,21 @@ export class Catalog {
 
   search(query: SearchQuery): SearchResult {
     const started = performance.now();
-    // ISBN saisi avec des tirets : « 978-2-07-054358-9 » → « 9782070543589 »
-    const isbn = /^[\d\s-]{10,17}[\dxX]$/.test(query.q.trim())
-      ? query.q.replace(/[\s-]/g, '').toLowerCase()
-      : null;
+    // ISBN avec ou sans tirets, « X » final compris. L'index contient chaque ISBN sous ses
+    // formes 10 et 13 chiffres : un ISBN-10 retrouve un livre enregistré en 978…
+    const isbn = normalizeIsbn(query.q.trim());
     const tokens = isbn ? [isbn] : tokenize(query.q);
     const phrase = tokens.join(' ');
+    // Filtre auteur : le nom demandé et ses alias (« Goscinny » ↔ « René Goscinny »)
     const authorFold = query.author ? fold(query.author) : null;
+    const authorSet = authorFold
+      ? new Set(this.authorAliases.get(authorFold) ?? [authorFold])
+      : null;
 
     // 1. Correspondance texte + auteur (avant les filtres, pour les compteurs de facettes)
     const matched: { item: IndexedWork; score: number }[] = [];
     for (const item of this.indexed) {
-      if (authorFold && !item.authorFolds.includes(authorFold)) continue;
+      if (authorSet && !item.authorFolds.some((a) => authorSet.has(a))) continue;
       if (tokens.length > 0 && !tokens.every((t) => item.hay.includes(t))) continue;
       matched.push({ item, score: tokens.length > 0 ? score(item, tokens, phrase) : 0 });
     }
@@ -222,11 +287,14 @@ export class Catalog {
       formatSet.size === 0 || w.formats.some((f) => formatSet.has(f));
     const inPeriod = (w: CatalogWork): boolean =>
       query.period === null || periodOf(w.year, this.recentYear) === query.period;
+    const now = new Date(); // une seule date pour toute la recherche
     const inAvailability = (w: CatalogWork): boolean => {
       if (!query.available && !query.branch) return true;
-      const a = simulateAvailability(w.id);
-      const copies = query.branch ? a.branches.filter((b) => b.code === query.branch) : a.branches;
-      return copies.length > 0 && (!query.available || copies.some((b) => b.available > 0));
+      return simulateAvailability(w.id, now).branches.some(
+        (b) =>
+          (query.branch === null || b.code === query.branch) &&
+          (!query.available || b.available > 0),
+      );
     };
 
     const formatCounts = new Map<FormatGroup, number>();
@@ -389,6 +457,13 @@ export const EMPTY_QUERY: SearchQuery = {
   limit: 24,
 };
 
+/** Nombre de caractères non ASCII (accents) : sert à préférer « René » à « Rene ». */
+function accents(name: string): number {
+  let n = 0;
+  for (let i = 0; i < name.length; i++) if (name.charCodeAt(i) > 127) n++;
+  return n;
+}
+
 function periodOf(year: number | null, recentYear: number): Period {
   if (year === null || year < 2000) return 'older';
   if (year >= recentYear) return 'recent';
@@ -486,7 +561,7 @@ function buildWork(
       seriesFold,
       ...authorFolds,
       fold(first.publisher ?? ''),
-      ...editions.map((e) => e.isbn ?? ''),
+      ...editions.flatMap((e) => isbnForms(e.isbn)),
     ]
       .filter(Boolean)
       .join(' '),
