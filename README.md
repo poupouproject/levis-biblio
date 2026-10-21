@@ -33,13 +33,14 @@ Chercher un livre dans le catalogue actuel demande de la patience :
 
 ## 🚦 Où en est le projet
 
-La recherche dans le catalogue est le cœur du projet, mais elle dépend d'un accès officiel aux données de la Ville : son catalogue est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Une demande d'accès est en cours (voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx)). En attendant, les premières pièces de l'interface sont livrées.
+La recherche fonctionne sur les notices du catalogue (titres, auteurs, ISBN, couvertures), relevées une fois puis regroupées en œuvres et en séries. Les **disponibilités en temps réel** dépendent d'un accès officiel aux données de la Ville : son catalogue est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Une demande d'accès est en cours (voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx)). D'ici là, les disponibilités affichées sont simulées.
 
 | Fonctionnalité | État |
 |---|---|
-| **Recherche dans le catalogue** : résultats rapides, une fiche par œuvre | 🟡 Maquettes prêtes ; en attente d'un accès officiel |
-| **Vue par série, imprimé et numérique réunis** | 🔭 Phase 2 |
-| **Disponibilité par succursale, réservation depuis le catalogue** | ⏳ Accès officiel requis |
+| **Accueil** : nouveautés, séries, auteurs d'ici, parcourir par type, succursales ouvertes | ✅ Livré |
+| **Recherche dans le catalogue** : suggestions dès la saisie, une fiche par œuvre, filtres (type, année, disponibilité, succursale), tri, ISBN | ✅ Livré ([détails](docs/catalogue.md)) |
+| **Vue par série** : tous les tomes réunis, tome précédent et suivant | ✅ Livré (imprimé ; numérique en phase 2) |
+| **Disponibilité par succursale, réservation depuis le catalogue** | 🟡 Simulée ; accès officiel requis |
 | **Mon dossier** : emprunts et renouvellements, réservations (rang, suspension, succursale), historique, amendes, profil | ✅ Livré ([détails](docs/mon-compte.md)) |
 | **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel | ✅ Livré |
 | **Interface** : squelettes de chargement, mode clair / sombre, accessibilité | ✅ Livré |
@@ -47,7 +48,7 @@ La recherche dans le catalogue est le cœur du projet, mais elle dépend d'un ac
 ## 🤝 Principes
 
 * **Respect des systèmes de la Ville** : aucune tentative de contourner leurs protections ; on respecte leurs règles d'accès aux robots (`robots.txt`) ; appels ciblés, uniquement quand un usager consulte une page ; requêtes identifiées (`LevisBiblio/1.0`). L'objectif est un accès officiel.
-* **Zéro base de données** : aucune donnée d'usager conservée côté serveur.
+* **Zéro base de données en production** : aucune donnée d'usager conservée côté serveur. Le catalogue public est servi depuis un jeu de démo embarqué (en développement, depuis la base locale des notices).
 * **Sécurité** : numéro de carte et NIP jamais conservés ni journalisés ; session chiffrée (`httpOnly`, `SameSite=Strict`, 30 min) ; tentatives de connexion limitées ; contrôle de l'origine des formulaires.
 
 ## 🏗️ Architecture
@@ -98,6 +99,8 @@ L'application est accessible sur `http://localhost:3000`.
 | `LEVIS_SESSION_SECRET` | **Obligatoire.** Clé de chiffrement du cookie de session (32 caractères minimum). |
 | `LEVIS_USER_AGENT` | Optionnel. Remplace le User-Agent envoyé au portail. |
 | `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`. |
+| `DATABASE_URL` | Développement seulement : base Postgres des notices scrapées (table `editions`). Absente : jeu de démo. |
+| `LEVIS_DEMO` | `1` : Mon dossier en mode démonstration (voir [docs/mon-compte.md](docs/mon-compte.md)). |
 
 ### Tester sur un téléphone
 
@@ -116,6 +119,7 @@ En mode dev, le téléphone peut ouvrir `http://<adresse-du-PC>:3000` sur le mê
 | `npm run test:coverage` | Couverture de code |
 | `npm run test:live` | Vérifie le portail avec un vrai compte (lecture seule, en local seulement) |
 | `npm run format` | Formatage Prettier |
+| `npm run catalogue:demo` | Régénère le jeu de démo du catalogue depuis la base locale |
 
 ## 📁 Structure
 
