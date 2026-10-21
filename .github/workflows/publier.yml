@@ -1,0 +1,82 @@
+name: Publier
+
+# Sur main, après chaque fusion : publie ce qui est écrit. Ne décide rien.
+#
+# Le déploiement lui-même est fait par l'intégration Git de Vercel. Ici : la
+# version de package.json fait foi ; si la release vX.Y.Z n'existe pas encore,
+# tag et release GitHub avec la section correspondante de CHANGELOG.md. Si elle
+# existe déjà (une PR avec un changeset vide), rien n'est publié. Peut être
+# relancé à la main sans risque : ce qui existe déjà n'est jamais refait.
+#
+# Libère ensuite le verrou « publication-en-cours » et relance la PR suivante
+# en file (voir pret-a-publier.yml).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publier
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release GitHub
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tag et release
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="v$version"
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "La release $tag existe déjà."
+            exit 0
+          fi
+
+          # La section « ## X.Y.Z » du journal, jusqu'à la suivante.
+          touch CHANGELOG.md
+          awk -v v="$version" '
+            $0 == "## " v { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Version $version." > notes.md
+
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Lévis Biblio $version" --notes-file notes.md
+          echo "Release $tag créée."
+
+  verrou:
+    name: Libérer le verrou
+    needs: release
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+      issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      READY: ready
+      LOCK: publication-en-cours
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+      - run: |
+          set -euo pipefail
+          # La PR qui tenait le verrou vient d'être fusionnée : on le retire.
+          for pr in $(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --label "$LOCK" --json number --jq '.[].number'); do
+            gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" --remove-label "$LOCK" --remove-label "$READY" || true
+            echo "Verrou de la PR #$pr libéré."
+          done
+          bash .github/scripts/suivante.sh
