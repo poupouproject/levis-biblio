@@ -155,7 +155,14 @@ Ce projet citoyen est ouvert à tous : UI, accessibilité, tests ou simple coqui
    ```bash
    npm run typecheck && npm run lint && npm run test:unit
    ```
-4. *Commit* tes changements, puis ouvre une Pull Request
+4. Décris ton changement pour le journal : `npx changeset`
+   (ou `npx changeset add --empty` s'il n'a aucun effet visible)
+5. *Commit* tes changements, puis ouvre une Pull Request
+
+La CI refait ces vérifications sur chaque Pull Request. Chaque fusion sur `main` est une
+version : la personne qui maintient le projet pose le label `ready`, la CI calcule le numéro
+de version et le `CHANGELOG.md`, puis la release GitHub est créée après la fusion
+(voir [docs/publication-par-label.md](docs/publication-par-label.md)).
 
 Merci de ne jamais committer de données personnelles (numéro de carte, NIP, captures du portail) : les tests utilisent des données fictives.
 
