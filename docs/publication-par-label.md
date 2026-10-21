@@ -304,3 +304,8 @@ observés, et corrections apportées :
 - `gh workflow run` répond 422 tant que `pret-a-publier.yml` n'est pas sur
   `main` (amorçage) → `suivante.sh` n'en fait plus un échec, et écarte la PR
   qui vient de perdre `ready` (liste des labels pas encore à jour).
+- Changesets **v3** sort en erreur (« No unreleased changesets found »)
+  quand aucun changeset n'attend, alors que la v2 se contentait d'un
+  avertissement : c'est le cas quand on repose `ready` après une préparation
+  qui a déjà calculé la version → la préparation saute `npm run version` si
+  `.changeset/` ne contient que son README.

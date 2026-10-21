@@ -118,6 +118,12 @@ jobs:
       - name: Calculer la version
         run: |
           set -euo pipefail
+          # Changesets v3 échoue s'il n'y a rien à consommer (version déjà
+          # calculée par une préparation précédente sur cette branche).
+          if ! find .changeset -maxdepth 1 -name '*.md' ! -name README.md | grep -q .; then
+            echo "Aucun changeset en attente : version inchangée."
+            exit 0
+          fi
           npm ci --ignore-scripts
           npm run version
           # Le lockfile porte la version du paquet ; régénéré ici, sous Linux,
