@@ -14,7 +14,7 @@ const SORTED = [...BRANCHES].sort((a, b) => a.title.localeCompare(b.title, 'fr')
 
 export default function BranchesPage(): JSX.Element {
   return (
-    <div className="flex flex-col gap-5 pt-2">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 pt-2">
       <PageHeader
         title="Bibliothèques"
         subtitle="Adresses, heures d’ouverture et itinéraires des 10 succursales de Lévis."

@@ -17,7 +17,7 @@ export default async function AccountLayout({
 }): Promise<JSX.Element> {
   const { demo } = await requireAccount();
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       {demo && (
         <p className="flex items-center gap-2 rounded-xl border border-[#d4a853]/40 bg-[#d4a853]/10 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
           <FlaskConical className="h-4 w-4 flex-shrink-0 text-[#d4a853]" aria-hidden />

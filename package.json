@@ -1,6 +1,6 @@
 {
   "name": "levis-biblio",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "node": "24.x"
@@ -16,7 +16,8 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:live": "vitest run --config vitest.live.config.mts",
-    "version": "changeset version && node scripts/journal-en-francais.mjs"
+    "version": "changeset version && node scripts/journal-en-francais.mjs",
+    "catalogue:demo": "node --env-file=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/catalogue-demo.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -24,6 +25,7 @@
     "iron-session": "^9.0.1",
     "lucide-react": "^1.55.0",
     "next": "16.4.0",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1"
@@ -35,6 +37,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
