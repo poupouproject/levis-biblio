@@ -1,0 +1,36 @@
+name: Tests
+description: >-
+  Typage, lint, tests unitaires (Vitest) et build Next. Les tests « live »
+  (npm run test:live) touchent le vrai portail de la Ville : jamais en CI.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: npm
+
+    - name: Installer
+      shell: bash
+      run: npm ci
+
+    # PageProps et LayoutProps sont des types que Next génère dans .next/ :
+    # absents d'une copie neuve du dépôt, tant que rien n'a été construit.
+    - name: Typage
+      shell: bash
+      run: |
+        npx next typegen
+        npm run typecheck
+
+    - name: Lint
+      shell: bash
+      run: npm run lint
+
+    - name: Tests unitaires
+      shell: bash
+      run: npm run test:unit
+
+    - name: Build Next
+      shell: bash
+      run: npm run build

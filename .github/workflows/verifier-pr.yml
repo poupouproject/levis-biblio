@@ -1,0 +1,90 @@
+name: Vérifier la PR
+
+# À chaque commit poussé sur une pull request vers main : changeset et tests.
+#
+# Pas de filtre de chemins : ces vérifications sont exigées par la règle de
+# main, et une vérification qui ne tourne jamais bloquerait la fusion d'une PR
+# qui ne touche que la CI ou la documentation.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: verifier-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changeset:
+    name: Un changeset accompagne la branche
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Il faut l'historique pour comparer la branche à sa cible.
+          fetch-depth: 0
+
+      - name: Chercher un changeset ajouté
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.base_ref }}"
+          git fetch --quiet origin "${{ github.base_ref }}"
+
+          # Une branche qui ne touche que la doc ou la CI n'a rien à annoncer.
+          changed="$(git diff --name-only "$base...HEAD" -- . \
+            ':(exclude)docs/' ':(exclude).github/' ':(exclude).changeset/' ':(exclude)*.md')"
+          if [ -z "$changed" ]; then
+            echo "Seules la documentation ou la CI changent : pas de changeset requis."
+            exit 0
+          fi
+
+          # Uniquement les fichiers AJOUTÉS : modifier le README du dossier
+          # .changeset ne compte pas comme une description de changement.
+          # Cherchés commit par commit : le commit de version de la CI consomme
+          # (supprime) les changesets, absents alors du diff de la branche.
+          added="$(git log --format= --name-only --diff-filter=A "$base..HEAD" \
+            -- '.changeset/*.md' | grep -v -e '^$' -e '/README\.md$' | sort -u || true)"
+          if [ -n "$added" ]; then
+            echo "Changeset trouvé :"
+            echo "$added" | sed 's/^/  - /'
+            exit 0
+          fi
+
+          cat >&2 <<'MESSAGE'
+          Aucun changeset dans cette branche.
+
+          Décrivez le changement (il paraîtra dans CHANGELOG.md et la release) :
+
+              npx changeset
+
+          Si le changement n'a aucun effet visible (refactor, dépendances, tests) :
+
+              npx changeset add --empty
+          MESSAGE
+          exit 1
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/tests
+
+  # Le label « ready » a pu être posé pendant que ces vérifications tournaient :
+  # « Prêt à publier » attendait leur résultat, on le relance (aussi en cas
+  # d'échec : la porte retire alors « ready »).
+  relance:
+    name: Relancer « Prêt à publier »
+    needs: [changeset, tests]
+    if: ${{ !cancelled() && contains(github.event.pull_request.labels.*.name, 'ready') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow run pret-a-publier.yml --repo "$GITHUB_REPOSITORY" -f pr=${{ github.event.pull_request.number }}
+        env:
+          GH_TOKEN: ${{ github.token }}
