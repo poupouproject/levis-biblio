@@ -53,6 +53,14 @@ Avant de committer, vérifier : un fichier par changement ? le bon type pour cha
     (fait, reste à faire). Ne pas la fermer.
   - travail sans issue (ex. un bogue trouvé en cours de route) → créer l'issue, avec son
     jalon et ses labels, et la lier avec `Closes #N`.
-- La description résume chaque changement (une section chacun), comment il a été vérifié,
-  et ses limites.
+- Titre et description en français. La description résume chaque changement (une section
+  chacun), comment il a été vérifié, et ses limites.
 - Un nouveau commit retire `ready` : il faut le reposer pour publier.
+- Une branche de fonctionnalités qui accumule plusieurs changements reste en **brouillon**
+  (draft) jusqu'à ce que le propriétaire décide de la publier.
+
+## Voir aussi
+
+- `conventions-code` : vérifications à lancer avant de committer.
+- `verifier-app` : vérifier le changement dans un navigateur.
+- `dependances-npm` : si la branche ajoute une dépendance.
