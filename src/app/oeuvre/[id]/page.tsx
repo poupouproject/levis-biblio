@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -12,6 +12,7 @@ import { branchByCode, openStatus } from '@/lib/levis/branches';
 import { LEVIS_BASE_PATH, LEVIS_ORIGIN } from '@/lib/levis/config';
 import { formatDate } from '@/lib/account/format';
 import { Cover } from '@/components/catalog/Cover';
+import { BookSummary, BookSummarySkeleton } from '@/components/catalog/BookSummary';
 import { Shelf } from '@/components/catalog/Shelf';
 import { WorkCard } from '@/components/catalog/WorkCard';
 import { BranchButton } from '@/components/branches/BranchButton';
@@ -126,10 +127,20 @@ export default async function WorkPage({ params }: { params: Params }): Promise<
               </div>
             )}
           </dl>
-          {work.summary && (
+          {work.summary ? (
             <p className="max-w-prose leading-relaxed text-zinc-700 dark:text-zinc-300">
               {work.summary}
             </p>
+          ) : (
+            // Résumé de Google Livres, en streaming : la fiche s'affiche sans l'attendre.
+            // Sans clé, pas de requête ni d'emplacement réservé.
+            process.env.GOOGLE_BOOKS_API_KEY && (
+              <Suspense fallback={<BookSummarySkeleton />}>
+                <BookSummary
+                  isbns={work.editions.map((e) => e.isbn).filter((i): i is string => i !== null)}
+                />
+              </Suspense>
+            )
           )}
           {work.subjects.length > 0 && (
             <ul className="flex flex-wrap gap-2">

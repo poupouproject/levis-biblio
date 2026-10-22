@@ -38,6 +38,16 @@ Simulée (`availability.ts`), stable par œuvre et par jour, signalée « Démo 
 catalogue public de la Ville est protégé : ne jamais interroger les fiches ou la
 disponibilité du portail.
 
+## Résumés (Google Livres)
+
+`src/lib/catalog/google-books.ts`, affiché par `components/catalog/BookSummary.tsx` sur la
+fiche d'une œuvre seulement. Clé `GOOGLE_BOOKS_API_KEY`, **côté serveur** (jamais
+`NEXT_PUBLIC_`). **Ne jamais stocker** un résumé Google (base, jeu de démo, fichier) : les
+conditions l'interdisent ; le cache en mémoire suit l'en-tête `Cache-Control`. Garder
+l'attribution (logo « Powered by Google » et lien). Ne pas appeler Google depuis la recherche,
+les suggestions ou les étagères (quota). Les résumés Electre du portail sont sous licence de
+la Ville : ne pas les reprendre. Détails : `docs/catalogue.md`.
+
 ## Couvertures
 
 URL du portail (`btlffile/<isbn>/cover`). Sur Vercel, chargées directement par le navigateur

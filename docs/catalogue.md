@@ -30,6 +30,20 @@ Ordre de grandeur sur 153 000 œuvres : 40 à 70 ms par recherche, 80 à 100 ms 
 
 Le catalogue public de la Ville (exemplaires, succursales) est protégé contre les requêtes automatisées. En attendant un accès officiel, chaque œuvre reçoit des exemplaires fictifs, dérivés de son identifiant : les mêmes à chaque visite. Les filtres « Disponible maintenant » et « Succursale » s'appuient dessus. Toutes les vues le signalent (« Démo »). La réservation renvoie à la fiche de l'œuvre sur le portail de la Ville.
 
+### Résumés (Google Livres, `google-books.ts`)
+
+Le catalogue scrapé n'a pas de résumé : les listes de résultats lues par le scraper n'en contiennent pas. Le portail affiche ceux d'**Electre/BTLF** sur la fiche détaillée, sous licence de la Ville : on ne les reprend pas.
+
+Sur la fiche d'une œuvre, le résumé vient de l'**API Google Books**, interrogée au moment de l'affichage :
+
+- **Côté serveur seulement** : clé `GOOGLE_BOOKS_API_KEY`, jamais préfixée `NEXT_PUBLIC_` (elle serait livrée au navigateur). Sans clé : aucune requête, aucune zone réservée.
+- **Par ISBN**, jusqu'à 3 éditions de l'œuvre, délai de 3 s, en streaming (`Suspense`) : la fiche s'affiche sans attendre.
+- **Rien n'est stocké.** Les conditions de Google (Google APIs Terms of Service, § 5 e) interdisent toute base ou copie permanente, et tout cache plus long que l'en-tête de la réponse. Le cache en mémoire suit donc le `Cache-Control` de Google. Une absence de résumé est retenue 24 h (ce n'est pas un contenu de Google). Après un dépassement de quota ou une clé refusée (429, 403), pause d'une heure.
+- **Attribution** (lignes directrices de Google) : logo « Powered by Google » et lien vers la fiche Google Livres.
+- **Quota** : à lire dans la console Google Cloud. Le chiffre de 1 000 requêtes par jour est souvent cité comme quota par défaut. Seule la fiche d'une œuvre interroge Google, jamais la recherche ni les suggestions. Sans clé, le quota anonyme partagé est épuisé (constaté) : la clé est indispensable.
+
+Chercher *dans* les résumés (plein texte, vecteurs) demanderait de les stocker. Il faudrait alors une source qui le permet : BnF (Licence Ouverte), Open Library (CC0), ou les résumés Electre de la Ville avec son accord.
+
 ## 4. Pages et composants
 
 | Route | Rendu |
