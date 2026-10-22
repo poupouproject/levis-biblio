@@ -143,7 +143,7 @@ conflit fait échouer la préparation (règlement humain).
 - `synchronize` (commit poussé par quelqu'un) → retire `ready`, libère le
   verrou, statut `pending`.
 - `unlabeled ready` → libère le verrou.
-- `closed` → libère le verrou.
+- `closed` (fusionnée ou abandonnée) → retire `ready`, libère le verrou.
 - Une vérification de la PR en échec → retire `ready`, statut `failure`.
 - `labeled` sur un autre label (dont le verrou lui-même) → ignoré.
 
@@ -309,3 +309,7 @@ observés, et corrections apportées :
   avertissement : c'est le cas quand on repose `ready` après une préparation
   qui a déjà calculé la version → la préparation saute `npm run version` si
   `.changeset/` ne contient que son README.
+- `ready` restait sur les PR fusionnées (#14, #15, #43) : sur `closed`, la
+  porte retirait le verrou, et `publier.yml`, quelques secondes plus tard, ne
+  retirait `ready` qu'aux PR fusionnées portant **encore** le verrou, donc
+  aucune → la porte retire maintenant `ready` elle-même sur `closed`.
