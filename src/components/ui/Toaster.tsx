@@ -14,15 +14,15 @@ const subscribe = (onChange: () => void): (() => void) => {
 const isDark = (): boolean => document.documentElement.classList.contains('dark');
 
 /**
- * Notifications de l'application (bibliothèque Sonner). En haut au centre : le bas de l'écran
+ * Notifications de l'application (bibliothèque Sonner). En haut à droite (pleine largeur sur mobile) : le bas de l'écran
  * est occupé, sur mobile, par les barres d'action (« Renouveler la sélection »).
  */
 export function Toaster(): JSX.Element {
   const dark = useSyncExternalStore(subscribe, isDark, () => false);
   return (
     <Sonner
-      position="top-center"
-      offset={72}
+      position="top-right"
+      offset={{ top: 72, right: 24 }}
       mobileOffset={{ top: 64 }}
       theme={dark ? 'dark' : 'light'}
       richColors
