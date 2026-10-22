@@ -1,7 +1,10 @@
 'use client';
 
 import { useSyncExternalStore, type JSX } from 'react';
-import { Toaster as Sonner } from 'sonner';
+import { Slide, ToastContainer } from 'react-toastify';
+
+/** Durée d'affichage de toutes les notifications ; une barre indique le temps restant. */
+export const TOAST_DURATION_MS = 10_000;
 
 // Le thème suit la classe `dark` de <html> (sélecteur Auto / Clair / Sombre), pas seulement le système.
 const subscribe = (onChange: () => void): (() => void) => {
@@ -14,22 +17,24 @@ const subscribe = (onChange: () => void): (() => void) => {
 const isDark = (): boolean => document.documentElement.classList.contains('dark');
 
 /**
- * Notifications de l'application (bibliothèque Sonner). En haut à droite (pleine largeur sur mobile) : le bas de l'écran
- * est occupé, sur mobile, par les barres d'action (« Renouveler la sélection »).
+ * Notifications de l'application (React-Toastify). En haut à droite, pleine largeur sur mobile :
+ * le bas de l'écran y est occupé par les barres d'action (« Renouveler la sélection »).
+ * La barre de progression et la pause (survol, onglet en arrière-plan) sont celles de la librairie.
  */
 export function Toaster(): JSX.Element {
   const dark = useSyncExternalStore(subscribe, isDark, () => false);
   return (
-    <Sonner
+    <ToastContainer
       position="top-right"
-      offset={{ top: 72, right: 24 }}
-      mobileOffset={{ top: 64 }}
+      autoClose={TOAST_DURATION_MS}
+      pauseOnHover
+      pauseOnFocusLoss
+      closeOnClick={false}
+      draggable
+      newestOnTop
+      limit={4}
+      transition={Slide}
       theme={dark ? 'dark' : 'light'}
-      richColors
-      expand
-      closeButton
-      visibleToasts={4}
-      toastOptions={{ className: 'text-sm' }}
     />
   );
 }
