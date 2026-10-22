@@ -81,6 +81,25 @@ export class LevisClient {
     return zone;
   }
 
+  /**
+   * Soumet un formulaire de zone (renouveler, annuler une réservation…). Après une action, le
+   * portail répond souvent `{"redirectURL": "…/search/account/1/0?"}` pour demander de recharger
+   * « Mon dossier » : c'est un succès, pas une expiration. Seule une redirection hors de l'espace
+   * usager (vers la connexion) signale une session expirée.
+   */
+  async submitZone(path: string, body: URLSearchParams): Promise<ZoneResponse> {
+    const res = await this.postAjax(path, body);
+    if (!res.contentType.includes('json')) throw new SessionExpiredError();
+    const zone = parseZoneResponse(res.text);
+    if (
+      zone.redirectURL &&
+      !new URL(zone.redirectURL, LEVIS_ORIGIN).pathname.startsWith(LEVIS_ACCOUNT_PATH)
+    ) {
+      throw new SessionExpiredError();
+    }
+    return zone;
+  }
+
   /** Charge la page « Mon dossier » ; lève `SessionExpiredError` si le portail redirige ailleurs. */
   async loadAccountPage(): Promise<string> {
     const res = await this.get(LEVIS_ACCOUNT_PATH);

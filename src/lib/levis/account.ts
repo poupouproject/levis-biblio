@@ -158,7 +158,7 @@ export async function renewCheckouts(
   let messages: string[] = [];
   if (zoneId) {
     form.fields.set('t:zoneid', zoneId);
-    messages = parseCheckoutMessages(zoneHtml(await client.loadZone(form.action, form.fields)));
+    messages = parseCheckoutMessages(zoneHtml(await client.submitZone(form.action, form.fields)));
   } else {
     await client.postForm(form.action, form.fields);
   }
@@ -274,7 +274,7 @@ export async function runHoldAction(
   let messages: string[] = [];
   if (zoneId) {
     form.fields.set('t:zoneid', zoneId);
-    messages = parseHoldMessages(zoneHtml(await client.loadZone(form.action, form.fields)));
+    messages = parseHoldMessages(zoneHtml(await client.submitZone(form.action, form.fields)));
   } else {
     const res = await client.postForm(form.action, form.fields);
     messages = parseHoldMessages(res.text);
