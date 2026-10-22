@@ -47,7 +47,7 @@ Avant de committer, vérifier : un fichier par changement ? le bon type pour cha
 ## Pull request
 
 - Une branche par lot de travail, PR vers `main`.
-- **Lier les issues** (feuille de route : projet GitHub « LévisBiblio — Feuille de route ») :
+- **Lier les issues** (détail : skill `feuille-de-route`) :
   - issue entièrement résolue → `Closes #N` dans la description : GitHub la ferme à la fusion ;
   - issue seulement avancée → `Refs #N`, et un commentaire d'avancement sur l'issue
     (fait, reste à faire). Ne pas la fermer.
@@ -64,3 +64,4 @@ Avant de committer, vérifier : un fichier par changement ? le bon type pour cha
 - `conventions-code` : vérifications à lancer avant de committer.
 - `verifier-app` : vérifier le changement dans un navigateur.
 - `dependances-npm` : si la branche ajoute une dépendance.
+- `feuille-de-route` : créer, lier, commenter et fermer les issues ; statut dans le projet.
