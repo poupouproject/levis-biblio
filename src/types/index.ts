@@ -27,6 +27,7 @@ export type {
   Profile,
   ActionItemResult,
   ActionResult,
+  ActionResultParts,
   CoverInfo,
   CoverMap,
   SessionStatus,

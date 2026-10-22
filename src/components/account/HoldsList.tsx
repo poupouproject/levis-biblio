@@ -19,7 +19,7 @@ import { StreamedCover, StreamedIsbn } from './StreamedCover';
 import { BranchButton } from '@/components/branches/BranchButton';
 import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { Dialog } from './Dialog';
-import { ActionFeedback, ItemMessage } from './ActionFeedback';
+import { ItemMessage } from './ActionFeedback';
 
 interface HoldsListProps {
   holds: Hold[];
@@ -64,7 +64,7 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
   const [branch, setBranch] = useState('');
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(addDays(today, 14));
-  const { pending, result, run, clear } = useAccountAction();
+  const { pending, result, run } = useAccountAction();
   const close = (): void => {
     setDialog(null);
   };
@@ -81,7 +81,6 @@ export function HoldsList({ holds, covers, branches, today }: HoldsListProps): J
 
   return (
     <div className="flex flex-col gap-6">
-      <ActionFeedback result={result} onDismiss={clear} />
       {pending && (
         <p className="flex items-center justify-center gap-2 text-sm text-zinc-500" role="status">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Communication avec la

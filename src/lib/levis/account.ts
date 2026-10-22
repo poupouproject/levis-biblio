@@ -12,7 +12,7 @@ import type {
   Preferences,
   Profile,
 } from '@/types';
-import { formatDate } from '@/lib/account/format';
+import { formatDate, renewalRefusedMessage } from '@/lib/account/format';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
 import { LevisError, ParseError } from './errors';
@@ -158,7 +158,7 @@ export async function renewCheckouts(
   let messages: string[] = [];
   if (zoneId) {
     form.fields.set('t:zoneid', zoneId);
-    messages = parseCheckoutMessages(zoneHtml(await client.loadZone(form.action, form.fields)));
+    messages = parseCheckoutMessages(zoneHtml(await client.submitZone(form.action, form.fields)));
   } else {
     await client.postForm(form.action, form.fields);
   }
@@ -175,9 +175,7 @@ export async function renewCheckouts(
       ok: renewed,
       message: renewed
         ? `Renouvelé${updated.dueDate ? ` jusqu’au ${formatDate(updated.dueDate)}` : ''}.`
-        : (updated?.alert ??
-          messages[0] ??
-          'Renouvellement refusé par la bibliothèque (réservé par un autre usager ou limite atteinte).'),
+        : (updated?.alert ?? messages[0] ?? renewalRefusedMessage(target.dueDate)),
     };
   });
 }
@@ -274,7 +272,7 @@ export async function runHoldAction(
   let messages: string[] = [];
   if (zoneId) {
     form.fields.set('t:zoneid', zoneId);
-    messages = parseHoldMessages(zoneHtml(await client.loadZone(form.action, form.fields)));
+    messages = parseHoldMessages(zoneHtml(await client.submitZone(form.action, form.fields)));
   } else {
     const res = await client.postForm(form.action, form.fields);
     messages = parseHoldMessages(res.text);

@@ -97,3 +97,20 @@ html.dark {
     display: none; /* Chrome, Safari and Opera */
   }
 }
+
+/* ─── Notifications (React-Toastify, src/components/ui/Toaster.tsx) ───
+   Sa feuille de style est injectée après celle-ci : variables posées sur <body> et sélecteurs
+   préfixés par `body` pour l'emporter. Sous l'en-tête fixe (h-14), couleurs de l'application. */
+body {
+  --toastify-font-family: inherit;
+  --toastify-toast-top: calc(4.5rem + env(safe-area-inset-top));
+  --toastify-toast-bd-radius: 0.75rem;
+  --toastify-color-success: #15803d; /* green-700 */
+  --toastify-color-error: #dc2626; /* red-600 */
+}
+
+@media only screen and (max-width: 480px) {
+  body .Toastify__toast-container--top-right {
+    top: calc(3.5rem + env(safe-area-inset-top));
+  }
+}

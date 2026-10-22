@@ -1,48 +1,55 @@
 'use client';
 
 import type { JSX } from 'react';
-import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
-import type { ActionResult } from '@/types';
+import { toast } from 'react-toastify';
+import type { ActionItemResult, ActionResult } from '@/types';
 
-interface ActionFeedbackProps {
-  result: ActionResult | null;
-  onDismiss: () => void;
-}
-
-/** Bandeau de résultat d'une action, annoncé aux lecteurs d'écran. */
-export function ActionFeedback({ result, onDismiss }: ActionFeedbackProps): JSX.Element {
+/** Contenu d'une notification : titre et, s'il y a lieu, un document par ligne avec son message. */
+function Content({
+  title,
+  items = [],
+}: {
+  title: string;
+  items?: ActionItemResult[];
+}): JSX.Element {
   return (
-    <div aria-live="polite" aria-atomic="true">
-      {result && (
-        <div
-          role="status"
-          className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${
-            result.status === 'success'
-              ? 'border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200'
-              : 'border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
-          }`}
-        >
-          {result.status === 'success' ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
-          ) : (
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
-          )}
-          <p className="flex-grow font-medium">{result.message}</p>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="rounded p-0.5 opacity-70 hover:opacity-100"
-            aria-label="Masquer le message"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <div className="text-sm">
+      <p className="font-semibold">{title}</p>
+      {items.length > 0 && (
+        <ul className="mt-1 flex flex-col gap-1">
+          {items.map((item) => (
+            <li key={item.id}>
+              <span className="font-semibold">{item.title}</span> : {item.message}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
 }
 
-/** Message propre à un document, sous sa carte. */
+/**
+ * Notifications d'un résultat d'action, 10 s chacune avec une barre de temps restant (voir
+ * Toaster). Résultat mixte : deux notifications, une pour les documents traités, une pour les
+ * refus avec leur motif.
+ */
+export function notifyResult(result: ActionResult): void {
+  const ok = result.items.filter((i) => i.ok);
+  const refused = result.items.filter((i) => !i.ok);
+  if (result.items.length === 0) {
+    const content = <Content title={result.message} />;
+    if (result.status === 'success') toast.success(content);
+    else toast.error(content);
+    return;
+  }
+  if (ok.length > 0)
+    toast.success(<Content title={result.parts?.ok ?? result.message} items={ok} />);
+  if (refused.length > 0) {
+    toast.error(<Content title={result.parts?.refused ?? result.message} items={refused} />);
+  }
+}
+
+/** Message propre à un document, sous sa carte : reste visible après les notifications. */
 export function ItemMessage({
   result,
   id,

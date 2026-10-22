@@ -118,9 +118,17 @@ export interface ActionItemResult {
   message: string;
 }
 
+/** Titres des notifications : documents traités, documents refusés (`null` : aucun). */
+export interface ActionResultParts {
+  ok: string | null;
+  refused: string | null;
+}
+
+/** `partial` : une partie des documents traités, le reste refusé (ex. un renouvelé, un réservé). */
 export type ActionResult =
-  | { status: 'success'; message: string; items: ActionItemResult[] }
-  | { status: 'error'; message: string; items: ActionItemResult[] };
+  | { status: 'success'; message: string; items: ActionItemResult[]; parts?: ActionResultParts }
+  | { status: 'partial'; message: string; items: ActionItemResult[]; parts?: ActionResultParts }
+  | { status: 'error'; message: string; items: ActionItemResult[]; parts?: ActionResultParts };
 
 /** État de connexion exposé à l'en-tête (`GET /compte/session`). `null` : personne n'est connecté. */
 export interface SessionStatus {

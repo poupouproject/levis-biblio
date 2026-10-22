@@ -50,6 +50,15 @@ export function formatDate(
   });
 }
 
+/**
+ * Refus de renouvellement. Le portail n'en donne pas le motif ; en pratique, c'est presque
+ * toujours une réservation d'un autre usager (sinon, la limite de renouvellements).
+ */
+export function renewalRefusedMessage(dueDate: string | null): string {
+  const due = dueDate ? ` À rapporter d’ici le ${formatDate(dueDate)}.` : '';
+  return `Non renouvelé : un autre usager l’a réservé (ou la limite de renouvellements est atteinte).${due}`;
+}
+
 /** Ajoute des jours à une date ISO. */
 export function addDays(iso: string, days: number): string {
   return new Date(Date.parse(`${iso}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
