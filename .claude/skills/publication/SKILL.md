@@ -47,6 +47,12 @@ Avant de committer, vérifier : un fichier par changement ? le bon type pour cha
 ## Pull request
 
 - Une branche par lot de travail, PR vers `main`.
+- **Lier les issues** (feuille de route : projet GitHub « LévisBiblio — Feuille de route ») :
+  - issue entièrement résolue → `Closes #N` dans la description : GitHub la ferme à la fusion ;
+  - issue seulement avancée → `Refs #N`, et un commentaire d'avancement sur l'issue
+    (fait, reste à faire). Ne pas la fermer.
+  - travail sans issue (ex. un bogue trouvé en cours de route) → créer l'issue, avec son
+    jalon et ses labels, et la lier avec `Closes #N`.
 - La description résume chaque changement (une section chacun), comment il a été vérifié,
   et ses limites.
 - Un nouveau commit retire `ready` : il faut le reposer pour publier.
