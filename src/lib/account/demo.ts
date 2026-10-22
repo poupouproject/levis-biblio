@@ -24,7 +24,7 @@ import {
 import { branchName } from '@/lib/levis/config';
 import type { LevisClient } from '@/lib/levis/client';
 import { LevisError } from '@/lib/levis/errors';
-import { addDays, formatDate, todayIso } from './format';
+import { addDays, formatDate, renewalRefusedMessage, todayIso } from './format';
 
 /**
  * Mode démonstration (`LEVIS_DEMO=1`) : « Mon dossier » fonctionne sans le portail de la Ville,
@@ -55,6 +55,8 @@ export function newDemoState(): DemoState {
 }
 
 const MAX_RENEWALS = 3;
+/** « Poussière de rêve » est réservé par un autre usager : son renouvellement est toujours refusé. */
+const RESERVED_BY_OTHER = new Set(['990000000103']);
 const RENEWAL_DAYS = 21;
 const COVERS = '/maquette/couvertures';
 
@@ -415,12 +417,13 @@ export function demoRenew(state: DemoState, barcodes: string[]): ActionItemResul
   return checkouts
     .filter((c) => barcodes.includes(c.barcode))
     .map((c) => {
-      if (c.renewals >= MAX_RENEWALS) {
+      if (RESERVED_BY_OTHER.has(c.barcode) || c.renewals >= MAX_RENEWALS) {
+        // Même message que le portail : il ne précise pas le motif du refus
         return {
           id: c.barcode,
           title: c.title,
           ok: false,
-          message: 'Limite de renouvellements atteinte.',
+          message: renewalRefusedMessage(c.dueDate),
         };
       }
       state.renewed[c.barcode] = c.renewals + 1;

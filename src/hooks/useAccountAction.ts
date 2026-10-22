@@ -3,6 +3,7 @@
 import { useCallback, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ActionResult } from '@/types';
+import { notifyResult } from '@/components/account/ActionFeedback';
 
 interface AccountAction {
   pending: boolean;
@@ -11,7 +12,7 @@ interface AccountAction {
   clear: () => void;
 }
 
-/** Exécute une Server Action du dossier et gère l'expiration de session. */
+/** Exécute une Server Action du dossier, annonce le résultat (notifications) et gère l'expiration de session. */
 export function useAccountAction(): AccountAction {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -36,6 +37,7 @@ export function useAccountAction(): AccountAction {
           return;
         }
         setResult(res);
+        notifyResult(res);
         onDone?.(res);
       });
     },

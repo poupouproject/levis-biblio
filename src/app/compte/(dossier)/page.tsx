@@ -198,10 +198,10 @@ function OverviewContent({
                   <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     {x.title}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <div className="text-xs text-zinc-500">
                     <BranchButton code={x.pickupCode} label={x.pickupLibrary} variant="link" />
                     {x.date ? ` · avant le ${formatDate(x.date, 'short', today)}` : ''}
-                  </p>
+                  </div>
                 </div>
               </li>
             ))}

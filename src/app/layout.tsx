@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Library, MapPin, Search } from 'lucide-react';
 import { AccountMenu } from '@/components/account/AccountMenu';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
+import { Toaster } from '@/components/ui/Toaster';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -64,6 +65,7 @@ export default function RootLayout({
 
         {/* Contenu principal (qui va s'étirer) */}
         <main className="mx-auto w-full max-w-6xl flex-grow p-4 sm:p-6">{children}</main>
+        <Toaster />
 
         {/* Pied de page (Footer) avec le disclaimer */}
         <footer className="mt-auto border-t border-zinc-200 bg-white py-6 dark:border-zinc-800 dark:bg-[#1a1a1a]">

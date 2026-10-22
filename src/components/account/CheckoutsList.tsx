@@ -9,7 +9,7 @@ import { plural } from '@/lib/account/format';
 import { StreamedCover, StreamedIsbn } from './StreamedCover';
 import { CardAction, DocumentCard, MetaChip } from './DocumentCard';
 import { DueBadge } from './DueBadge';
-import { ActionFeedback, ItemMessage } from './ActionFeedback';
+import { ItemMessage } from './ActionFeedback';
 
 interface CheckoutsListProps {
   checkouts: Checkout[];
@@ -19,7 +19,7 @@ interface CheckoutsListProps {
 
 export function CheckoutsList({ checkouts, covers, today }: CheckoutsListProps): JSX.Element {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { pending, result, run, clear } = useAccountAction();
+  const { pending, result, run } = useAccountAction();
   const allSelected = selected.size === checkouts.length && checkouts.length > 0;
 
   const toggle = (barcode: string): void => {
@@ -42,8 +42,6 @@ export function CheckoutsList({ checkouts, covers, today }: CheckoutsListProps):
 
   return (
     <div className="flex flex-col gap-4 pb-24 sm:pb-0">
-      <ActionFeedback result={result} onDismiss={clear} />
-
       <div className="flex items-center justify-between gap-3">
         <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
           <input

@@ -1,5 +1,5 @@
 ---
-"levis-biblio": patch
+"levis-biblio": minor
 ---
 
-Renouveler un emprunt ou modifier une réservation n'affiche plus « session expirée » à tort : le portail répond à ces actions par une redirection vers Mon dossier, qui était prise pour une expiration.
+Mon dossier : le résultat des actions s'affiche en notifications. Pour un résultat mixte, une notification pour les documents renouvelés (elle disparaît seule) et une pour les refus, avec leur motif et la date de retour (elle reste jusqu'à fermeture). Renouveler un emprunt ou modifier une réservation n'affiche plus « session expirée » à tort.

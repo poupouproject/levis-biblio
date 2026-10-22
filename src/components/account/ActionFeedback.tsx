@@ -1,48 +1,49 @@
 'use client';
 
 import type { JSX } from 'react';
-import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
-import type { ActionResult } from '@/types';
+import { toast } from 'sonner';
+import type { ActionItemResult, ActionResult } from '@/types';
 
-interface ActionFeedbackProps {
-  result: ActionResult | null;
-  onDismiss: () => void;
-}
-
-/** Bandeau de résultat d'une action, annoncé aux lecteurs d'écran. */
-export function ActionFeedback({ result, onDismiss }: ActionFeedbackProps): JSX.Element {
+function Details({ items }: { items: ActionItemResult[] }): JSX.Element {
   return (
-    <div aria-live="polite" aria-atomic="true">
-      {result && (
-        <div
-          role="status"
-          className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${
-            result.status === 'success'
-              ? 'border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200'
-              : 'border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'
-          }`}
-        >
-          {result.status === 'success' ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
-          ) : (
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
-          )}
-          <p className="flex-grow font-medium">{result.message}</p>
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="rounded p-0.5 opacity-70 hover:opacity-100"
-            aria-label="Masquer le message"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-    </div>
+    <ul className="mt-1 flex flex-col gap-1">
+      {items.map((item) => (
+        <li key={item.id}>
+          <span className="font-semibold">{item.title}</span> : {item.message}
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/** Message propre à un document, sous sa carte. */
+/**
+ * Notifications d'un résultat d'action. Résultat mixte : deux notifications, une pour les
+ * documents traités (disparaît seule), une pour les refus (reste jusqu'à fermeture, puisqu'il
+ * faut agir : rapporter le livre).
+ */
+export function notifyResult(result: ActionResult): void {
+  const ok = result.items.filter((i) => i.ok);
+  const refused = result.items.filter((i) => !i.ok);
+  if (result.items.length === 0) {
+    if (result.status === 'success') toast.success(result.message);
+    else toast.error(result.message, { duration: Infinity });
+    return;
+  }
+  if (ok.length > 0) {
+    toast.success(result.parts?.ok ?? result.message, {
+      description: <Details items={ok} />,
+      duration: 6000,
+    });
+  }
+  if (refused.length > 0) {
+    toast.error(result.parts?.refused ?? result.message, {
+      description: <Details items={refused} />,
+      duration: Infinity,
+    });
+  }
+}
+
+/** Message propre à un document, sous sa carte : reste visible après les notifications. */
 export function ItemMessage({
   result,
   id,

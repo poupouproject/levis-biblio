@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import type { ActionItemResult, ActionResult, Profile } from '@/types';
+import type { ActionItemResult, ActionResult, ActionResultParts, Profile } from '@/types';
 import { LevisClient } from '@/lib/levis/client';
 import {
   changePickupLibrary,
@@ -23,6 +23,7 @@ import {
 } from '@/lib/account/demo';
 import { addDays, todayIso } from '@/lib/account/format';
 import { LOGIN_PATH } from '@/lib/account/dal';
+import { PICKUP, RESERVATION, describe } from '@/lib/account/summary';
 
 /** Valeur texte d'un champ de formulaire (les fichiers sont ignorés). */
 function field(formData: FormData, name: string): string {
@@ -46,7 +47,7 @@ interface AccountAction {
 /** Exécute une action avec la session de l'usager, puis renouvelle le cookie scellé. */
 async function withSession(
   run: AccountAction,
-  successMessage: (items: ActionItemResult[]) => string,
+  describeResult: (items: ActionItemResult[]) => { message: string; parts?: ActionResultParts },
 ): Promise<ActionResult> {
   const session = await getAccountSession();
   const { levis, demo } = session;
@@ -64,8 +65,8 @@ async function withSession(
     revalidatePath('/compte', 'layout');
     const failed = items.filter((i) => !i.ok).length;
     return {
-      status: failed === items.length ? 'error' : 'success',
-      message: successMessage(items),
+      status: failed === 0 ? 'success' : failed === items.length ? 'error' : 'partial',
+      ...describeResult(items),
       items,
     };
   } catch (error) {
@@ -80,17 +81,6 @@ async function withSession(
       items: [],
     };
   }
-}
-
-function summarize(items: ActionItemResult[], verb: string): string {
-  const ok = items.filter((i) => i.ok).length;
-  if (ok === items.length)
-    return items.length === 1 ? `Document ${verb}.` : `${String(ok)} documents ${verb}s.`;
-  if (ok === 0)
-    return items.length === 1
-      ? (items[0]?.message ?? 'Action refusée.')
-      : 'Aucun document n’a pu être traité.';
-  return `${String(ok)} sur ${String(items.length)} documents ${verb}s.`;
 }
 
 const isStringArray = (value: unknown, pattern: RegExp): value is string[] =>
@@ -111,7 +101,7 @@ export async function renewAction(barcodes: string[]): Promise<ActionResult> {
       portal: (client) => renewCheckouts(client, barcodes),
       demo: (state) => demoRenew(state, barcodes),
     },
-    (items) => summarize(items, 'renouvelé'),
+    (items) => describe(items, 'renouvelé'),
   );
 }
 
@@ -153,10 +143,7 @@ export async function holdAction(
       portal: (client) => runHoldAction(client, action, keys, dates),
       demo: (state) => demoHoldAction(state, action, keys, dates),
     },
-    (items) =>
-      summarize(items, verb[action])
-        .replace('Document', 'Réservation')
-        .replace('documents', 'réservations'),
+    (items) => describe(items, verb[action], RESERVATION),
   );
 }
 
@@ -172,10 +159,7 @@ export async function changePickupAction(
       portal: (client) => changePickupLibrary(client, keys, branchCode),
       demo: (state) => demoChangePickup(state, keys, branchCode),
     },
-    (items) =>
-      summarize(items, 'modifié')
-        .replace('Document', 'Lieu de retrait')
-        .replace('documents', 'réservations'),
+    (items) => describe(items, 'modifié', PICKUP),
   );
 }
 
@@ -227,8 +211,9 @@ export async function preferencesAction(
       portal: async (client) => outcome(await updatePreferences(client, wanted)),
       demo: (state) => outcome(demoUpdatePreferences(state, wanted)),
     },
-    (items) => items[0]?.message ?? '',
+    (items) => ({ message: items[0]?.message ?? '' }),
   );
   if (result.message === SESSION_EXPIRED) redirect(`${LOGIN_PATH}?raison=expiree`);
-  return { status: result.status, message: result.message };
+  // Une seule entrée (les préférences) : jamais de résultat partiel
+  return { status: result.status === 'success' ? 'success' : 'error', message: result.message };
 }
