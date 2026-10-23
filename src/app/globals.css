@@ -109,6 +109,13 @@ body {
   --toastify-color-error: #dc2626; /* red-600 */
 }
 
+/* Plus larges que les 320 px par défaut dès qu’il y a de la place (le mobile reste pleine largeur). */
+@media only screen and (min-width: 481px) {
+  body {
+    --toastify-toast-width: 26rem;
+  }
+}
+
 @media only screen and (max-width: 480px) {
   body .Toastify__toast-container--top-right {
     top: calc(3.5rem + env(safe-area-inset-top));
