@@ -50,8 +50,7 @@ html.dark {
 }
 
 /* Éléments « feuilles » portant du texte : une barre à la largeur du texte. */
-[data-skeleton]
-  *:not(:has(*)):not(:empty):not(svg *):not([data-skeleton-ignore], [data-skeleton-ignore] *) {
+[data-skeleton] *:not(:has(*)):not(:empty):not(svg *):not([data-skeleton-ignore], [data-skeleton-ignore] *) {
   max-inline-size: fit-content;
   border-radius: 0.375rem;
   background-color: var(--skeleton) !important;
@@ -59,11 +58,7 @@ html.dark {
 }
 
 /* Icônes et champs : un bloc. */
-[data-skeleton]
-  :is(svg, input, select, textarea, button:empty):not(
-    [data-skeleton-ignore],
-    [data-skeleton-ignore] *
-  ) {
+[data-skeleton] :is(svg, input, select, textarea, button:empty):not([data-skeleton-ignore], [data-skeleton-ignore] *) {
   border-color: transparent !important;
   border-radius: 0.375rem;
   background-color: var(--skeleton) !important;
@@ -95,8 +90,8 @@ html.dark {
 
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */

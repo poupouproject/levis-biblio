@@ -2,15 +2,28 @@
 
 import { useEffect, type JSX } from 'react';
 import { toast } from 'react-toastify';
+import { TOAST_DURATION_MS } from '@/components/ui/Toaster';
+import { REPO_URL } from '@/lib/site';
 
-const REPO_URL = 'https://github.com/poupouproject/levis-biblio';
 const DEMO_TOAST_ID = 'mode-demo';
+const DEMO_TOAST_SEEN_KEY = 'lb-demo-toast-vue';
 
 /** Plus long que les autres notifications : le message s’adresse au visiteur, pas à une action. */
-const DEMO_TOAST_DURATION_MS = 20_000;
+const DEMO_TOAST_DURATION_MS = 2 * TOAST_DURATION_MS;
+
+/** Une fois par session d’onglet : un rechargement ne ressert pas le message à qui l’a déjà lu. */
+function demoToastAlreadySeen(): boolean {
+  try {
+    if (sessionStorage.getItem(DEMO_TOAST_SEEN_KEY) === '1') return true;
+    sessionStorage.setItem(DEMO_TOAST_SEEN_KEY, '1');
+  } catch {
+    // Stockage inaccessible (navigation privée stricte…) : on l’affiche, sans mémoire.
+  }
+  return false;
+}
 
 function showDemoToast(): void {
-  // `theme` lu ici : au premier chargement, le Toaster n’a pas encore basculé en sombre (hydratation).
+  // Pas de `theme` : la notification suit celui du Toaster, qui suit la classe `dark` en direct.
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
   toast.info(
     <div className="text-[0.8125rem] leading-snug sm:text-sm sm:leading-normal">
@@ -36,25 +49,23 @@ function showDemoToast(): void {
     {
       toastId: DEMO_TOAST_ID,
       autoClose: DEMO_TOAST_DURATION_MS,
-      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
     },
   );
 }
 
 /**
  * Pastille « Démo » de l’en-tête (mode démonstration seulement). Le message d’explication
- * s’affiche au premier chargement et chaque fois qu’on clique sur la pastille.
+ * s’affiche à la première visite de la session et chaque fois qu’on clique sur la pastille.
  */
 export function DemoBadge(): JSX.Element {
   useEffect(() => {
-    showDemoToast();
+    if (!demoToastAlreadySeen()) showDemoToast();
   }, []);
 
   return (
     <button
       type="button"
       onClick={showDemoToast}
-      aria-label="Démo : pourquoi les données sont fictives"
       className="flex cursor-pointer items-center gap-1.5 rounded-full border border-sky-500/60 bg-sky-500/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-sky-800 uppercase hover:bg-sky-500/20 dark:text-sky-300"
     >
       {/* Point qui pulse : rappelle qu’on est en démo même si le message a été fermé.
@@ -64,6 +75,7 @@ export function DemoBadge(): JSX.Element {
         <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
       </span>
       Démo
+      <span className="sr-only"> : afficher pourquoi les données sont fictives</span>
     </button>
   );
 }

@@ -39,19 +39,20 @@ export default function RootLayout({
         {/* En-tête (Header) simple et fixe */}
         <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-[#1a1a1a]/80">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-2">
-              <Link href="/" className="flex items-center gap-2 text-[#d4a853]">
-                <Library className="h-5 w-5" />
-                <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link href="/" className="flex min-w-0 items-center gap-2 text-[#d4a853]">
+                <Library className="h-5 w-5 shrink-0" />
+                <span className="truncate text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                   Lévis<span className="text-[#d4a853]">Biblio</span>
                 </span>
               </Link>
-              <span className="rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase dark:text-[#d4a853]">
+              <span className="shrink-0 rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase dark:text-[#d4a853]">
                 Bêta
               </span>
+              {/* Lu au rendu du serveur : sur Vercel, la variable est fixée au déploiement. */}
               {isDemoMode() && <DemoBadge />}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <Link
                 href="/recherche"
                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
