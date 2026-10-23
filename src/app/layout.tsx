@@ -6,6 +6,7 @@ import { Library, MapPin, Search } from 'lucide-react';
 import { AccountMenu } from '@/components/account/AccountMenu';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { Toaster } from '@/components/ui/Toaster';
+import { isDemoMode } from '@/lib/account/demo';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -37,12 +38,22 @@ export default function RootLayout({
         {/* En-tête (Header) simple et fixe */}
         <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-[#1a1a1a]/80">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-            <Link href="/" className="flex items-center gap-2 text-[#d4a853]">
-              <Library className="h-5 w-5" />
-              <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                Lévis<span className="text-[#d4a853]">Biblio</span>
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2 text-[#d4a853]">
+                <Library className="h-5 w-5" />
+                <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  Lévis<span className="text-[#d4a853]">Biblio</span>
+                </span>
+              </Link>
+              <span className="rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase dark:text-[#d4a853]">
+                Bêta
               </span>
-            </Link>
+              {isDemoMode() && (
+                <span className="rounded-full border border-sky-500/60 bg-sky-500/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-sky-800 uppercase dark:text-sky-300">
+                  Démo
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <Link
                 href="/recherche"
