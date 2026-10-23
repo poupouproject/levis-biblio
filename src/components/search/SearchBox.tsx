@@ -113,7 +113,21 @@ function SuggestionContent({ s, query }: { s: Suggestion; query: string }): JSX.
 type Option =
   { type: 'suggestion'; suggestion: Suggestion } | { type: 'query'; q: string; recent: boolean };
 
-interface SearchBoxProps {
+/** Écran tactile (téléphone, tablette) : le clavier virtuel occupe une bonne part de l'écran. */
+export function isTouchScreen(): boolean {
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
+/**
+ * Défilement qui remonte le champ juste sous l'en-tête (`top` = position actuelle du champ,
+ * `margin` = sa marge de défilement). Rien quand il y est déjà, ou plus haut : un champ collant
+ * reste en place au lieu de ramener la page à l'endroit qu'il occupe dans le flux.
+ */
+export function raiseOffset(top: number, margin: number): number {
+  return Math.max(0, Math.round(top - margin));
+}
+
+interface BaseProps {
   defaultValue?: string;
   size?: 'hero' | 'compact';
   popular?: string[];
@@ -122,14 +136,18 @@ interface SearchBoxProps {
   floating?: boolean | undefined;
   /** Appelé quand une recherche ou une suggestion est choisie. */
   onNavigate?: (() => void) | undefined;
-  /** Saisie contrôlée de l'extérieur (partagée avec la recherche flottante). */
-  value?: string | undefined;
-  onValueChange?: ((value: string) => void) | undefined;
   /** Sur écran tactile, le focus est confié à la recherche flottante plutôt qu'à ce champ. */
   onTouchFocus?: (() => void) | undefined;
   /** À droite du champ (bouton « Annuler » du panneau) : les suggestions passent dessous. */
   trailing?: ReactNode;
 }
+
+/** Saisie contrôlée de l'extérieur (partagée avec la recherche flottante) : les deux ensemble. */
+type SearchBoxProps = BaseProps &
+  (
+    | { value: string; onValueChange: (value: string) => void }
+    | { value?: undefined; onValueChange?: undefined }
+  );
 
 export function SearchBox({
   defaultValue = '',
@@ -190,9 +208,11 @@ export function SearchBox({
     };
   }, [floating]);
 
-  // Suggestions : délai de 120 ms, requête annulée si la saisie change, réponses en mémoire
+  // Suggestions : délai de 120 ms, requête annulée si la saisie change, réponses en mémoire.
+  // Seul le champ actif interroge : la barre de l'accueil et le panneau flottant partagent leur
+  // saisie, sans quoi chaque frappe partirait deux fois.
   useEffect(() => {
-    if (key.length < 2 || cache.has(key)) return;
+    if (!open || key.length < 2 || cache.has(key)) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setLoading(true);
@@ -219,7 +239,22 @@ export function SearchBox({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [key]);
+  }, [key, open]);
+
+  // Hauteur réellement visible, clavier déduit : iOS Safari ignore `interactive-widget` et ne
+  // réduit pas `dvh` quand le clavier s'ouvre, mais met à jour le visualViewport.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!open || !vv) return;
+    const update = (): void => {
+      form.current?.style.setProperty('--hauteur-visible', `${String(vv.height)}px`);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   const options: Option[] = typed
     ? [
@@ -239,9 +274,15 @@ export function SearchBox({
   // le champ remonte sous l'en-tête pour laisser la place aux suggestions. Relancé quand le
   // clavier finit de s'ouvrir, car le navigateur recentre lui-même le champ à ce moment.
   const raiseOnTouch = (): void => {
-    if (floating || !window.matchMedia('(pointer: coarse)').matches) return;
+    if (floating || !isTouchScreen()) return;
     const raise = (): void => {
-      form.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const el = form.current;
+      if (!el) return;
+      const top = raiseOffset(
+        el.getBoundingClientRect().top,
+        parseFloat(getComputedStyle(el).scrollMarginTop) || 0,
+      );
+      if (top > 0) window.scrollBy({ top, behavior: 'smooth' });
     };
     raise();
     const vv = window.visualViewport;
@@ -276,6 +317,8 @@ export function SearchBox({
     const chosen = active >= 0 ? options[active] : undefined;
     if (chosen) choose(chosen);
     else if (value.trim()) go(searchHref({ q: value.trim() }), value.trim());
+    // Panneau de l'en-tête vide : on parcourt le catalogue, comme l'ancien lien « Catalogue »
+    else if (floating) go(searchHref({}));
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
@@ -290,8 +333,14 @@ export function SearchBox({
         return next >= options.length ? -1 : next;
       });
     } else if (e.key === 'Escape') {
-      if (open) setOpen(false);
-      else setValue('');
+      if (showList) {
+        // Ferme la liste seulement : dans le panneau, le <dialog> se fermerait aussi
+        e.preventDefault();
+        setOpen(false);
+      } else if (!floating) {
+        setValue('');
+      }
+      // Panneau sans liste : Échap ferme le <dialog> et la saisie est conservée
       setActive(-1);
     }
   };
@@ -335,7 +384,7 @@ export function SearchBox({
               setActive(-1);
             }}
             onFocus={() => {
-              if (onTouchFocus && window.matchMedia('(pointer: coarse)').matches) {
+              if (onTouchFocus && isTouchScreen()) {
                 // Retiré d'abord : à sa fermeture, le panneau rendrait sinon le focus à ce champ
                 // et se rouvrirait aussitôt.
                 input.current?.blur();
@@ -399,8 +448,8 @@ export function SearchBox({
           // Flottante : la liste s'insère dans le panneau, sous le champ placé en haut de l'écran
           className={`mt-2 overflow-y-auto overscroll-contain p-1.5 ${
             floating
-              ? 'max-h-[calc(100dvh-6rem)] sm:max-h-[min(70vh,calc(100dvh-10rem))]'
-              : 'absolute top-full right-0 left-0 z-50 max-h-[min(70vh,calc(100dvh-10rem))] rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]'
+              ? 'max-h-[calc(var(--hauteur-visible,100dvh)-6rem)] sm:max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))]'
+              : 'absolute top-full right-0 left-0 z-50 max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))] rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]'
           }`}
         >
           {!typed && (

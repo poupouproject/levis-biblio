@@ -23,7 +23,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: '#d4a853',
   // Le clavier mobile réduit la page (et `dvh`) au lieu de la recouvrir : les suggestions de
-  // recherche se limitent ainsi à la partie visible.
+  // recherche se limitent ainsi à la partie visible. iOS Safari l'ignore : SearchBox suit
+  // alors le visualViewport.
   interactiveWidget: 'resizes-content',
 };
 

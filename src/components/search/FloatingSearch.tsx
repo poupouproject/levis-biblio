@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, use, useRef, useState, type JSX, type ReactNode } from 'react';
+import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { SearchBox } from '@/components/search/SearchBox';
 
@@ -11,6 +12,12 @@ interface FloatingSearchContext {
 }
 
 const Context = createContext<FloatingSearchContext | null>(null);
+
+/** Recherche affichée par la page de résultats, `null` ailleurs. */
+export function pageQuery(location: Pick<Location, 'pathname' | 'search'>): string | null {
+  if (location.pathname !== '/recherche') return null;
+  return new URLSearchParams(location.search).get('q') ?? '';
+}
 
 function useFloatingSearch(): FloatingSearchContext {
   const context = use(Context);
@@ -37,6 +44,10 @@ export function FloatingSearchProvider({
     dialog.current?.close();
   };
   const open = (): void => {
+    // Sur la page de résultats, le panneau reprend la recherche affichée plutôt que la dernière
+    // saisie du panneau
+    const shown = pageQuery(window.location);
+    if (shown !== null) setDraft(shown);
     dialog.current?.showModal();
     // Dans le geste de l'utilisateur : sans quoi le clavier mobile ne s'ouvre pas
     dialog.current?.querySelector('input')?.focus();
@@ -51,7 +62,8 @@ export function FloatingSearchProvider({
         onClick={(e) => {
           if (e.target === dialog.current) close();
         }}
-        className="m-0 w-full max-w-none bg-transparent p-0 text-zinc-900 backdrop:bg-black/50 backdrop:backdrop-blur-sm sm:mx-auto sm:mt-20 sm:max-w-2xl dark:text-zinc-100"
+        // max-h-none : la liste limite déjà sa hauteur, le <dialog> ne défile pas en plus
+        className="m-0 max-h-none w-full max-w-none bg-transparent p-0 text-zinc-900 backdrop:bg-black/50 backdrop:backdrop-blur-sm sm:mx-auto sm:mt-20 sm:max-w-2xl dark:text-zinc-100"
       >
         <div className="rounded-b-3xl bg-white p-3 shadow-2xl sm:rounded-3xl dark:bg-[#1a1a1a]">
           <SearchBox
@@ -76,18 +88,25 @@ export function FloatingSearchProvider({
   );
 }
 
-/** Loupe de l'en-tête. */
+/**
+ * Loupe de l'en-tête : un vrai lien vers le catalogue (avant l'hydratation, sans JavaScript,
+ * dans un nouvel onglet), qui ouvre le panneau pour un clic simple.
+ */
 export function HeaderSearchButton(): JSX.Element {
   const { open } = useFloatingSearch();
   return (
-    <button
-      type="button"
-      onClick={open}
+    <Link
+      href="/recherche"
+      onClick={(e) => {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        open();
+      }}
       className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
     >
       <Search className="h-4 w-4" aria-hidden />
       <span className="sr-only sm:not-sr-only">Rechercher</span>
-    </button>
+    </Link>
   );
 }
 
