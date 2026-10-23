@@ -20,6 +20,7 @@
     "catalogue:demo": "node --env-file=.env.local --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/catalogue-demo.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^11.8.0",
     "@vercel/analytics": "^2.0.1",
     "cheerio": "^1.2.0",
     "iron-session": "^9.0.1",
