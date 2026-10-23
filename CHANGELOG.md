@@ -1,5 +1,16 @@
 # levis-biblio
 
+## 0.4.0
+
+### Nouveautés
+
+- Fiche d'une œuvre : le résumé du livre s'affiche quand Google Livres en a un, avec un lien vers sa fiche Google Livres.
+
+### Correctifs
+
+- Sécurité : Next.js passe à la version 16.4.2, qui corrige une vulnérabilité critique.
+- Fiche d'une œuvre : le résumé du livre s'affiche plus souvent et plus vite (accents et guillemets bien rendus, éditions essayées en parallèle, long résumé replié sous « Lire la suite »).
+
 ## 0.3.0
 
 ### Nouveautés
