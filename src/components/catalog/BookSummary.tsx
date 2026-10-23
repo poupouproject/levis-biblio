@@ -7,6 +7,34 @@ import { bookSummary } from '@/lib/catalog/google-books';
 const VISIBLE_CHARS = 600;
 
 /**
+ * Sépare la partie visible du reste, à environ VISIBLE_CHARS caractères : entre deux
+ * paragraphes, ou dans le premier s'il dépasse seul la limite (les descriptions Google
+ * arrivent souvent en un seul bloc).
+ */
+export function splitSummary(paragraphs: string[]): { visible: string[]; rest: string[] } {
+  let shown = 0;
+  for (const [i, p] of paragraphs.entries()) {
+    shown += p.length;
+    if (shown <= VISIBLE_CHARS) continue;
+    if (i > 0) return { visible: paragraphs.slice(0, i), rest: paragraphs.slice(i) };
+    // Premier paragraphe trop long : coupe à la première fin de phrase après la limite
+    // (à 200 caractères près), sinon au premier espace.
+    const after = p.slice(VISIBLE_CHARS);
+    const sentence = /[.!?…»]\s/.exec(after);
+    const cut =
+      sentence && sentence.index < 200
+        ? VISIBLE_CHARS + sentence.index + 1
+        : p.indexOf(' ', VISIBLE_CHARS);
+    if (cut <= 0) return { visible: paragraphs, rest: [] };
+    return {
+      visible: [p.slice(0, cut).trim()],
+      rest: [p.slice(cut).trim(), ...paragraphs.slice(1)],
+    };
+  }
+  return { visible: paragraphs, rest: [] };
+}
+
+/**
  * Résumé d'une œuvre par Google Livres (composant serveur : la clé ne quitte pas le serveur).
  * Rien n'est affiché sans résumé, sans clé ou hors quota. Attribution exigée par Google :
  * logo « Powered by Google » et lien vers la fiche Google Livres.
@@ -15,18 +43,7 @@ export async function BookSummary({ isbns }: { isbns: string[] }): Promise<JSX.E
   const summary = await bookSummary(isbns);
   if (!summary) return null;
 
-  // Paragraphes visibles jusqu'à environ VISIBLE_CHARS caractères, le reste replié
-  let shown = 0;
-  let split = summary.paragraphs.length;
-  for (let i = 0; i < summary.paragraphs.length; i++) {
-    shown += summary.paragraphs[i]?.length ?? 0;
-    if (shown > VISIBLE_CHARS && i > 0) {
-      split = i;
-      break;
-    }
-  }
-  const visible = summary.paragraphs.slice(0, split);
-  const rest = summary.paragraphs.slice(split);
+  const { visible, rest } = splitSummary(summary.paragraphs);
 
   return (
     <section aria-label="Résumé" className="flex max-w-prose flex-col gap-2">

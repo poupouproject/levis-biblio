@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { BookSummary } from '@/components/catalog/BookSummary';
+import { BookSummary, splitSummary } from '@/components/catalog/BookSummary';
 import { resetGoogleBooksCache } from '@/lib/catalog/google-books';
 
 function googleReturns(description: string): void {
@@ -55,6 +55,21 @@ describe('<BookSummary>', () => {
     googleReturns(long);
     render(<>{await BookSummary({ isbns: ['9782075187794'] })}</>);
     expect(screen.getByText('Lire la suite')).toBeInTheDocument();
+  });
+
+  it('replie aussi un résumé d’un seul paragraphe, à une fin de phrase', async () => {
+    googleReturns(`<p>${'Une phrase assez longue pour remplir. '.repeat(40)}</p>`);
+    render(<>{await BookSummary({ isbns: ['9782075187794'] })}</>);
+    expect(screen.getByText('Lire la suite')).toBeInTheDocument();
+  });
+
+  it('découpe un long paragraphe unique sans perdre de texte', () => {
+    const p = 'Une phrase assez longue pour remplir. '.repeat(40).trim();
+    const { visible, rest } = splitSummary([p]);
+    expect(visible).toHaveLength(1);
+    expect(visible[0]?.endsWith('.')).toBe(true);
+    expect(`${visible.join(' ')} ${rest.join(' ')}`).toBe(p);
+    expect(splitSummary(['court'])).toEqual({ visible: ['court'], rest: [] });
   });
 
   it('n’affiche rien sans résumé', async () => {
