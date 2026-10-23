@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { Suspense, type JSX } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -6,12 +6,14 @@ import { BookmarkPlus, ChevronLeft, ChevronRight, ExternalLink, Info, Layers } f
 import { getCatalog } from '@/lib/catalog/source';
 import { simulateAvailability } from '@/lib/catalog/availability';
 import { searchHref } from '@/lib/catalog/query';
-import { FORMAT_LABELS } from '@/lib/catalog/normalize';
+import { FORMAT_LABELS, isbnForms } from '@/lib/catalog/normalize';
 import type { CatalogWork } from '@/lib/catalog/types';
 import { branchByCode, openStatus } from '@/lib/levis/branches';
 import { LEVIS_BASE_PATH, LEVIS_ORIGIN } from '@/lib/levis/config';
 import { formatDate } from '@/lib/account/format';
 import { Cover } from '@/components/catalog/Cover';
+import { BookSummary, BookSummarySkeleton } from '@/components/catalog/BookSummary';
+import { googleBooksEnabled } from '@/lib/catalog/google-books';
 import { Shelf } from '@/components/catalog/Shelf';
 import { WorkCard } from '@/components/catalog/WorkCard';
 import { BranchButton } from '@/components/branches/BranchButton';
@@ -47,6 +49,9 @@ export default async function WorkPage({ params }: { params: Params }): Promise<
   const previous = series && index > 0 ? series.works[index - 1] : undefined;
   const next = series && index >= 0 ? series.works[index + 1] : undefined;
   const related = catalog.related(work);
+  const summaryIsbns = work.editions
+    .map((e) => e.isbn)
+    .filter((i): i is string => isbnForms(i).length > 0);
 
   return (
     <article className="flex flex-col gap-10 pt-2">
@@ -126,11 +131,17 @@ export default async function WorkPage({ params }: { params: Params }): Promise<
               </div>
             )}
           </dl>
-          {work.summary && (
+          {work.summary ? (
             <p className="max-w-prose leading-relaxed text-zinc-700 dark:text-zinc-300">
               {work.summary}
             </p>
-          )}
+          ) : // Résumé de Google Livres, en streaming : la fiche s'affiche sans l'attendre.
+          // Sans clé ni ISBN, pas de requête ni d'emplacement réservé.
+          summaryIsbns.length > 0 && googleBooksEnabled() ? (
+            <Suspense fallback={<BookSummarySkeleton />}>
+              <BookSummary isbns={summaryIsbns} />
+            </Suspense>
+          ) : null}
           {work.subjects.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {work.subjects.slice(0, 8).map((s) => (

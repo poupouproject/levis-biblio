@@ -101,6 +101,7 @@ L'application est accessible sur `http://localhost:3000`.
 | `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`. |
 | `DATABASE_URL` | Développement seulement : base Postgres des notices scrapées (table `editions`). Absente : jeu de démo. |
 | `LEVIS_DEMO` | `1` : Mon dossier en mode démonstration (voir [docs/mon-compte.md](docs/mon-compte.md)). |
+| `GOOGLE_BOOKS_API_KEY` | Optionnel. Résumé des œuvres par Google Livres, lu côté serveur seulement (jamais `NEXT_PUBLIC_`). Absente : fiches sans résumé. Voir [docs/catalogue.md](docs/catalogue.md). |
 
 ### Tester sur un téléphone
 

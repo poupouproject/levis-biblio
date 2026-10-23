@@ -35,6 +35,13 @@ release_lock_if_held() {
 if [ "$EVENT" = "pull_request" ]; then
   case "$ACTION" in
     closed)
+      # Fusionnée ou abandonnée : « ready » ne veut plus rien dire. Il était laissé sur les PR
+      # fusionnées (#14, #15, #43) : publier.yml ne le retirait qu'aux PR portant encore le
+      # verrou, déjà retiré ici quelques secondes plus tôt.
+      if has_label "$READY"; then
+        gh pr edit "$pr" --repo "$repo" --remove-label "$READY" > /dev/null || true
+        echo "Label « $READY » retiré."
+      fi
       release_lock_if_held
       exit 0
       ;;
