@@ -118,6 +118,17 @@ interface SearchBoxProps {
   size?: 'hero' | 'compact';
   popular?: string[];
   autoFocus?: boolean | undefined;
+  /** Dans la recherche flottante de l'en-tête : suggestions dans le panneau, sans raccourci « / ». */
+  floating?: boolean | undefined;
+  /** Appelé quand une recherche ou une suggestion est choisie. */
+  onNavigate?: (() => void) | undefined;
+  /** Saisie contrôlée de l'extérieur (partagée avec la recherche flottante). */
+  value?: string | undefined;
+  onValueChange?: ((value: string) => void) | undefined;
+  /** Sur écran tactile, le focus est confié à la recherche flottante plutôt qu'à ce champ. */
+  onTouchFocus?: (() => void) | undefined;
+  /** À droite du champ (bouton « Annuler » du panneau) : les suggestions passent dessous. */
+  trailing?: ReactNode;
 }
 
 export function SearchBox({
@@ -125,11 +136,20 @@ export function SearchBox({
   size = 'compact',
   popular = [],
   autoFocus,
+  floating = false,
+  onNavigate,
+  value: controlled,
+  onValueChange,
+  onTouchFocus,
+  trailing,
 }: SearchBoxProps): JSX.Element {
   const router = useRouter();
   const id = useId();
+  const form = useRef<HTMLFormElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState(defaultValue);
+  const [ownValue, setOwnValue] = useState(defaultValue);
+  const value = controlled ?? ownValue;
+  const setValue = onValueChange ?? setOwnValue;
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [lastFetched, setLastFetched] = useState<{ key: string; list: Suggestion[] }>({
@@ -145,7 +165,7 @@ export function SearchBox({
   const [syncedDefault, setSyncedDefault] = useState(defaultValue);
   if (syncedDefault !== defaultValue) {
     setSyncedDefault(defaultValue);
-    setValue(defaultValue);
+    setOwnValue(defaultValue);
   }
 
   const key = fold(value.trim());
@@ -157,6 +177,7 @@ export function SearchBox({
 
   // « / » place le curseur dans la recherche, comme sur les grands sites
   useEffect(() => {
+    if (floating) return;
     const onKey = (e: globalThis.KeyboardEvent): void => {
       const target = e.target as HTMLElement | null;
       if (e.key !== '/' || target?.closest('input, textarea, select, [contenteditable]')) return;
@@ -167,7 +188,7 @@ export function SearchBox({
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, []);
+  }, [floating]);
 
   // Suggestions : délai de 120 ms, requête annulée si la saisie change, réponses en mémoire
   useEffect(() => {
@@ -214,10 +235,28 @@ export function SearchBox({
       ];
   const showList = open && options.length + stale.length > 0;
 
+  // Sur téléphone et tablette (écran tactile), le clavier occupe une bonne part de l'écran :
+  // le champ remonte sous l'en-tête pour laisser la place aux suggestions. Relancé quand le
+  // clavier finit de s'ouvrir, car le navigateur recentre lui-même le champ à ce moment.
+  const raiseOnTouch = (): void => {
+    if (floating || !window.matchMedia('(pointer: coarse)').matches) return;
+    const raise = (): void => {
+      form.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+    raise();
+    const vv = window.visualViewport;
+    if (!vv) return;
+    vv.addEventListener('resize', raise, { once: true });
+    setTimeout(() => {
+      vv.removeEventListener('resize', raise);
+    }, 1000);
+  };
+
   const go = (href: string, q?: string): void => {
     if (q) saveRecent(q);
     setOpen(false);
     input.current?.blur();
+    onNavigate?.();
     startNavigation(() => {
       router.push(href);
     });
@@ -262,73 +301,90 @@ export function SearchBox({
   const optionId = (i: number): string => `${id}-option-${String(i)}`;
 
   return (
-    <form role="search" onSubmit={onSubmit} className="relative w-full">
-      <div className="relative">
-        <Search
-          className={`pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-zinc-400 ${hero ? 'h-6 w-6' : 'h-5 w-5'}`}
-          aria-hidden
-        />
-        <input
-          ref={input}
-          type="search"
-          name="q"
-          role="combobox"
-          aria-label="Rechercher dans le catalogue"
-          aria-expanded={showList}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={showList && active >= 0 ? optionId(active) : undefined}
-          autoComplete="off"
-          autoFocus={autoFocus}
-          enterKeyHint="search"
-          value={value}
-          placeholder="Titre, auteur, série, ISBN…"
-          onChange={(e) => {
-            setValue(e.target.value);
-            setOpen(true);
-            setActive(-1);
-          }}
-          onFocus={() => {
-            setRecent(readRecent());
-            setOpen(true);
-          }}
-          onBlur={() => {
-            setOpen(false);
-          }}
-          onKeyDown={onKeyDown}
-          className={`w-full rounded-2xl border border-zinc-300 bg-white text-zinc-900 shadow-sm transition-shadow placeholder:text-zinc-400 focus:border-[#d4a853] focus:shadow-lg focus:ring-4 focus:ring-[#d4a853]/15 focus:outline-none dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-100 [&::-webkit-search-cancel-button]:hidden ${
-            hero ? 'h-16 pr-28 pl-13 text-lg' : 'h-12 pr-24 pl-12 text-base'
-          }`}
-        />
-        <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
-          {(loading || navigating) && (
-            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" aria-hidden />
-          )}
-          {value && (
+    <form
+      ref={form}
+      role="search"
+      onSubmit={onSubmit}
+      // L'en-tête collant fait 3,5 rem : le champ remonté s'arrête juste dessous
+      className="relative w-full scroll-mt-18"
+    >
+      <div className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search
+            className={`pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-zinc-400 ${hero ? 'h-6 w-6' : 'h-5 w-5'}`}
+            aria-hidden
+          />
+          <input
+            ref={input}
+            type="search"
+            name="q"
+            role="combobox"
+            aria-label="Rechercher dans le catalogue"
+            aria-expanded={showList}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={showList && active >= 0 ? optionId(active) : undefined}
+            autoComplete="off"
+            autoFocus={autoFocus}
+            enterKeyHint="search"
+            value={value}
+            placeholder="Titre, auteur, série, ISBN…"
+            onChange={(e) => {
+              setValue(e.target.value);
+              setOpen(true);
+              setActive(-1);
+            }}
+            onFocus={() => {
+              if (onTouchFocus && window.matchMedia('(pointer: coarse)').matches) {
+                // Retiré d'abord : à sa fermeture, le panneau rendrait sinon le focus à ce champ
+                // et se rouvrirait aussitôt.
+                input.current?.blur();
+                onTouchFocus();
+                return;
+              }
+              setRecent(readRecent());
+              setOpen(true);
+              raiseOnTouch();
+            }}
+            onBlur={() => {
+              setOpen(false);
+            }}
+            onKeyDown={onKeyDown}
+            className={`w-full rounded-2xl border border-zinc-300 bg-white text-zinc-900 shadow-sm transition-shadow placeholder:text-zinc-400 focus:border-[#d4a853] focus:shadow-lg focus:ring-4 focus:ring-[#d4a853]/15 focus:outline-none dark:border-zinc-700 dark:bg-[#1a1a1a] dark:text-zinc-100 [&::-webkit-search-cancel-button]:hidden ${
+              hero ? 'h-16 pr-28 pl-13 text-lg' : 'h-12 pr-24 pl-12 text-base'
+            }`}
+          />
+          <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
+            {(loading || navigating) && (
+              <Loader2 className="h-4 w-4 animate-spin text-zinc-400" aria-hidden />
+            )}
+            {value && (
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+                onClick={() => {
+                  setValue('');
+                  setActive(-1);
+                  input.current?.focus();
+                }}
+                className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                aria-label="Effacer"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            )}
             <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-              }}
-              onClick={() => {
-                setValue('');
-                setActive(-1);
-                input.current?.focus();
-              }}
-              className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-              aria-label="Effacer"
+              type="submit"
+              className={`rounded-xl bg-[#d4a853] font-semibold text-white transition-colors hover:bg-[#b88f42] ${hero ? 'px-4 py-2.5' : 'px-3 py-1.5 text-sm'}`}
             >
-              <X className="h-4 w-4" aria-hidden />
+              <span className="sr-only sm:not-sr-only">Chercher</span>
+              <Search className="h-4 w-4 sm:hidden" aria-hidden />
             </button>
-          )}
-          <button
-            type="submit"
-            className={`rounded-xl bg-[#d4a853] font-semibold text-white transition-colors hover:bg-[#b88f42] ${hero ? 'px-4 py-2.5' : 'px-3 py-1.5 text-sm'}`}
-          >
-            <span className="sr-only sm:not-sr-only">Chercher</span>
-            <Search className="h-4 w-4 sm:hidden" aria-hidden />
-          </button>
+          </div>
         </div>
+        {trailing}
       </div>
 
       {showList && (
@@ -340,7 +396,12 @@ export function SearchBox({
           onMouseDown={(e) => {
             e.preventDefault();
           }}
-          className="absolute top-full right-0 left-0 z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]"
+          // Flottante : la liste s'insère dans le panneau, sous le champ placé en haut de l'écran
+          className={`mt-2 overflow-y-auto overscroll-contain p-1.5 ${
+            floating
+              ? 'max-h-[calc(100dvh-6rem)] sm:max-h-[min(70vh,calc(100dvh-10rem))]'
+              : 'absolute top-full right-0 left-0 z-50 max-h-[min(70vh,calc(100dvh-10rem))] rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]'
+          }`}
         >
           {!typed && (
             <li

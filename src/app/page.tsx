@@ -17,7 +17,7 @@ import { getCatalog } from '@/lib/catalog/source';
 import { AUTEURS_DICI, RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { searchHref } from '@/lib/catalog/query';
 import type { FormatGroup } from '@/lib/catalog/normalize';
-import { SearchBox } from '@/components/search/SearchBox';
+import { HeroSearch } from '@/components/search/FloatingSearch';
 import { Shelf } from '@/components/catalog/Shelf';
 import { SeriesCard, WorkCard } from '@/components/catalog/WorkCard';
 import { Cover } from '@/components/catalog/Cover';
@@ -68,7 +68,7 @@ export default async function Home(): Promise<JSX.Element> {
               </p>
             )}
           </div>
-          <SearchBox size="hero" popular={RECHERCHES_POPULAIRES} />
+          <HeroSearch popular={RECHERCHES_POPULAIRES} />
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-zinc-500">Populaires :</span>
             {RECHERCHES_POPULAIRES.map((q) => (
