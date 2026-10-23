@@ -50,8 +50,14 @@ export function DemoBadge(): JSX.Element {
       type="button"
       onClick={showDemoToast}
       aria-label="Démo : pourquoi les données sont fictives"
-      className="cursor-pointer rounded-full border border-sky-500/60 bg-sky-500/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-sky-800 uppercase hover:bg-sky-500/20 dark:text-sky-300"
+      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-sky-500/60 bg-sky-500/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-sky-800 uppercase hover:bg-sky-500/20 dark:text-sky-300"
     >
+      {/* Point qui pulse : rappelle qu’on est en démo même si le message a été fermé.
+          Immobile si la personne a demandé de réduire les animations. */}
+      <span className="relative flex h-2 w-2" aria-hidden>
+        <span className="absolute inline-flex h-full w-full rounded-full bg-sky-500 opacity-75 motion-safe:animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
+      </span>
       Démo
     </button>
   );
