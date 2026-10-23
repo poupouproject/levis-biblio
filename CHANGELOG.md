@@ -1,5 +1,19 @@
 # levis-biblio
 
+## 0.5.0
+
+### Nouveautés
+
+- En-tête : pastille « Bêta » à côté du nom du site, et pastille « Démo » lorsque le mode démonstration est activé.
+- Mode démonstration : une notification de 20 s explique, au premier chargement et à chaque clic sur la pastille « Démo », que les données sont fictives en attendant les autorisations de la Ville, et invite à contribuer sur GitHub.
+
+### Correctifs
+
+- Icône du site : le livre doré de l’en-tête remplace l’icône par défaut de Next.js.
+- Pastille « Démo » : un point animé rappelle qu’on est en démonstration, même si la notification a été fermée (immobile si les animations sont réduites).
+- Notifications : plus larges sur ordinateur, et message du mode démonstration plus compact sur mobile.
+- Notification du mode démonstration : elle respecte le thème sombre dès le premier chargement.
+
 ## 0.4.0
 
 ### Nouveautés
