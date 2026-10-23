@@ -62,10 +62,12 @@ export function FloatingSearchProvider({
         onClick={(e) => {
           if (e.target === dialog.current) close();
         }}
-        // max-h-none : la liste limite déjà sa hauteur, le <dialog> ne défile pas en plus
-        className="m-0 max-h-none w-full max-w-none bg-transparent p-0 text-zinc-900 backdrop:bg-black/50 backdrop:backdrop-blur-sm sm:mx-auto sm:mt-20 sm:max-w-2xl dark:text-zinc-100"
+        // max-h-none : la liste limite déjà sa hauteur, le <dialog> ne défile pas en plus.
+        // Collé en haut sur écran tactile, même large (tablette à l'horizontale, où le clavier
+        // laisse peu de hauteur) ; carte décalée vers le bas seulement avec une souris.
+        className="m-0 max-h-none w-full max-w-none bg-transparent p-0 text-zinc-900 backdrop:bg-black/50 backdrop:backdrop-blur-sm sm:mx-auto sm:max-w-2xl dark:text-zinc-100 sm:pointer-fine:mt-20"
       >
-        <div className="rounded-b-3xl bg-white p-3 shadow-2xl sm:rounded-3xl dark:bg-[#1a1a1a]">
+        <div className="rounded-b-3xl bg-white p-3 shadow-2xl dark:bg-[#1a1a1a] sm:pointer-fine:rounded-3xl">
           <SearchBox
             floating
             popular={popular}

@@ -448,7 +448,7 @@ export function SearchBox({
           // Flottante : la liste s'insère dans le panneau, sous le champ placé en haut de l'écran
           className={`mt-2 overflow-y-auto overscroll-contain p-1.5 ${
             floating
-              ? 'max-h-[calc(var(--hauteur-visible,100dvh)-6rem)] sm:max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))]'
+              ? 'max-h-[calc(var(--hauteur-visible,100dvh)-6rem)] sm:pointer-fine:max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))]'
               : 'absolute top-full right-0 left-0 z-50 max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))] rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]'
           }`}
         >
