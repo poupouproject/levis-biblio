@@ -13,7 +13,7 @@ function showDemoToast(): void {
   // `theme` lu ici : au premier chargement, le Toaster n’a pas encore basculé en sombre (hydratation).
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
   toast.info(
-    <div className="text-sm">
+    <div className="text-[0.8125rem] leading-snug sm:text-sm sm:leading-normal">
       <p className="font-semibold">Données fictives et partielles</p>
       <p className="mt-1">
         Nous attendons les autorisations de la Ville de Lévis pour accéder aux vraies données des
