@@ -10,7 +10,8 @@ Sentry.init({
     Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
     Sentry.feedbackIntegration({
       colorScheme: 'system',
-      autoInject: true,
+      // Les boutons du pied de page ouvrent le formulaire (FeedbackButtons).
+      autoInject: false,
       showName: false,
       showEmail: false,
       isNameRequired: false,

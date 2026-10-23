@@ -4,6 +4,7 @@ import './globals.css';
 import Link from 'next/link';
 import { Library, MapPin, Search } from 'lucide-react';
 import { AccountMenu } from '@/components/account/AccountMenu';
+import { FeedbackButtons } from '@/components/ui/FeedbackButtons';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { Toaster } from '@/components/ui/Toaster';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
@@ -70,6 +71,9 @@ export default function RootLayout({
         {/* Pied de page (Footer) avec le disclaimer */}
         <footer className="mt-auto border-t border-zinc-200 bg-white py-6 dark:border-zinc-800 dark:bg-[#1a1a1a]">
           <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
+            <div className="mb-4">
+              <FeedbackButtons />
+            </div>
             <div className="mb-4 flex justify-center">
               <ThemeSelector />
             </div>

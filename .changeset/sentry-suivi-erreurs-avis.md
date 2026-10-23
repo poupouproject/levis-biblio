@@ -2,4 +2,4 @@
 'levis-biblio': minor
 ---
 
-Suivi des erreurs avec Sentry et bouton « Donner votre avis » pour signaler un problème ou une idée.
+Suivi des erreurs avec Sentry et, en pied de page, les boutons « Donner votre avis » et « Signaler un problème ».
