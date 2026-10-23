@@ -4,6 +4,7 @@ import './globals.css';
 import Link from 'next/link';
 import { Library, MapPin, Search } from 'lucide-react';
 import { AccountMenu } from '@/components/account/AccountMenu';
+import { DemoBadge } from '@/components/ui/DemoBadge';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { Toaster } from '@/components/ui/Toaster';
 import { isDemoMode } from '@/lib/account/demo';
@@ -48,11 +49,7 @@ export default function RootLayout({
               <span className="rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase dark:text-[#d4a853]">
                 Bêta
               </span>
-              {isDemoMode() && (
-                <span className="rounded-full border border-sky-500/60 bg-sky-500/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-sky-800 uppercase dark:text-sky-300">
-                  Démo
-                </span>
-              )}
+              {isDemoMode() && <DemoBadge />}
             </div>
             <div className="flex items-center gap-1">
               <Link
