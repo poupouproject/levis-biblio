@@ -10,6 +10,7 @@ const DEMO_TOAST_ID = 'mode-demo';
 const DEMO_TOAST_DURATION_MS = 20_000;
 
 function showDemoToast(): void {
+  // `theme` lu ici : au premier chargement, le Toaster n’a pas encore basculé en sombre (hydratation).
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
   toast.info(
     <div className="text-sm">
@@ -32,7 +33,11 @@ function showDemoToast(): void {
         .
       </p>
     </div>,
-    { toastId: DEMO_TOAST_ID, autoClose: DEMO_TOAST_DURATION_MS },
+    {
+      toastId: DEMO_TOAST_ID,
+      autoClose: DEMO_TOAST_DURATION_MS,
+      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+    },
   );
 }
 
