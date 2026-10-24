@@ -33,14 +33,13 @@ function showDemoToast(): void {
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
   toast.info(
     <div className="text-[0.8125rem] leading-snug sm:text-sm sm:leading-normal">
-      <p className="font-semibold">Données fictives et partielles</p>
+      <p className="font-semibold">Vous explorez une démo</p>
       <p className="mt-1">
-        Nous attendons les autorisations de la Ville de Lévis pour accéder aux vraies données des
-        bibliothèques. D’ici là, ce site fonctionne en mode démonstration.
+        Nous travaillons avec la Ville de Lévis pour brancher les vraies données des bibliothèques.
+        D’ici là, les données sont fictives ou partielles.
       </p>
       <p className="mt-1">
-        Parlez-en autour de vous : cela nous aide à obtenir les accès qui nous sont bloqués pour
-        l’instant. Toute personne est la bienvenue pour contribuer au projet sur{' '}
+        Ce projet est ouvert à toutes et à tous : venez contribuer sur{' '}
         <a
           href={REPO_URL}
           target="_blank"
