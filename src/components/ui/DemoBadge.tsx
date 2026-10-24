@@ -14,27 +14,32 @@ const DEMO_TOAST_DURATION_MS = 2 * TOAST_DURATION_MS;
 /** Une fois par session d’onglet : un rechargement ne ressert pas le message à qui l’a déjà lu. */
 function demoToastAlreadySeen(): boolean {
   try {
-    if (sessionStorage.getItem(DEMO_TOAST_SEEN_KEY) === '1') return true;
-    sessionStorage.setItem(DEMO_TOAST_SEEN_KEY, '1');
+    return sessionStorage.getItem(DEMO_TOAST_SEEN_KEY) === '1';
   } catch {
     // Stockage inaccessible (navigation privée stricte…) : on l’affiche, sans mémoire.
+    return false;
   }
-  return false;
+}
+
+function markDemoToastSeen(): void {
+  try {
+    sessionStorage.setItem(DEMO_TOAST_SEEN_KEY, '1');
+  } catch {
+    // Voir demoToastAlreadySeen.
+  }
 }
 
 function showDemoToast(): void {
-  // Pas de `theme` : la notification suit celui du Toaster, qui suit la classe `dark` en direct.
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
   toast.info(
     <div className="text-[0.8125rem] leading-snug sm:text-sm sm:leading-normal">
-      <p className="font-semibold">Données fictives et partielles</p>
+      <p className="font-semibold">Vous explorez une démo</p>
       <p className="mt-1">
-        Nous attendons les autorisations de la Ville de Lévis pour accéder aux vraies données des
-        bibliothèques. D’ici là, ce site fonctionne en mode démonstration.
+        Nous travaillons avec la Ville de Lévis pour brancher les vraies données des bibliothèques.
+        D’ici là, les données sont fictives ou partielles.
       </p>
       <p className="mt-1">
-        Parlez-en autour de vous : cela nous aide à obtenir les accès qui nous sont bloqués pour
-        l’instant. Toute personne est la bienvenue pour contribuer au projet sur{' '}
+        Ce projet est ouvert à toutes et à tous : venez contribuer sur{' '}
         <a
           href={REPO_URL}
           target="_blank"
@@ -59,7 +64,16 @@ function showDemoToast(): void {
  */
 export function DemoBadge(): JSX.Element {
   useEffect(() => {
-    if (!demoToastAlreadySeen()) showDemoToast();
+    if (demoToastAlreadySeen()) return;
+    // Après le montage, pas pendant : en développement, StrictMode démonte et remonte le
+    // Toaster, qui emporterait une notification émise trop tôt. Marquée « vue » une fois émise.
+    const timer = setTimeout(() => {
+      showDemoToast();
+      markDemoToastSeen();
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   return (

@@ -1,5 +1,12 @@
 # levis-biblio
 
+## 0.6.1
+
+### Correctifs
+
+- Notifications : le thème sombre vient du CSS. La notification du mode démonstration s’affiche bien au premier chargement, et sombre dès ce moment.
+- Notification du mode démonstration : message reformulé, plus positif sur la démarche avec la Ville de Lévis.
+
 ## 0.6.0
 
 ### Nouveautés
