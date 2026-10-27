@@ -84,6 +84,14 @@ export interface SearchResult {
   series: SeriesSummary[];
   facets: { formats: FacetCount<FormatGroup>[]; periods: FacetCount<Period>[] };
   tookMs: number;
+  /** Aucun résultat exact : résultats aux titres proches (faute de frappe). */
+  approximate?: boolean | undefined;
+}
+
+/** Une série et tous ses tomes, dans l'ordre. */
+export interface SeriesWithWorks {
+  summary: SeriesSummary;
+  works: CatalogWork[];
 }
 
 export type SuggestionKind = 'oeuvre' | 'serie' | 'auteur';

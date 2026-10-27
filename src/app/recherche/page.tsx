@@ -42,7 +42,7 @@ export default async function SearchPage({
 }): Promise<JSX.Element> {
   const query = parseSearchParams(await searchParams);
   const { catalog } = await getCatalog();
-  const result = catalog.search(query);
+  const result = await catalog.search(query);
   const filtered =
     query.formats.length > 0 || query.period !== null || query.available || query.branch !== null;
 
@@ -90,6 +90,12 @@ export default async function SearchPage({
               branches: Object.fromEntries(BRANCH_OPTIONS.map((b) => [b.code, b.name])),
             }}
           />
+          {result.approximate && (
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Aucun titre ne correspond exactement à « {query.q} » : voici les titres les plus
+              proches.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">

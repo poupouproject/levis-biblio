@@ -1,17 +1,21 @@
 import 'server-only';
+import type { Pool, PoolConfig } from 'pg';
 import { Catalog } from './engine';
+import { PostgresCatalog } from './postgres';
+import { memoryStore, type CatalogStore } from './store';
 import type { RawEdition } from './types';
 
 /**
- * Catalogue chargé une seule fois par processus, puis gardé en mémoire.
- * - `DATABASE_URL` défini (développement) : la table `editions` scrapée (~160 000 notices, ~1 s).
- * - Sinon, ou si la base ne répond pas (production sur Vercel) : le jeu de démo
- *   `src/lib/catalog/catalogue-demo.json`, extrait de la même base (`npm run catalogue:demo`).
+ * Source du catalogue :
+ * - `DATABASE_URL` défini : Postgres (tables de recherche, index plein texte), interrogé à chaque
+ *   requête. En production, l'adresse du pooler de Supabase.
+ * - Sinon, ou si la base ne répond pas : le jeu de démo `src/lib/catalog/catalogue-demo.json`
+ *   (`npm run catalogue:demo`), cherché en mémoire par le moteur (engine.ts).
  */
 export type CatalogSourceName = 'postgres' | 'demo';
 
 interface Loaded {
-  catalog: Catalog;
+  catalog: CatalogStore;
   source: CatalogSourceName;
   /** Taille du catalogue complet (le jeu de démo n'en est qu'un échantillon). */
   totalEditions: number;
@@ -49,49 +53,9 @@ export function coverId(url: string | null): string | null {
     : null;
 }
 
-async function loadPostgres(url: string): Promise<RawEdition[]> {
-  const { Client } = await import('pg');
-  const client = new Client({ connectionString: url, connectionTimeoutMillis: 15_000 });
-  await client.connect();
-  try {
-    const { rows } = await client.query<{
-      isbn: string | null;
-      title_id: string | null;
-      titre_brut: string | null;
-      auteur_brut: string | null;
-      editeur: string | null;
-      annee_publication: number | null;
-      format: string | null;
-      nb_pages: number | null;
-      image_couverture: string | null;
-      resume: string | null;
-      sujets: string[] | null;
-    }>(
-      `select e.isbn, e.title_id, e.titre_brut, e.auteur_brut, e.editeur, e.annee_publication,
-              e.format, e.nb_pages, e.image_couverture, o.resume, o.sujets
-         from editions e left join oeuvres o on o.id = e.oeuvre_id`,
-    );
-    return rows.map((r) => ({
-      isbn: r.isbn,
-      titleId: r.title_id,
-      title: r.titre_brut ?? '',
-      author: r.auteur_brut,
-      publisher: r.editeur,
-      year: r.annee_publication,
-      format: r.format,
-      pages: r.nb_pages,
-      cover: r.image_couverture,
-      summary: r.resume,
-      subjects: r.sujets,
-    }));
-  } finally {
-    await client.end();
-  }
-}
-
-async function loadDemo(): Promise<{ rows: RawEdition[]; totalEditions: number }> {
+async function loadDemo(): Promise<{ catalog: Catalog; totalEditions: number }> {
   const file = (await import('./catalogue-demo.json')).default as unknown as DemoCatalogFile;
-  const rows = file.rows.map(
+  const rows: RawEdition[] = file.rows.map(
     ([isbn, titleId, title, author, publisher, year, format, pages, cover, summary, subjects]) => ({
       isbn,
       titleId,
@@ -106,33 +70,59 @@ async function loadDemo(): Promise<{ rows: RawEdition[]; totalEditions: number }
       subjects,
     }),
   );
-  return { rows, totalEditions: file.totalEditions };
+  return { catalog: new Catalog(rows), totalEditions: file.totalEditions };
+}
+
+/**
+ * TLS : aucun en local ; ailleurs, vérification complète du certificat. Supabase signe avec sa
+ * propre autorité : son certificat racine (tableau de bord → Database → SSL Configuration) va
+ * dans `DATABASE_CA_CERT`, en PEM (les retours à la ligne peuvent s'écrire « \n »).
+ */
+export function tlsOptions(url: string, ca = process.env.DATABASE_CA_CERT): PoolConfig['ssl'] {
+  const host = new URL(url).hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return false;
+  return ca ? { ca: ca.replace(/\\n/g, '\n') } : true;
 }
 
 /** Délai avant de réessayer la base quand elle n'a pas répondu (le jeu de démo sert entre-temps). */
 export const DATABASE_RETRY_MS = 30_000;
 
-async function loadFromDatabase(url: string): Promise<Loaded> {
-  const rows = await loadPostgres(url);
-  return { catalog: new Catalog(rows), source: 'postgres', totalEditions: rows.length };
-}
-
-async function loadFromDemo(): Promise<Loaded> {
-  const demo = await loadDemo();
-  return { catalog: new Catalog(demo.rows), source: 'demo', totalEditions: demo.totalEditions };
-}
-
-interface Entry {
+interface State {
   engine: typeof Catalog;
-  loaded: Promise<Loaded>;
+  demo: Promise<Loaded> | null;
+  pool: Pool | null;
+  postgres: PostgresCatalog | null;
   /** Base injoignable : heure à partir de laquelle la réessayer. */
-  retryAt: number | null;
-  retrying: boolean;
+  retryAt: number;
 }
 
 // Conservé entre les rechargements à chaud du serveur de développement. Si le code du moteur
-// change (nouvelle classe Catalog), le catalogue est reconstruit.
-const store = globalThis as typeof globalThis & { __levisCatalog?: Entry | undefined };
+// change (nouvelle classe Catalog), tout est recréé.
+const store = globalThis as typeof globalThis & { __levisCatalog?: State | undefined };
+
+function state(): State {
+  let s = store.__levisCatalog;
+  if (s?.engine !== Catalog) {
+    void s?.pool?.end();
+    s = { engine: Catalog, demo: null, pool: null, postgres: null, retryAt: 0 };
+    store.__levisCatalog = s;
+  }
+  return s;
+}
+
+function demo(s: State): Promise<Loaded> {
+  s.demo ??= loadDemo()
+    .then(({ catalog, totalEditions }) => ({
+      catalog: memoryStore(catalog),
+      source: 'demo' as const,
+      totalEditions,
+    }))
+    .catch((error: unknown) => {
+      s.demo = null;
+      throw error;
+    });
+  return s.demo;
+}
 
 function warn(error: unknown): void {
   console.warn(
@@ -140,51 +130,66 @@ function warn(error: unknown): void {
   );
 }
 
-function start(): Entry {
-  const url = process.env.DATABASE_URL;
-  const entry: Omit<Entry, 'loaded'> = { engine: Catalog, retryAt: null, retrying: false };
-  const loaded = (
-    url
-      ? loadFromDatabase(url).catch((error: unknown) => {
-          warn(error);
-          entry.retryAt = Date.now() + DATABASE_RETRY_MS;
-          return loadFromDemo();
-        })
-      : loadFromDemo()
-  ).catch((error: unknown) => {
-    if (store.__levisCatalog === entry) store.__levisCatalog = undefined;
-    throw error;
-  });
-  return Object.assign(entry, { loaded });
-}
-
-/** Réessaie la base en arrière-plan ; le jeu de démo reste servi tant qu'elle ne répond pas. */
-function retryDatabase(entry: Entry, url: string): void {
-  entry.retrying = true;
-  loadFromDatabase(url)
-    .then((loaded) => {
-      entry.loaded = Promise.resolve(loaded);
-      entry.retryAt = null;
-      console.info('[catalogue] Base de nouveau accessible : catalogue complet chargé.');
-    })
-    .catch((error: unknown) => {
-      warn(error);
-      entry.retryAt = Date.now() + DATABASE_RETRY_MS;
-    })
-    .finally(() => {
-      entry.retrying = false;
+async function postgres(s: State, url: string): Promise<PostgresCatalog> {
+  if (!s.postgres) {
+    const { Pool } = await import('pg');
+    s.pool = new Pool({
+      connectionString: url,
+      ssl: tlsOptions(url),
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+      statement_timeout: 8_000,
+      application_name: 'levisbiblio',
     });
+    // Une connexion inactive coupée par le serveur ne doit pas faire tomber le processus
+    s.pool.on('error', warn);
+    s.postgres = new PostgresCatalog(s.pool);
+  }
+  return s.postgres;
 }
 
-export function getCatalog(): Promise<Loaded> {
-  let entry = store.__levisCatalog;
-  if (entry?.engine !== Catalog) {
-    entry = start();
-    store.__levisCatalog = entry;
+/**
+ * Chaque appel passe d'abord par Postgres ; si la base ne répond pas, le jeu de démo répond à
+ * sa place et la base est réessayée 30 s plus tard.
+ */
+function resilient(s: State, primary: CatalogStore): CatalogStore {
+  async function call<T>(run: (catalog: CatalogStore) => Promise<T>): Promise<T> {
+    if (Date.now() >= s.retryAt) {
+      try {
+        return await run(primary);
+      } catch (error) {
+        warn(error);
+        s.retryAt = Date.now() + DATABASE_RETRY_MS;
+      }
+    }
+    return run((await demo(s)).catalog);
   }
+  return {
+    search: (query) => call((c) => c.search(query)),
+    suggest: (q, limit) => call((c) => c.suggest(q, limit)),
+    getWork: (id) => call((c) => c.getWork(id)),
+    getSeries: (slug) => call((c) => c.getSeries(slug)),
+    related: (work, limit) => call((c) => c.related(work, limit)),
+    newest: (limit) => call((c) => c.newest(limit)),
+    topSeries: (limit) => call((c) => c.topSeries(limit)),
+    byAuthors: (names, limit) => call((c) => c.byAuthors(names, limit)),
+    formatCounts: () => call((c) => c.formatCounts()),
+    editionCount: () => call((c) => c.editionCount()),
+  };
+}
+
+export async function getCatalog(): Promise<Loaded> {
+  const s = state();
   const url = process.env.DATABASE_URL;
-  if (url && entry.retryAt !== null && !entry.retrying && Date.now() >= entry.retryAt) {
-    retryDatabase(entry, url);
+  if (!url || Date.now() < s.retryAt) return demo(s);
+  try {
+    const primary = await postgres(s, url);
+    const totalEditions = await primary.editionCount();
+    return { catalog: resilient(s, primary), source: 'postgres', totalEditions };
+  } catch (error) {
+    warn(error);
+    s.retryAt = Date.now() + DATABASE_RETRY_MS;
+    return demo(s);
   }
-  return entry.loaded;
 }
