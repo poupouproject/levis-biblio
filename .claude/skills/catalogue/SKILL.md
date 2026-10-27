@@ -31,10 +31,12 @@ Documentation complète : `docs/catalogue.md`.
   `src/lib/catalog/catalogue-demo.json`, échantillon de ~6 000 éditions. Régénérer avec
   `npm run catalogue:demo` après un changement de sélection (`scripts/catalogue-demo.mjs`,
   `src/lib/catalog/curation.ts`). Ne jamais le reformater avec Prettier.
-- Source choisie par `source.ts`, à chaque appel : Postgres si `DATABASE_URL` répond, sinon
-  jeu de démo, avec un nouvel essai de la base toutes les 30 s. Hors local, TLS vérifié :
-  certificat racine de Supabase dans `DATABASE_CA_CERT` ; ne jamais désactiver la
-  vérification.
+- Source choisie une fois par requête de page (`CatalogSelector`, `connexion.ts`, testé) :
+  Postgres si `DATABASE_URL` répond, sinon jeu de démo. Seules les erreurs de connexion font
+  servir la démo (une erreur de requête remonte) ; une seule tentative en arrière-plan toutes
+  les 30 s rétablit la base. Hors local, TLS vérifié : certificat racine de Supabase dans
+  `DATABASE_CA_CERT` ; les paramètres `ssl*` de l'adresse sont retirés ; ne jamais
+  désactiver la vérification (`DATABASE_TLS=desactive` : conteneur local seulement).
 
 ## Recherche dans Postgres (`postgres.ts`, requêtes pures dans `sql.ts`)
 
