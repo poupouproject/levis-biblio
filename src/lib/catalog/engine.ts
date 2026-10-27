@@ -187,7 +187,9 @@ export class Catalog {
       else groups.set(work.series.slug, [work]);
     }
     for (const [slug, works] of groups) {
-      works.sort((a, b) => (a.series?.volume ?? 0) - (b.series?.volume ?? 0));
+      // Tomes dans l'ordre, puis les intégrales (sans numéro de tome)
+      const order = (w: CatalogWork): number => w.series?.volume ?? Number.MAX_SAFE_INTEGER;
+      works.sort((a, b) => order(a) - order(b));
       const authorCounts = new Map<string, number>();
       for (const w of works)
         for (const a of w.authors) authorCounts.set(a, (authorCounts.get(a) ?? 0) + 1);
@@ -450,7 +452,10 @@ export function groupKey(
   parsed: ReturnType<typeof parseTitle>,
   authorKey: string | null,
 ): { key: string; tome: string | null } {
-  const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+  // Une intégrale a sa propre place dans la série, distincte du tome de même numéro
+  const place =
+    parsed.omnibus !== null ? `integrale ${String(parsed.omnibus)}` : String(parsed.volume);
+  const tome = parsed.series ? `s:${fold(parsed.series)}|${place}` : null;
   return {
     key: tome ? `${tome}|${authorKey ?? ''}` : `t:${fold(parsed.title)}|${authorKey ?? ''}`,
     tome,
@@ -557,6 +562,7 @@ function buildWork(
     summary,
     subjects,
     editions,
+    editionCount: editions.length,
   };
   const titleFold = fold(parsed.title);
   const seriesFold = series ? fold(series.name) : '';

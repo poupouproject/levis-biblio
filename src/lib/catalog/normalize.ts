@@ -83,6 +83,8 @@ export interface ParsedTitle {
   subtitle: string | null;
   series: string | null;
   volume: number | null;
+  /** Numéro d'intégrale (« Sorcière. Intégrale 5 ») : dans la série, hors de la numérotation des tomes. */
+  omnibus: number | null;
 }
 
 // Autres écritures du tome dans les notices, essayées si « Série. N » ne convient pas :
@@ -91,9 +93,13 @@ export interface ParsedTitle {
 const VOLUME_PATTERNS: RegExp[] = [
   /^(.+?)\.?\s+\[(\d{1,3})\](?:\s*[,.:]\s*(.*))?$/,
   /^(.+?)\s:\s\[?(\d{1,3})\]?(?:\s:\s(.*))?$/,
-  /^(.+?)[\s,:.]+(?:tome|t\.|vol\.|volume|vol|intégrale|integrale)\s*\.?\s*(\d{1,3})\s*$/i,
+  /^(.+?)[\s,:.]+(?:tome|t\.|vol\.|volume|vol)\s*\.?\s*(\d{1,3})\s*$/i,
   /^(.+?[!?])\s+(\d{1,3})$/,
 ];
+
+// « Sorcière. Intégrale 5 », « La balade de Yaya : intégrale 1 » : une intégrale n'est pas le tome
+// de même numéro (elle en réunit plusieurs)
+const OMNIBUS = /^(.+?)[\s,:.]+int[ée]grale\s*\.?\s*(\d{1,3})\s*$/i;
 
 function matchVolume(text: string): { series: string; volume: number; rest: string } | null {
   for (const pattern of VOLUME_PATTERNS) {
@@ -120,6 +126,7 @@ export function parseTitle(raw: string): ParsedTitle {
   text = text.replace(/^\[(.+)\]$/, '$1');
   let series: string | null = null;
   let volume: number | null = null;
+  let omnibus: number | null = null;
 
   const seriesMatch = /^(.+?)\.\s+(\d{1,4})(?:\s*[,.:]\s*(.*))?$/.exec(text);
   // « Histoire du Québec. 1960, … » : une année, pas un tome
@@ -128,6 +135,11 @@ export function parseTitle(raw: string): ParsedTitle {
     series = seriesMatch[1].trim();
     volume = Number.parseInt(seriesMatch[2], 10);
     text = (seriesMatch[3] ?? '').trim();
+  } else if (OMNIBUS.test(text)) {
+    const match = OMNIBUS.exec(text);
+    series = match?.[1]?.replace(/[\s,.;:]+$/, '').trim() ?? null;
+    omnibus = match?.[2] ? Number.parseInt(match[2], 10) : null;
+    text = '';
   } else {
     const other = matchVolume(text);
     if (other) {
@@ -148,8 +160,15 @@ export function parseTitle(raw: string): ParsedTitle {
         .trim() || null;
     text = text.slice(0, colon).trim();
   }
-  if (!text) text = series && volume !== null ? `${series}, tome ${String(volume)}` : raw.trim();
-  return { title: capitalize(text), subtitle, series, volume };
+  if (!text) {
+    text =
+      series && volume !== null
+        ? `${series}, tome ${String(volume)}`
+        : series && omnibus !== null
+          ? `${series}, intégrale ${String(omnibus)}`
+          : raw.trim();
+  }
+  return { title: capitalize(text), subtitle, series, volume, omnibus };
 }
 
 function capitalize(value: string): string {

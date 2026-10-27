@@ -96,7 +96,9 @@ const editionOeuvre = []; // [id édition, œuvre]
 const formes = new Map(); // forme brute → { count, series: Set, oeuvres: Set }
 const reprises = new Set(); // œuvres existantes déjà attribuées
 for (const row of rows) {
-  const work = row.title_id ? catalogue.getWork(row.title_id) : null;
+  // Comme le moteur : par title_id, ou par ISBN pour une édition sans title_id
+  const id = row.title_id ?? row.isbn;
+  const work = id ? catalogue.getWork(id) : null;
   if (!work) continue;
   let oeuvre = oeuvres.get(work.id);
   if (!oeuvre) {

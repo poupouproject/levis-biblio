@@ -3,13 +3,16 @@ import type { Pool, QueryResultRow } from 'pg';
 import { PERIOD_LABELS } from './engine';
 import { fold, tokenize } from './normalize';
 import {
+  BASE_ORDER,
   BROWSE_SQL,
   CARD_COLUMNS,
   browseKey,
   browseValues,
   interleave,
   isBrowse,
+  needsApproximate,
   parseText,
+  prefixed,
   rowToSeries,
   rowToWork,
   rowsToEditions,
@@ -25,12 +28,12 @@ import {
 import type { CatalogStore } from './store';
 import type { CatalogWork, SearchQuery, SearchResult, SeriesSummary, Suggestion } from './types';
 
-const BASE_ORDER = '(couverture is not null) desc, annee desc nulls last, popularite desc, ref';
-
 /** Les compteurs d'un parcours ne changent qu'à la restructuration du catalogue. */
 const CACHE_MS = 60 * 60 * 1000;
 
 interface SearchRow {
+  /** Correspondances du texte avant les filtres (absent sans facettes). */
+  correspondances: number | null;
   total: number | null;
   formats: Record<string, number> | null;
   periods: Record<string, number> | null;
@@ -87,7 +90,7 @@ export class PostgresCatalog implements CatalogStore {
       searchSql(mode, withFacets),
       searchValues(query, authorIds, this.recentYear()),
     );
-    return row ?? { total: 0, formats: null, periods: null, works: [] };
+    return row ?? { correspondances: 0, total: 0, formats: null, periods: null, works: [] };
   }
 
   /** Séries dont le nom contient tous les mots : nom exact d'abord, puis les plus populaires. */
@@ -133,7 +136,8 @@ export class PostgresCatalog implements CatalogStore {
       this.runSearch('exact', true, query, authorIds),
       isbn || tokens.length === 0 ? Promise.resolve([]) : this.matchSeries(tokens, 3),
     ]);
-    if ((exact.total ?? 0) > 0 || isbn || tokens.length === 0) return done(exact, series);
+    // Seulement si le texte n'a rien trouvé, pas quand ce sont les filtres qui vident la page
+    if (!needsApproximate(query.q, exact.correspondances)) return done(exact, series);
     const near = await this.runSearch('approchant', true, query, authorIds);
     return (near.total ?? 0) > 0 ? done(near, series, true) : done(exact, series);
   }
@@ -196,9 +200,7 @@ export class PostgresCatalog implements CatalogStore {
     const [row] = await this.rows<
       CardRow & { resume: string | null; sujets: string[] | null; editions: EditionRow[] }
     >(
-      `select ${CARD_COLUMNS.split(', ')
-        .map((c) => `r.${c}`)
-        .join(', ')}, o.resume, o.sujets,
+      `select ${prefixed(CARD_COLUMNS, 'r')}, o.resume, o.sujets,
               (select coalesce(json_agg(json_build_object(
                  'title_id', e.title_id, 'isbn', e.isbn, 'titre', e.titre_brut,
                  'annee', e.annee_publication, 'format', e.format, 'editeur', e.editeur,
@@ -222,7 +224,7 @@ export class PostgresCatalog implements CatalogStore {
   async getSeries(slug: string): Promise<{ summary: SeriesSummary; works: CatalogWork[] } | null> {
     const [row] = await this.rows<SeriesRow & { works: CardRow[] }>(
       `select s.nom, s.slug, s.nb_tomes, s.couvertures, s.annee_max, s.auteurs,
-              (select coalesce(json_agg(w order by coalesce(w.tome, 0), w.ref), '[]')
+              (select coalesce(json_agg(w order by w.tome nulls last, w.ref), '[]')
                  from (select ${CARD_COLUMNS} from catalogue_oeuvres
                         where serie_id = s.id) w) as works
          from series s where s.slug = $1 and s.nb_tomes > 0`,

@@ -8,7 +8,7 @@ import {
   plausibleYear,
   tokenize,
 } from '@/lib/catalog/normalize';
-import { Catalog, EMPTY_QUERY } from '@/lib/catalog/engine';
+import { Catalog, EMPTY_QUERY, groupKey } from '@/lib/catalog/engine';
 import { parseSearchParams, searchHref } from '@/lib/catalog/query';
 import { simulateAvailability } from '@/lib/catalog/availability';
 import type { RawEdition } from '@/lib/catalog/types';
@@ -32,6 +32,7 @@ describe('normalisation des notices', () => {
       subtitle: null,
       series: 'One Piece',
       volume: 25,
+      omnibus: null,
     });
     expect(parseTitle('Shaman King. 23')).toMatchObject({
       title: 'Shaman King, tome 23',
@@ -43,6 +44,48 @@ describe('normalisation des notices', () => {
       series: 'Op-center',
       volume: 5,
     });
+  });
+
+  it('garde une intégrale dans sa série, à part du tome de même numéro', () => {
+    expect(parseTitle('Sorcière. Intégrale 5')).toMatchObject({
+      title: 'Sorcière, intégrale 5',
+      series: 'Sorcière',
+      volume: null,
+      omnibus: 5,
+    });
+    expect(parseTitle('La balade de Yaya : intégrale 1')).toMatchObject({
+      series: 'La balade de Yaya',
+      omnibus: 1,
+    });
+    // L'intégrale 5 et le tome 5 du même auteur restent deux œuvres
+    const omnibus = groupKey(parseTitle('Sorcière. Intégrale 5'), 'tiernan');
+    const tome = groupKey(parseTitle('Sorcière. 5, L’éveil'), 'tiernan');
+    expect(omnibus.key).toBe('s:sorciere|integrale 5|tiernan');
+    expect(tome.key).toBe('s:sorciere|5|tiernan');
+    // Et l'intégrale passe après les tomes dans la série
+    const catalog = new Catalog(
+      [
+        { title: 'Sorcière. Intégrale 5', isbn: null, titleId: '3' },
+        { title: 'Sorcière. 5, L’éveil', isbn: null, titleId: '2' },
+        { title: 'Sorcière. 1, Le début', isbn: null, titleId: '1' },
+      ].map((r) => ({
+        ...r,
+        author: 'Tiernan, Cate',
+        publisher: null,
+        year: 2010,
+        format: 'Livres',
+        pages: null,
+        cover: null,
+        summary: null,
+        subjects: null,
+      })),
+      NOW,
+    );
+    expect(catalog.getSeries('sorciere')?.works.map((w) => w.title)).toEqual([
+      'Le début',
+      'L’éveil',
+      'Sorcière, intégrale 5',
+    ]);
   });
 
   it('détecte les autres écritures du tome', () => {

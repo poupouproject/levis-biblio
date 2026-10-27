@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import type { Pool } from 'pg';
 import { EMPTY_QUERY, PERIOD_LABELS } from '@/lib/catalog/engine';
+import { PostgresCatalog } from '@/lib/catalog/postgres';
 import {
   browseKey,
   interleave,
   isBrowse,
+  needsApproximate,
   parseText,
+  prefixed,
   rowToWork,
   rowsToEditions,
   searchSql,
@@ -100,6 +104,7 @@ describe('recherche Postgres : conversions', () => {
         annee: 2013,
         formats: ['livre', 'inconnu'],
         couverture: null,
+        nb_editions: 3,
       }),
     ).toMatchObject({
       id: '469229',
@@ -107,7 +112,13 @@ describe('recherche Postgres : conversions', () => {
       authors: ['Eiichirô Oda'],
       formats: ['livre'],
       editions: [],
+      // Sans la liste, la carte garde le compte (badge « 3 éditions »)
+      editionCount: 3,
     });
+  });
+
+  it('préfixe les colonnes d’une table', () => {
+    expect(prefixed('ref, titre', 'r')).toBe('r.ref, r.titre');
   });
 
   it('normalise les éditions d’une fiche comme le moteur', () => {
@@ -170,5 +181,69 @@ describe('recherche Postgres : conversions', () => {
     ];
     expect(interleave(items, 2, 10).map((i) => i.id)).toEqual(['a', 'd', 'c']);
     expect(interleave(items, 2, 2).map((i) => i.id)).toEqual(['a', 'd']);
+  });
+});
+
+describe('recherche Postgres : titres approchants', () => {
+  it('seulement quand le texte ne trouve rien, jamais pour un ISBN', () => {
+    expect(needsApproximate('harry poter', 0)).toBe(true);
+    expect(needsApproximate('harry potter', 56)).toBe(false);
+    expect(needsApproximate('9782070360024', 0)).toBe(false);
+    expect(needsApproximate('', 0)).toBe(false);
+  });
+
+  const card = {
+    ref: '1',
+    titre: 'Harry Potter à l’école des sorciers',
+    sous_titre: null,
+    serie_nom: null,
+    serie_slug: null,
+    tome: null,
+    auteurs: ['J. K. Rowling'],
+    annee: 1998,
+    formats: ['livre'],
+    couverture: null,
+    nb_editions: 1,
+  };
+
+  /** Une base simulée : chaque requête est reconnue à son texte. */
+  function fakePool(exact: { correspondances: number; total: number }): {
+    pool: Pool;
+    approchantes: () => number;
+  } {
+    let approchantes = 0;
+    const query = (sql: string): Promise<{ rows: unknown[] }> => {
+      if (sql.includes('from series')) return Promise.resolve({ rows: [] });
+      if (sql.includes('operator(extensions.<%)')) {
+        approchantes++;
+        return Promise.resolve({
+          rows: [{ correspondances: 1, total: 1, formats: null, periods: null, works: [card] }],
+        });
+      }
+      return Promise.resolve({
+        rows: [{ ...exact, formats: null, periods: null, works: exact.total > 0 ? [card] : [] }],
+      });
+    };
+    return { pool: { query } as unknown as Pool, approchantes: () => approchantes };
+  }
+
+  it('propose des titres proches quand le texte ne trouve rien', async () => {
+    const { pool, approchantes } = fakePool({ correspondances: 0, total: 0 });
+    const result = await new PostgresCatalog(pool).search({ ...EMPTY_QUERY, q: 'harry poter' });
+    expect(approchantes()).toBe(1);
+    expect(result.approximate).toBe(true);
+    expect(result.works[0]?.title).toBe('Harry Potter à l’école des sorciers');
+  });
+
+  it('n’en propose pas quand ce sont les filtres qui vident les résultats', async () => {
+    const { pool, approchantes } = fakePool({ correspondances: 56, total: 0 });
+    const result = await new PostgresCatalog(pool).search({
+      ...EMPTY_QUERY,
+      q: 'harry potter',
+      formats: ['video'],
+    });
+    expect(approchantes()).toBe(0);
+    expect(result.approximate).toBeUndefined();
+    expect(result.total).toBe(0);
   });
 });

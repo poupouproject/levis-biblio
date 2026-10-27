@@ -95,10 +95,10 @@ export function WorkRow({
         </p>
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
           <AvailabilityChip workId={work.id} />
-          {work.editions.length > 1 && (
+          {work.editionCount > 1 && (
             <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
               <Layers className="h-3.5 w-3.5" aria-hidden />
-              {work.editions.length} éditions
+              {work.editionCount} éditions
             </span>
           )}
           {formats.map((f) => (

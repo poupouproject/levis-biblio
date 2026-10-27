@@ -37,15 +37,36 @@ export function isBrowse(query: SearchQuery): boolean {
   return parseText(query.q).tokens.length === 0 && query.author === null;
 }
 
-// Ordre de base, sans requête : couverture d'abord, puis les plus récents, puis les populaires
-const BASE_ORDER = '(couverture is not null) desc, annee desc nulls last, popularite desc, ref';
+/**
+ * Titres approchants (fautes de frappe) seulement si le texte n'a rien trouvé du tout : quand
+ * ce sont les filtres qui vident les résultats, on ne propose pas d'autres titres.
+ */
+export function needsApproximate(q: string, correspondances: number | null): boolean {
+  const { isbn, tokens } = parseText(q);
+  return !isbn && tokens.length > 0 && (correspondances ?? 0) === 0;
+}
+
+/**
+ * Ordre de base, sans requête : couverture d'abord, puis les plus récents, puis les populaires.
+ * Le même que l'index oeuvres_base_idx.
+ */
+export const BASE_ORDER =
+  '(couverture is not null) desc, annee desc nulls last, popularite desc, ref';
 
 const PERIOD_SQL = `case when r.annee is null or r.annee < 2000 then 'older'
   when r.annee >= $8 then 'recent' when r.annee >= 2010 then '2010' else '2000' end`;
 
 /** Colonnes d'une carte d'œuvre (listes, étagères, séries). */
 export const CARD_COLUMNS =
-  'ref, titre, sous_titre, serie_nom, serie_slug, tome, auteurs, annee, formats, couverture';
+  'ref, titre, sous_titre, serie_nom, serie_slug, tome, auteurs, annee, formats, couverture, nb_editions';
+
+/** Colonnes préfixées par un alias de table : « r.ref, r.titre, … ». */
+export function prefixed(columns: string, alias: string): string {
+  return columns
+    .split(', ')
+    .map((c) => `${alias}.${c}`)
+    .join(', ');
+}
 
 // Pertinence : celle du moteur en mémoire (engine.ts, score) plus le rang plein texte.
 // Série exacte : tous ses tomes passent devant, dans l'ordre des tomes.
@@ -79,42 +100,44 @@ export function searchSql(mode: SearchMode, withFacets: boolean): string {
     mode === 'exact'
       ? '($1::text is null or r.document @@ q.tsq) and ($4::text is null or r.isbns @> array[$4::text])'
       : '$3::text operator(extensions.<%) r.titre_cle';
+  // Chaque facette ignore son propre filtre ; `correspondances` les ignore tous : c'est lui qui
+  // dit si le texte a trouvé quelque chose (sinon, recherche approchante)
   const facets = withFacets
-    ? `count(*) filter (where ok_f and ok_p)::int as total,
+    ? `count(*)::int as correspondances,
+       count(*) filter (where ok_f and ok_p and ok_d)::int as total,
        json_build_object(${(Object.keys(FORMAT_LABELS) as FormatGroup[])
-         .map((f) => `'${f}', count(*) filter (where ok_p and '${f}' = any(formats))`)
+         .map((f) => `'${f}', count(*) filter (where ok_p and ok_d and '${f}' = any(formats))`)
          .join(', ')}) as formats,
        json_build_object(${PERIOD_IDS.map(
-         (p) => `'${p}', count(*) filter (where ok_f and periode = '${p}')`,
+         (p) => `'${p}', count(*) filter (where ok_f and ok_d and periode = '${p}')`,
        ).join(', ')}) as periods`
-    : 'null::int as total, null::json as formats, null::json as periods';
+    : 'null::int as correspondances, null::int as total, null::json as formats, null::json as periods';
   return `
     with q as (select case when $1::text is null then null
                            else to_tsquery('public.catalogue', $1::text) end as tsq,
                       -- Paramètres typés même quand le mode ne s'en sert pas
                       $2::text[] as mots, $4::text as isbn),
     m as materialized (
-      select ${CARD_COLUMNS.split(', ')
-        .map((c) => `r.${c}`)
-        .join(', ')}, r.popularite, r.titre_cle,
+      select ${prefixed(CARD_COLUMNS, 'r')}, r.popularite, r.titre_cle,
+             r.succursales, r.succursales_dispo,
              ${PERIOD_SQL} as periode,
              ${mode === 'exact' ? SCORE_EXACT : SCORE_APPROCHANT} as score
         from catalogue_oeuvres r, q
        where ${match}
          and ($5::uuid[] is null or r.auteur_ids && $5::uuid[])
-         and case when $10::text is not null
-                  then $10::text = any(case when $9::boolean then r.succursales_dispo else r.succursales end)
-                  when $9::boolean then cardinality(r.succursales_dispo) > 0 else true end
     ),
     f as (
       select m.*, (cardinality($6::text[]) = 0 or m.formats && $6::text[]) as ok_f,
-             ($7::text is null or m.periode = $7::text) as ok_p
+             ($7::text is null or m.periode = $7::text) as ok_p,
+             case when $10::text is not null
+                  then $10::text = any(case when $9::boolean then m.succursales_dispo else m.succursales end)
+                  when $9::boolean then cardinality(m.succursales_dispo) > 0 else true end as ok_d
         from m
     ),
     agg as (select ${facets} from f)
-    select agg.total, agg.formats, agg.periods,
+    select agg.correspondances, agg.total, agg.formats, agg.periods,
            (select coalesce(json_agg(w), '[]') from (
-              select ${CARD_COLUMNS} from f where ok_f and ok_p
+              select ${CARD_COLUMNS} from f where ok_f and ok_p and ok_d
                order by case when $11::text = 'titre' then titre_cle end,
                         case when $11::text = 'recent' then annee end desc nulls last,
                         case when $11::text = 'pertinence' and $3::text <> '' then score end desc,
@@ -193,6 +216,7 @@ export interface CardRow {
   annee: number | null;
   formats: string[] | null;
   couverture: string | null;
+  nb_editions: number;
 }
 
 const FORMAT_IDS = new Set<string>(Object.keys(FORMAT_LABELS));
@@ -214,6 +238,7 @@ export function rowToWork(row: CardRow): CatalogWork {
     summary: null,
     subjects: [],
     editions: [],
+    editionCount: row.nb_editions,
   };
 }
 

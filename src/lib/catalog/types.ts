@@ -47,6 +47,8 @@ export interface CatalogWork {
   summary: string | null;
   subjects: string[];
   editions: CatalogEdition[];
+  /** Nombre d'éditions : les cartes des listes n'ont pas la liste, seulement le compte. */
+  editionCount: number;
 }
 
 export interface SeriesSummary {
