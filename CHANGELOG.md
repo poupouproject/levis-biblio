@@ -1,5 +1,17 @@
 # levis-biblio
 
+## 0.7.0
+
+### Nouveautés
+
+- La recherche interroge la base du catalogue : elle porte sur tous les documents, répond dès la première visite, et les auteurs écrits de plusieurs façons (« Greg » et « Michel Greg ») sont réunis.
+- Une faute de frappe ne mène plus à une page vide : sans résultat exact, la recherche propose les titres les plus proches (« harry poter » trouve Harry Potter).
+
+### Correctifs
+
+- Les titres et les auteurs aux lettres particulières (« Guðmundsson », « Vardø », « Hałasa ») se trouvent en tapant leur forme courante (« gudmundsson », « vardo »).
+- Plus de livres sont rattachés à leur série : les tomes notés « [2] », « : 3 », « tome 4 » ou « ! 15 » dans le catalogue sont maintenant reconnus, et des tomes qui étaient confondus en une seule œuvre sont séparés.
+
 ## 0.6.1
 
 ### Correctifs
