@@ -412,25 +412,14 @@ export class Catalog {
   /** Œuvres avec couverture des auteurs donnés, une par série, en alternant les auteurs. */
   byAuthors(names: string[], limit = 18): CatalogWork[] {
     const wanted = names.map(fold);
-    const buckets = wanted.map(() => [] as CatalogWork[]);
-    const seen = new Set<string>();
+    const items: { bucket: number; key: string; work: CatalogWork }[] = [];
     for (const item of this.indexed) {
       if (!item.work.cover) continue;
-      const i = wanted.findIndex((a) => item.authorFolds.includes(a));
-      if (i === -1) continue;
-      const key = item.work.series?.slug ?? item.work.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      buckets[i]?.push(item.work);
+      const bucket = wanted.findIndex((a) => item.authorFolds.includes(a));
+      if (bucket === -1) continue;
+      items.push({ bucket, key: item.work.series?.slug ?? item.work.id, work: item.work });
     }
-    const out: CatalogWork[] = [];
-    for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
-      for (const bucket of buckets) {
-        const w = bucket[round];
-        if (w && out.length < limit) out.push(w);
-      }
-    }
-    return out;
+    return interleave(items, wanted.length, limit).map((i) => i.work);
   }
 
   formatCounts(): FacetCount<FormatGroup>[] {
@@ -460,6 +449,33 @@ export function groupKey(
     key: tome ? `${tome}|${authorKey ?? ''}` : `t:${fold(parsed.title)}|${authorKey ?? ''}`,
     tome,
   };
+}
+
+/**
+ * Étagère « auteurs d'ici » : une œuvre par série, en alternant les auteurs. `bucket` donne
+ * l'auteur (sa position dans la liste demandée) de chaque œuvre, déjà triée par ordre de base.
+ * Partagé par le moteur en mémoire et par Postgres.
+ */
+export function interleave<T extends { bucket: number; key: string }>(
+  items: T[],
+  authors: number,
+  limit: number,
+): T[] {
+  const buckets: T[][] = Array.from({ length: authors }, () => []);
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.key)) continue;
+    seen.add(item.key);
+    buckets[item.bucket]?.push(item);
+  }
+  const out: T[] = [];
+  for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
+    for (const bucket of buckets) {
+      const item = bucket[round];
+      if (item && out.length < limit) out.push(item);
+    }
+  }
+  return out;
 }
 
 export const EMPTY_QUERY: SearchQuery = {

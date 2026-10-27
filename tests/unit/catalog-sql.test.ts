@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Pool } from 'pg';
-import { EMPTY_QUERY, PERIOD_LABELS } from '@/lib/catalog/engine';
+import { EMPTY_QUERY, PERIOD_LABELS, interleave } from '@/lib/catalog/engine';
 import { PostgresCatalog } from '@/lib/catalog/postgres';
 import {
   browseKey,
-  interleave,
   isBrowse,
   needsApproximate,
   parseText,

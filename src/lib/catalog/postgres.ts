@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Pool, QueryResultRow } from 'pg';
-import { PERIOD_LABELS } from './engine';
+import { PERIOD_LABELS, interleave } from './engine';
 import { fold, tokenize } from './normalize';
 import {
   BASE_ORDER,
@@ -8,7 +8,6 @@ import {
   CARD_COLUMNS,
   browseKey,
   browseValues,
-  interleave,
   isBrowse,
   needsApproximate,
   parseText,
@@ -274,15 +273,24 @@ export class PostgresCatalog implements CatalogStore {
 
   /** Œuvres avec couverture des auteurs donnés, une par série, en alternant les auteurs. */
   async byAuthors(names: string[], limit = 18): Promise<CatalogWork[]> {
+    // En SQL : une œuvre par série, puis au plus `limit` par auteur ; l'entrelacement en TS
     const rows = await this.rows<CardRow & { bucket: number; serie_id: string | null }>(
       `with a as (select id as auteur_id, array_position($1::text[], nom_cle) - 1 as bucket
-                    from auteurs where nom_cle = any($1::text[]) and nb_oeuvres > 0)
-       select ${CARD_COLUMNS}, serie_id,
-              (select min(a.bucket) from a where a.auteur_id = any(r.auteur_ids))::int as bucket
-         from catalogue_oeuvres r
-        where r.auteur_ids && (select array_agg(auteur_id) from a) and r.couverture is not null
-        order by ${BASE_ORDER} limit 2000`,
-      [names.map(fold)],
+                    from auteurs where nom_cle = any($1::text[]) and nb_oeuvres > 0),
+       w as (select ${prefixed(CARD_COLUMNS, 'r')}, r.serie_id, r.popularite,
+                    (select min(a.bucket) from a where a.auteur_id = any(r.auteur_ids))::int as bucket
+               from catalogue_oeuvres r
+              where r.auteur_ids && (select array_agg(auteur_id) from a)
+                and r.couverture is not null),
+       par_serie as (select w.*, row_number() over (
+                       partition by coalesce(serie_id::text, ref) order by ${BASE_ORDER}) as rang
+                       from w),
+       par_auteur as (select par_serie.*, row_number() over (
+                        partition by bucket order by ${BASE_ORDER}) as place
+                        from par_serie where rang = 1)
+       select ${CARD_COLUMNS}, serie_id, bucket from par_auteur
+        where place <= $2 order by ${BASE_ORDER}`,
+      [names.map(fold), limit],
     );
     return interleave(
       rows.map((r) => ({ ...r, key: r.serie_id ?? r.ref })),
