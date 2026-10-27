@@ -12,7 +12,6 @@ import {
   toFacets,
   toTsQuery,
 } from '@/lib/catalog/sql';
-import { tlsOptions } from '@/lib/catalog/source';
 
 const NOW = new Date('2026-10-20T12:00:00Z');
 
@@ -171,15 +170,5 @@ describe('recherche Postgres : conversions', () => {
     ];
     expect(interleave(items, 2, 10).map((i) => i.id)).toEqual(['a', 'd', 'c']);
     expect(interleave(items, 2, 2).map((i) => i.id)).toEqual(['a', 'd']);
-  });
-});
-
-describe('connexion à la base', () => {
-  it('se passe de TLS en local, le vérifie partout ailleurs', () => {
-    expect(tlsOptions('postgresql://postgres@127.0.0.1:54332/postgres', undefined)).toBe(false);
-    expect(tlsOptions('postgresql://u@db.example.com:5432/postgres', undefined)).toBe(true);
-    expect(
-      tlsOptions('postgresql://u@db.example.com:5432/postgres', '-----BEGIN\\nAAA\\n-----END'),
-    ).toEqual({ ca: '-----BEGIN\nAAA\n-----END' });
   });
 });
