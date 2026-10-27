@@ -39,10 +39,13 @@ const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
 
 export default async function Home(): Promise<JSX.Element> {
   const { catalog, source, totalEditions } = await getCatalog();
-  const newest = catalog.newest(18);
-  const series = catalog.topSeries(10);
-  const local = catalog.byAuthors(AUTEURS_DICI, 18);
-  const formats = catalog.formatCounts();
+  const [newest, series, local, formats, served] = await Promise.all([
+    catalog.newest(18),
+    catalog.topSeries(10),
+    catalog.byAuthors(AUTEURS_DICI, 18),
+    catalog.formatCounts(),
+    catalog.editionCount(),
+  ]);
   const heroCovers = newest.slice(0, 5);
 
   return (
@@ -64,7 +67,7 @@ export default async function Home(): Promise<JSX.Element> {
             {source === 'demo' && (
               <p className="w-fit rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-400">
                 Démonstration : la recherche porte sur un échantillon de{' '}
-                {catalog.stats.editions.toLocaleString('fr-CA')} documents.
+                {served.toLocaleString('fr-CA')} documents.
               </p>
             )}
           </div>

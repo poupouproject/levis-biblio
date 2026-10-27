@@ -88,14 +88,11 @@ export class Catalog {
       if (!row.title) continue;
       const parsed = parseTitle(row.title);
       const author = parseAuthor(row.author);
-      const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+      const { key, tome } = groupKey(parsed, author?.key ?? null);
       if (tome && !author) {
         orphanTomes.push({ row, parsed, tome });
         continue;
       }
-      const key = tome
-        ? `${tome}|${author?.key ?? ''}`
-        : `t:${fold(parsed.title)}|${author?.key ?? ''}`;
       const group = groups.get(key);
       if (group) group.raw.push(row);
       else {
@@ -165,9 +162,7 @@ export class Catalog {
       bySurname.set(surname, [...(bySurname.get(surname) ?? []), entry]);
     }
     for (const entries of bySurname.values()) {
-      const full = entries
-        .filter((e) => e.fold.includes(' '))
-        .sort((a, b) => b.count - a.count);
+      const full = entries.filter((e) => e.fold.includes(' ')).sort((a, b) => b.count - a.count);
       const bare = entries.filter((e) => !e.fold.includes(' '));
       const canonical = full[0];
       const fullTotal = full.reduce((n, e) => n + e.count, 0);
@@ -192,7 +187,9 @@ export class Catalog {
       else groups.set(work.series.slug, [work]);
     }
     for (const [slug, works] of groups) {
-      works.sort((a, b) => (a.series?.volume ?? 0) - (b.series?.volume ?? 0));
+      // Tomes dans l'ordre, puis les intégrales (sans numéro de tome)
+      const order = (w: CatalogWork): number => w.series?.volume ?? Number.MAX_SAFE_INTEGER;
+      works.sort((a, b) => order(a) - order(b));
       const authorCounts = new Map<string, number>();
       for (const w of works)
         for (const a of w.authors) authorCounts.set(a, (authorCounts.get(a) ?? 0) + 1);
@@ -415,25 +412,14 @@ export class Catalog {
   /** Œuvres avec couverture des auteurs donnés, une par série, en alternant les auteurs. */
   byAuthors(names: string[], limit = 18): CatalogWork[] {
     const wanted = names.map(fold);
-    const buckets = wanted.map(() => [] as CatalogWork[]);
-    const seen = new Set<string>();
+    const items: { bucket: number; key: string; work: CatalogWork }[] = [];
     for (const item of this.indexed) {
       if (!item.work.cover) continue;
-      const i = wanted.findIndex((a) => item.authorFolds.includes(a));
-      if (i === -1) continue;
-      const key = item.work.series?.slug ?? item.work.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      buckets[i]?.push(item.work);
+      const bucket = wanted.findIndex((a) => item.authorFolds.includes(a));
+      if (bucket === -1) continue;
+      items.push({ bucket, key: item.work.series?.slug ?? item.work.id, work: item.work });
     }
-    const out: CatalogWork[] = [];
-    for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
-      for (const bucket of buckets) {
-        const w = bucket[round];
-        if (w && out.length < limit) out.push(w);
-      }
-    }
-    return out;
+    return interleave(items, wanted.length, limit).map((i) => i.work);
   }
 
   formatCounts(): FacetCount<FormatGroup>[] {
@@ -444,6 +430,52 @@ export class Catalog {
       .map((id) => ({ id, label: FORMAT_LABELS[id], count: counts.get(id) ?? 0 }))
       .filter((f) => f.count > 0);
   }
+}
+
+/**
+ * Clé de regroupement d'une édition en œuvre : même tome de série (ou même titre) et même
+ * auteur (nom de famille replié). `tome` est la partie série et tome, sans l'auteur : un tome
+ * sans auteur rejoint le seul tome de même numéro qui en a un.
+ */
+export function groupKey(
+  parsed: ReturnType<typeof parseTitle>,
+  authorKey: string | null,
+): { key: string; tome: string | null } {
+  // Une intégrale a sa propre place dans la série, distincte du tome de même numéro
+  const place =
+    parsed.omnibus !== null ? `integrale ${String(parsed.omnibus)}` : String(parsed.volume);
+  const tome = parsed.series ? `s:${fold(parsed.series)}|${place}` : null;
+  return {
+    key: tome ? `${tome}|${authorKey ?? ''}` : `t:${fold(parsed.title)}|${authorKey ?? ''}`,
+    tome,
+  };
+}
+
+/**
+ * Étagère « auteurs d'ici » : une œuvre par série, en alternant les auteurs. `bucket` donne
+ * l'auteur (sa position dans la liste demandée) de chaque œuvre, déjà triée par ordre de base.
+ * Partagé par le moteur en mémoire et par Postgres.
+ */
+export function interleave<T extends { bucket: number; key: string }>(
+  items: T[],
+  authors: number,
+  limit: number,
+): T[] {
+  const buckets: T[][] = Array.from({ length: authors }, () => []);
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.key)) continue;
+    seen.add(item.key);
+    buckets[item.bucket]?.push(item);
+  }
+  const out: T[] = [];
+  for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
+    for (const bucket of buckets) {
+      const item = bucket[round];
+      if (item && out.length < limit) out.push(item);
+    }
+  }
+  return out;
 }
 
 export const EMPTY_QUERY: SearchQuery = {
@@ -546,6 +578,7 @@ function buildWork(
     summary,
     subjects,
     editions,
+    editionCount: editions.length,
   };
   const titleFold = fold(parsed.title);
   const seriesFold = series ? fold(series.name) : '';

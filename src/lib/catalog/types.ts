@@ -47,6 +47,8 @@ export interface CatalogWork {
   summary: string | null;
   subjects: string[];
   editions: CatalogEdition[];
+  /** Nombre d'éditions : les cartes des listes n'ont pas la liste, seulement le compte. */
+  editionCount: number;
 }
 
 export interface SeriesSummary {
@@ -84,6 +86,14 @@ export interface SearchResult {
   series: SeriesSummary[];
   facets: { formats: FacetCount<FormatGroup>[]; periods: FacetCount<Period>[] };
   tookMs: number;
+  /** Aucun résultat exact : résultats aux titres proches (faute de frappe). */
+  approximate?: boolean | undefined;
+}
+
+/** Une série et tous ses tomes, dans l'ordre. */
+export interface SeriesWithWorks {
+  summary: SeriesSummary;
+  works: CatalogWork[];
 }
 
 export type SuggestionKind = 'oeuvre' | 'serie' | 'auteur';
