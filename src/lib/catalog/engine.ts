@@ -88,14 +88,11 @@ export class Catalog {
       if (!row.title) continue;
       const parsed = parseTitle(row.title);
       const author = parseAuthor(row.author);
-      const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+      const { key, tome } = groupKey(parsed, author?.key ?? null);
       if (tome && !author) {
         orphanTomes.push({ row, parsed, tome });
         continue;
       }
-      const key = tome
-        ? `${tome}|${author?.key ?? ''}`
-        : `t:${fold(parsed.title)}|${author?.key ?? ''}`;
       const group = groups.get(key);
       if (group) group.raw.push(row);
       else {
@@ -165,9 +162,7 @@ export class Catalog {
       bySurname.set(surname, [...(bySurname.get(surname) ?? []), entry]);
     }
     for (const entries of bySurname.values()) {
-      const full = entries
-        .filter((e) => e.fold.includes(' '))
-        .sort((a, b) => b.count - a.count);
+      const full = entries.filter((e) => e.fold.includes(' ')).sort((a, b) => b.count - a.count);
       const bare = entries.filter((e) => !e.fold.includes(' '));
       const canonical = full[0];
       const fullTotal = full.reduce((n, e) => n + e.count, 0);
@@ -444,6 +439,22 @@ export class Catalog {
       .map((id) => ({ id, label: FORMAT_LABELS[id], count: counts.get(id) ?? 0 }))
       .filter((f) => f.count > 0);
   }
+}
+
+/**
+ * Clé de regroupement d'une édition en œuvre : même tome de série (ou même titre) et même
+ * auteur (nom de famille replié). `tome` est la partie série et tome, sans l'auteur : un tome
+ * sans auteur rejoint le seul tome de même numéro qui en a un.
+ */
+export function groupKey(
+  parsed: ReturnType<typeof parseTitle>,
+  authorKey: string | null,
+): { key: string; tome: string | null } {
+  const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+  return {
+    key: tome ? `${tome}|${authorKey ?? ''}` : `t:${fold(parsed.title)}|${authorKey ?? ''}`,
+    tome,
+  };
 }
 
 export const EMPTY_QUERY: SearchQuery = {

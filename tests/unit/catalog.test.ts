@@ -18,6 +18,11 @@ const NOW = new Date('2026-10-20T12:00:00Z');
 describe('normalisation des notices', () => {
   it('replie accents, ligatures et ponctuation', () => {
     expect(fold('Cœur de Lévis : ROMAN!')).toBe('coeur de levis roman');
+    // Comme unaccent dans Postgres (public.replier)
+    expect(fold('Einar Már Guðmundsson')).toBe('einar mar gudmundsson');
+    expect(fold('Les sorcières de Vardø, Hałasa, Straße')).toBe(
+      'les sorcieres de vardo halasa strasse',
+    );
     expect(tokenize('Le cœur de la forêt')).toEqual(['coeur', 'foret']);
   });
 
@@ -38,6 +43,62 @@ describe('normalisation des notices', () => {
       series: 'Op-center',
       volume: 5,
     });
+  });
+
+  it('détecte les autres écritures du tome', () => {
+    expect(parseTitle('Les maîtres de Rome. [3], Le favori des dieux')).toMatchObject({
+      title: 'Le favori des dieux',
+      series: 'Les maîtres de Rome',
+      volume: 3,
+    });
+    expect(parseTitle('Abarat. [1]')).toMatchObject({ series: 'Abarat', volume: 1 });
+    expect(parseTitle('À découvert [1]')).toMatchObject({ series: 'À découvert', volume: 1 });
+    // La mention de genre ne fait pas partie du nom de la série
+    expect(parseTitle('Et si c’était ça, le bonheur? : roman. [1]')).toMatchObject({
+      series: 'Et si c’était ça, le bonheur?',
+      volume: 1,
+    });
+    expect(parseTitle('Belem. [1]. Le temps des naufrageurs')).toMatchObject({
+      title: 'Le temps des naufrageurs',
+      series: 'Belem',
+      volume: 1,
+    });
+    expect(parseTitle('Mon oeuvre à moi : 7')).toMatchObject({
+      title: 'Mon oeuvre à moi, tome 7',
+      series: 'Mon oeuvre à moi',
+      volume: 7,
+    });
+    expect(parseTitle('Les contes du Korrigan : 2 : les mille visages du diable')).toMatchObject({
+      title: 'Les mille visages du diable',
+      series: 'Les contes du Korrigan',
+      volume: 2,
+    });
+    expect(parseTitle('Louisette la taupe : [2] : sardine express')).toMatchObject({
+      series: 'Louisette la taupe',
+      volume: 2,
+    });
+    expect(parseTitle('Histoires drôles : tome 49')).toMatchObject({
+      series: 'Histoires drôles',
+      volume: 49,
+    });
+    expect(parseTitle('Le Québec en chansons volume 1')).toMatchObject({
+      series: 'Le Québec en chansons',
+      volume: 1,
+    });
+    expect(parseTitle('Switch girl!! 15')).toMatchObject({ series: 'Switch girl!!', volume: 15 });
+  });
+
+  it('ne prend pas un nombre du titre pour un tome', () => {
+    for (const title of [
+      'Salades : 500 recettes variées et savoureuses pour toute l’année',
+      'Formule 1 : le livre d’or 2001',
+      'Ephemeris : 1000 ans d’histoire au jour le jour',
+      'Jeux & activités pour votre enfant : 3 ans',
+      'Fahrenheit 451',
+      'Les 4 saisons',
+    ]) {
+      expect(parseTitle(title)).toMatchObject({ series: null, volume: null });
+    }
   });
 
   it('retire la mention de genre et sépare le sous-titre', () => {

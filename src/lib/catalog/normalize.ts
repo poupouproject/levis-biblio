@@ -1,5 +1,18 @@
 // Nettoyage des notices brutes du catalogue (titres, auteurs, formats). Fonctions pures, testées.
 
+// Lettres sans forme décomposée, translittérées comme le fait `unaccent` dans Postgres
+// (public.replier) : « Guðmundsson » → « gudmundsson », pas « gu mundsson ».
+const LETTERS: Record<string, string> = {
+  ø: 'o',
+  ł: 'l',
+  đ: 'd',
+  ð: 'd',
+  þ: 'th',
+  ß: 'ss',
+  ı: 'i',
+  ħ: 'h',
+};
+
 /** Minuscules, sans accents ni ponctuation : sert à comparer et à chercher. */
 export function fold(value: string): string {
   return value
@@ -8,6 +21,7 @@ export function fold(value: string): string {
     .replace(/œ/gi, 'oe')
     .replace(/æ/gi, 'ae')
     .toLowerCase()
+    .replace(/[øłđðþßıħ]/g, (letter) => LETTERS[letter] ?? letter)
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
@@ -71,6 +85,31 @@ export interface ParsedTitle {
   volume: number | null;
 }
 
+// Autres écritures du tome dans les notices, essayées si « Série. N » ne convient pas :
+// « Titre. [2], Sous-titre », « Titre : 7 », « Titre : tome 3 », « Titre! 15 ».
+// Un nombre suivi d'un mot (« Salades : 500 recettes ») n'est jamais un tome.
+const VOLUME_PATTERNS: RegExp[] = [
+  /^(.+?)\.?\s+\[(\d{1,3})\](?:\s*[,.:]\s*(.*))?$/,
+  /^(.+?)\s:\s\[?(\d{1,3})\]?(?:\s:\s(.*))?$/,
+  /^(.+?)[\s,:.]+(?:tome|t\.|vol\.|volume|vol|intégrale|integrale)\s*\.?\s*(\d{1,3})\s*$/i,
+  /^(.+?[!?])\s+(\d{1,3})$/,
+];
+
+function matchVolume(text: string): { series: string; volume: number; rest: string } | null {
+  for (const pattern of VOLUME_PATTERNS) {
+    const match = pattern.exec(text);
+    const series = match?.[1]
+      ?.replace(GENRE_SUFFIX, '')
+      .replace(/[\s,.;:]+$/, '')
+      .trim();
+    const volume = match?.[2];
+    if (series && volume) {
+      return { series, volume: Number.parseInt(volume, 10), rest: (match[3] ?? '').trim() };
+    }
+  }
+  return null;
+}
+
 /**
  * « One Piece. 25, L'homme qui valait cent millions » → série One Piece, tome 25.
  * « Shaman King. 23 » → série Shaman King, tome 23, titre « Shaman King, tome 23 ».
@@ -89,6 +128,13 @@ export function parseTitle(raw: string): ParsedTitle {
     series = seriesMatch[1].trim();
     volume = Number.parseInt(seriesMatch[2], 10);
     text = (seriesMatch[3] ?? '').trim();
+  } else {
+    const other = matchVolume(text);
+    if (other) {
+      series = other.series;
+      volume = other.volume;
+      text = other.rest;
+    }
   }
 
   text = text.replace(GENRE_SUFFIX, '').replace(/[\s,.;:/]+$/, '');
