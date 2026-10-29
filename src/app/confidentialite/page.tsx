@@ -96,7 +96,7 @@ export default function PrivacyPage(): JSX.Element {
           <li>
             Si un document de votre dossier manque à notre copie du catalogue (une nouveauté), sa
             notice publique y est ajoutée : titre, auteur, ISBN et couverture. Rien ne la relie à
-            vous, et elle ne porte aucune date d’ajout.
+            vous : elle est ajoutée par un compte de service du site, sans nom d’usager.
           </li>
           <li>
             Tant que la Ville ne l’a pas autorisé, la version en ligne présente un dossier fictif

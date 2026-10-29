@@ -247,6 +247,25 @@ describe('moteur de recherche', () => {
     });
   });
 
+  it('choisit, entre éditions d’un même title_id, la même que Postgres', () => {
+    const shared = new Catalog(
+      [
+        row('Sans rien', null, { titleId: '1' }),
+        row('Avec ISBN', null, { titleId: '1', isbn: '111' }),
+        row('Avec couverture', null, { titleId: '1', cover: 'https://x/a.jpg' }),
+        row('ISBN seul', null, { titleId: '2', isbn: '222' }),
+        row('Couverture et ISBN', null, { titleId: '2', isbn: '333', cover: 'https://x/b.jpg' }),
+        row('Couverture seule', null, { titleId: '2', cover: 'https://x/c.jpg' }),
+      ],
+      NOW,
+    );
+    // Couverture d'abord, puis ISBN (order by image_couverture is null, isbn nulls last)
+    expect(shared.editionCovers(['1', '2'])).toEqual({
+      '1': { isbn: null, cover: 'https://x/a.jpg' },
+      '2': { isbn: '333', cover: 'https://x/b.jpg' },
+    });
+  });
+
   it('place les tomes de la série exacte en premier, dans l’ordre', () => {
     const r = catalog.search({ ...EMPTY_QUERY, q: 'one piece' });
     expect(r.works.map((w) => w.id)).toEqual(['101', '102', '104']);

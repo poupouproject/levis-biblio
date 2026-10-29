@@ -119,6 +119,39 @@ describe('couvertures de Mon dossier', () => {
     expect(await covers.newNotices).toEqual([]);
   });
 
+  it('n’ajoute rien que le portail n’a pas décrit (en panne, trop lent)', async () => {
+    const covers = resolveCovers(
+      [{ id: 'b1', titleId: '101', notice: { title: 'Titre', author: null } }],
+      lookupOf({}),
+      () => Promise.resolve({}),
+    );
+    expect(await covers.newNotices).toEqual([]);
+  });
+
+  it('demande l’ISBN au portail pour une édition qui a une couverture sans ISBN', async () => {
+    const portal = vi.fn(() => Promise.resolve({ b1: { url: null, isbn: '111' } }));
+    const covers = resolveCovers(
+      [{ id: 'b1', titleId: '101' }],
+      lookupOf({ '101': { isbn: null, cover: URL_1 } }),
+      portal,
+    );
+    expect(await covers.known).toEqual({});
+    expect(await covers.late).toEqual({ b1: { url: URL_1, isbn: '111' } });
+    expect(portal).toHaveBeenCalledTimes(1);
+  });
+
+  it('n’attend pas un catalogue trop lent : le portail prend le relais', async () => {
+    const covers = resolveCovers(
+      [{ id: 'b1', titleId: '101', notice: { title: 'Titre', author: null } }],
+      () => new Promise(() => undefined),
+      () => Promise.resolve({ b1: { url: URL_1, isbn: '111' } }),
+      { timeoutMs: 5 },
+    );
+    expect(await covers.known).toEqual({});
+    expect(await covers.late).toEqual({ b1: { url: URL_1, isbn: '111' } });
+    expect(await covers.newNotices).toEqual([]);
+  });
+
   it('des couvertures déjà résolues n’attendent rien du portail', async () => {
     const covers = readyCovers({ b1: { url: URL_1, isbn: '111' } });
     expect(await covers.known).toEqual({ b1: { url: URL_1, isbn: '111' } });

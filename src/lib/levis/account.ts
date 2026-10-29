@@ -17,7 +17,7 @@ import type {
 import { readyCovers, resolveCovers, type CoverRequest } from '@/lib/account/covers';
 import { formatDate, renewalRefusedMessage } from '@/lib/account/format';
 import { injectNotices, injectionEnabled } from '@/lib/catalog/injection';
-import { getCatalog } from '@/lib/catalog/source';
+import { getCatalog, type CatalogSourceName } from '@/lib/catalog/source';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
 import { LevisError, ParseError } from './errors';
@@ -111,17 +111,24 @@ function loadCovers(
   items: CoverRequest[],
 ): CoverStreams {
   if (items.length === 0) return readyCovers({});
+  // La source de la comparaison, pas celle d'un nouvel appel : la base a pu revenir entre-temps
+  let source: CatalogSourceName | null = null;
   const { known, late, newNotices } = resolveCovers(
     items,
-    async (titleIds) => (await getCatalog()).catalog.editionCovers(titleIds),
+    async (titleIds) => {
+      const loaded = await getCatalog();
+      source = loaded.source;
+      return loaded.catalog.editionCovers(titleIds);
+    },
     () => loadExtras(client, kind),
   );
   if (injectionEnabled()) {
     try {
       after(async () => {
+        const notices = await newNotices;
         // Comparé au jeu de démo, presque tout semblerait manquer : la base seulement
-        if ((await getCatalog()).source !== 'postgres') return;
-        await injectNotices(await newNotices);
+        if (source !== 'postgres') return;
+        await injectNotices(notices);
       });
     } catch {
       // Hors d'une requête (tests) : rien à ajouter

@@ -3,8 +3,7 @@
 --
 -- 1. `notice_partielle` : le portail ne donne que le titre, l'auteur, l'ISBN et la couverture.
 --    Éditeur, année, format et pages restent à compléter (Open Library par ISBN, prochain relevé).
---    Ces notices n'ont pas de date d'ajout (`created_at` nul) : rien ne doit permettre de déduire
---    qu'un usager a emprunté tel document à tel moment.
+--    Rien ne les relie à un usager : elles sont ajoutées par le compte de service du site.
 -- 2. Rôle `levisbiblio_injection` pour le serveur du site : lire le catalogue, y ajouter et mettre
 --    à jour (les déclencheurs recalculent œuvres, séries et auteurs), jamais supprimer.
 --    Créé sans connexion. Le propriétaire lui donne un mot de passe à la main, jamais dans le

@@ -120,8 +120,15 @@ export class Catalog {
       for (const edition of raw) {
         const id = edition.titleId ?? edition.isbn;
         if (id) this.byId.set(id, item);
-        // Plusieurs lignes peuvent partager un title_id : on garde celle qui a une couverture
-        if (edition.titleId && !this.editionsByTitleId.get(edition.titleId)?.cover) {
+        // Plusieurs lignes peuvent partager un title_id : comme Postgres, celle qui a une
+        // couverture d'abord, puis un ISBN
+        const current = edition.titleId ? this.editionsByTitleId.get(edition.titleId) : undefined;
+        if (
+          edition.titleId &&
+          (!current ||
+            (edition.cover && !current.cover) ||
+            (Boolean(edition.cover) === Boolean(current.cover) && edition.isbn && !current.isbn))
+        ) {
           this.editionsByTitleId.set(edition.titleId, {
             isbn: edition.isbn,
             cover: edition.cover,
