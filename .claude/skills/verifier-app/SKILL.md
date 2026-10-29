@@ -29,11 +29,16 @@ npx next dev --turbopack -p 3100   # en arrière-plan
 
 ## Variantes utiles
 
-| But | Environnement |
-|---|---|
-| Catalogue complet (base Docker) | `.env.local` tel quel (`DATABASE_URL`) |
-| Mon dossier fictif, captures | `LEVIS_DEMO=1`, puis « Explorer le dossier de démonstration » |
-| Comme en production (Vercel) | `next build` puis `next start`, **sans** `DATABASE_URL`, avec `LEVIS_DEMO=1`, `NEXT_PUBLIC_VERCEL_ENV=production` et un `LEVIS_SESSION_SECRET` aléatoire |
+| But                             | Environnement                                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalogue complet (base Docker) | `.env.local` tel quel (`DATABASE_URL`)                                                                                                                   |
+| Mon dossier fictif, captures    | `LEVIS_DEMO=1`, puis « Explorer le dossier de démonstration »                                                                                            |
+| Comme en production (Vercel)    | `next build` puis `next start`, **sans** `DATABASE_URL`, avec `LEVIS_DEMO=1`, `NEXT_PUBLIC_VERCEL_ENV=production` et un `LEVIS_SESSION_SECRET` aléatoire |
+
+Les variables lues dans la coquille statique (`LEVIS_DEMO`, `LEVIS_BANNIERE_DEMO`) sont fixées
+au build : les donner **au build et au démarrage**, sinon chaque page lève une erreur
+d'hydratation (React #418). Ne jamais relancer `next build` pendant que son `next start` tourne
+dans la même copie : arrêter le serveur d'abord.
 
 Avec la base, le premier affichage attend le chargement du catalogue (5 à 9 s) : faire une
 requête de chauffe (`/api/catalogue/suggestions?q=zz`) avant de mesurer ou de capturer.
@@ -47,9 +52,10 @@ Pas de téléchargement de navigateur : `playwright-core` avec l'Edge installé.
 ```bash
 cd "$S/shots-tool" && npm init -y && npm i playwright-core@1
 ```
+
 ```js
 const browser = await chromium.launch({ channel: 'msedge' });
-await page.goto(url, { waitUntil: 'load' });   // pas 'networkidle' : le rechargement à chaud ne s'arrête jamais
+await page.goto(url, { waitUntil: 'load' }); // pas 'networkidle' : le rechargement à chaud ne s'arrête jamais
 ```
 
 - Couvertures en chargement différé : faire défiler la page (`page.mouse.wheel`) avant une

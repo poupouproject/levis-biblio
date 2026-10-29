@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchX } from 'lucide-react';
-import { getCatalog } from '@/lib/catalog/source';
+import { search } from '@/lib/catalog/cached';
 import { MAX_LIMIT, PAGE_SIZE, parseSearchParams, searchHref } from '@/lib/catalog/query';
 import { PERIOD_LABELS } from '@/lib/catalog/engine';
 import { FORMAT_LABELS } from '@/lib/catalog/normalize';
@@ -41,8 +41,7 @@ export default async function SearchPage({
   searchParams: Params;
 }): Promise<JSX.Element> {
   const query = parseSearchParams(await searchParams);
-  const { catalog } = await getCatalog();
-  const result = await catalog.search(query);
+  const result = await search(query);
   const filtered =
     query.formats.length > 0 || query.period !== null || query.available || query.branch !== null;
 

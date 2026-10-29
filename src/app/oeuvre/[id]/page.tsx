@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BookmarkPlus, ChevronLeft, ChevronRight, ExternalLink, Info, Layers } from 'lucide-react';
-import { getCatalog } from '@/lib/catalog/source';
+import { getRelated, getSeries, getWork } from '@/lib/catalog/cached';
 import { simulateAvailability } from '@/lib/catalog/availability';
 import { searchHref } from '@/lib/catalog/query';
 import { FORMAT_LABELS, isbnForms } from '@/lib/catalog/normalize';
@@ -22,7 +22,7 @@ type Params = Promise<{ id: string }>;
 
 async function load(id: string): Promise<CatalogWork | null> {
   if (!/^[\dXx]{1,13}$/.test(id)) return null;
-  return (await getCatalog()).catalog.getWork(id);
+  return getWork(id);
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -42,11 +42,10 @@ function portalUrl(titleId: string): string {
 export default async function WorkPage({ params }: { params: Params }): Promise<JSX.Element> {
   const work = await load((await params).id);
   if (!work) notFound();
-  const { catalog } = await getCatalog();
   const availability = simulateAvailability(work.id);
   const [series, related] = await Promise.all([
-    work.series ? catalog.getSeries(work.series.slug) : null,
-    catalog.related(work),
+    work.series ? getSeries(work.series.slug) : null,
+    getRelated(work),
   ]);
   const index = series ? series.works.findIndex((w) => w.id === work.id) : -1;
   const previous = series && index > 0 ? series.works[index - 1] : undefined;

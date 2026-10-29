@@ -15,6 +15,12 @@ const lanAddresses = Object.values(networkInterfaces())
 const nextConfig: NextConfig = {
   allowedDevOrigins: lanAddresses,
 
+  // Chaque page est prérendue en coquille statique ; les données de la base et la session se
+  // lisent au moment de la requête, dans des <Suspense>, ou en cache avec 'use cache'.
+  cacheComponents: true,
+  // Préchargement d'une seule coquille par route (pas une par lien) : moins de requêtes.
+  partialPrefetching: true,
+
   images: {
     remotePatterns: [
       {

@@ -43,6 +43,16 @@ Documentation complète : `docs/catalogue.md`.
   `DATABASE_CA_CERT` ; les paramètres `ssl*` de l'adresse sont retirés ; ne jamais
   désactiver la vérification (`DATABASE_TLS=desactive` : conteneur local seulement).
 
+## Rendu et cache (Cache Components)
+
+- Coquille statique par page, prérendue au build **sans la base**. Une lecture du catalogue dans
+  une page passe par `src/lib/catalog/cached.ts` (`connection()` puis `'use cache'`, 1 h ; jamais
+  le jeu de démo). L'accueil garde `unstable_cache` (partagé entre instances sur Vercel).
+- Pas de `new Date()`, `Date.now()` ni de lecture de cookies hors d'un `<Suspense>` ou après
+  `connection()` : le build échoue (« unstable value … while prerendering »). Les squelettes
+  utilisent `PLACEHOLDER_TODAY`.
+- Détails : `docs/catalogue.md` (Rendu et cache).
+
 ## Recherche dans Postgres (`postgres.ts`, requêtes pures dans `sql.ts`)
 
 - Requêtes paramétrées seulement (jamais le texte de l'usager dans le SQL). Plein texte

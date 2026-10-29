@@ -3,7 +3,7 @@ import { BookOpen } from 'lucide-react';
 import { getCheckouts, type CheckoutsResult } from '@/lib/levis/account';
 import { withAccount } from '@/lib/account/dal';
 import { plural, todayIso } from '@/lib/account/format';
-import { NO_COVERS, placeholderCheckouts } from '@/lib/account/placeholders';
+import { NO_COVERS, PLACEHOLDER_TODAY, placeholderCheckouts } from '@/lib/account/placeholders';
 import { CheckoutsList } from '@/components/account/CheckoutsList';
 import { EmptyState, PageHeader } from '@/components/account/PageParts';
 import { SkeletonScope } from '@/components/ui/Skeleton';
@@ -13,7 +13,11 @@ export default function CheckoutsPage(): JSX.Element {
     <Suspense
       fallback={
         <SkeletonScope label="Chargement de vos emprunts…">
-          <CheckoutsContent {...placeholderCheckouts(3)} covers={NO_COVERS} today={todayIso()} />
+          <CheckoutsContent
+            {...placeholderCheckouts(3)}
+            covers={NO_COVERS}
+            today={PLACEHOLDER_TODAY}
+          />
         </SkeletonScope>
       }
     >

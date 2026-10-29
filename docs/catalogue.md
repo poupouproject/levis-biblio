@@ -11,6 +11,13 @@ Les notices viennent de la base locale scrapée du catalogue SirsiDynix de Lévi
 
 Choix fait une fois par requête de page (`CatalogSelector`, `connexion.ts`) : une page ne mélange jamais les deux sources. Seule une erreur de connexion (réseau, TLS, authentification, serveur arrêté) fait servir le jeu de démo ; une requête en erreur (délai dépassé, SQL) remonte sans rien changer. Base injoignable : la démo répond tout de suite, et une seule tentative en arrière-plan, toutes les 30 s, rétablit la base dès qu'elle répond.
 
+**Rendu et cache (Cache Components, `cacheComponents` dans `next.config.ts`).** Chaque page est une coquille statique, prérendue au build sans jamais toucher la base : en-tête, titres, squelettes (`loading.tsx`, `<Suspense>`). Les données arrivent à la requête, en flux :
+
+- Fiches, séries, recherche et suggestions passent par `src/lib/catalog/cached.ts` : `connection()` (jamais au build), puis une fonction `'use cache'` (1 h, étiquette `catalogue`). Sur Vercel, ce cache vit en mémoire de chaque instance. Le jeu de démo n'y entre jamais : servi pendant une panne de la base, il ne doit pas la remplacer pendant une heure.
+- L'accueil (étagères, compteurs) garde `unstable_cache` : le cache de données de Vercel, **partagé** entre instances, ce que `'use cache'` sans `remote` ne fait pas.
+- Mon dossier : la session se lit dans des `<Suspense>` (onglets et titres restent dans la coquille) ; la page de connexion est rendue d'un bloc (`instant = false`).
+- Ce qui est lu au rendu de la coquille (`LEVIS_DEMO`, `LEVIS_BANNIERE_DEMO` pour la pastille « Démo ») est fixé **au build** : changer ces variables demande un nouveau déploiement (déjà le cas sur Vercel). En local, les donner au build comme au démarrage, sinon erreur d'hydratation.
+
 Hors de la machine locale, la connexion exige TLS avec vérification du certificat : Supabase signe avec sa propre autorité, dont le certificat racine (tableau de bord → Database → SSL Configuration) va dans `DATABASE_CA_CERT` (PEM). Les paramètres `ssl*` de `DATABASE_URL` sont retirés (pg les ferait passer avant le certificat). `DATABASE_TLS=desactive` coupe TLS pour une base dans un conteneur joint par son nom, jamais en production. En production, `DATABASE_URL` est l'adresse du pooler de Supabase en mode transaction (port 6543) ; ce pooler ignore `statement_timeout`, d'où une limite de durée côté client (`query_timeout`).
 
 Le jeu de démo se régénère avec `npm run catalogue:demo`. Il retient les 60 plus grandes séries illustrées, les nouveautés, les auteurs d'ici et les recherches populaires (`src/lib/catalog/curation.ts`), les notices enrichies et un échantillon stable du reste. Il garde le nombre total d'éditions pour l'accueil.
