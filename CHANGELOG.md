@@ -1,5 +1,11 @@
 # levis-biblio
 
+## 0.8.0
+
+### Nouveautés
+
+- Nouvelle page « Confidentialité », accessible depuis le pied de page : ce que le site fait (et ne fait pas) de vos renseignements, les deux cookies de « Mon dossier », et qui détient vos données.
+
 ## 0.7.1
 
 ### Correctifs
