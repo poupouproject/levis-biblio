@@ -91,6 +91,14 @@ export default function RootLayout({
               Indépendant de la Ville de Lévis. Ce service agit comme une interface par-dessus les
               outils existants.
             </p>
+            <p className="mt-3 text-xs">
+              <Link
+                href="/confidentialite"
+                className="text-zinc-600 underline underline-offset-2 hover:text-[#8a6a2c] dark:text-zinc-400 dark:hover:text-[#d4a853]"
+              >
+                Confidentialité
+              </Link>
+            </p>
           </div>
         </footer>
       </body>
