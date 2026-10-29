@@ -47,6 +47,7 @@ export function analyzeNotice(raw: Pick<RawEdition, 'title' | 'author'>): Notice
 
 export type InjectionResult =
   | { statut: 'connue' }
+  | { statut: 'rattachee' }
   | { statut: 'ignoree'; raison: string }
   | { statut: 'ajoutee'; oeuvreId: string; oeuvreCreee: boolean; auteurId: string | null };
 
@@ -151,26 +152,43 @@ async function workFor(
 
 /**
  * Ajoute une notice et la rattache à son œuvre (créée au besoin), à sa série et à son auteur.
- * Idempotente : une notice déjà connue (même ISBN, ou même title_id sans ISBN) est laissée.
+ * Idempotente : une notice déjà connue (même ISBN, ou même title_id sans ISBN) est laissée ;
+ * en notice partielle, elle reçoit le title_id du portail s'il diffère.
  * À appeler dans une transaction : en cas d'erreur, l'appelant annule tout.
  */
-export async function injectNotice(db: Queryable, raw: RawEdition): Promise<InjectionResult> {
+export async function injectNotice(
+  db: Queryable,
+  raw: RawEdition,
+  options: { partielle?: boolean } = {},
+): Promise<InjectionResult> {
   const analysis = analyzeNotice(raw);
   if (!analysis) return { statut: 'ignoree', raison: 'notice sans titre' };
-  const { rows: known } = await db.query<{ id: string }>(
-    `select id from editions
+  const { rows: known } = await db.query<{ id: string; title_id: string | null }>(
+    `select id, title_id from editions
       where ($1::text is not null and isbn = $1) or ($1::text is null and title_id = $2) limit 1`,
     [raw.isbn, raw.titleId],
   );
-  if (known[0]) return { statut: 'connue' };
+  if (known[0]) {
+    // Mon dossier cherche par title_id : même ISBN sous un autre title_id (notice recataloguée),
+    // on prend celui du portail, sinon l'élément semblerait manquer à chaque visite
+    if (options.partielle && raw.titleId && known[0].title_id !== raw.titleId) {
+      await db.query('update editions set title_id = $2 where id = $1', [known[0].id, raw.titleId]);
+      return { statut: 'rattachee' };
+    }
+    return { statut: 'connue' };
+  }
 
   const auteurId = raw.author ? await authorFor(db, raw.author) : null;
   const work = await workFor(db, raw, analysis);
-  // L'insertion déclenche le recalcul de l'œuvre, puis de sa série et de ses auteurs
+  // L'insertion déclenche le recalcul de l'œuvre, puis de sa série et de ses auteurs.
+  // Notice partielle (Mon dossier) : marquée à compléter (éditeur, année, format, pages).
+  const partielle = options.partielle
+    ? { columns: ', notice_partielle', values: ', true' }
+    : { columns: '', values: '' };
   await db.query(
     `insert into editions (isbn, title_id, titre_brut, auteur_brut, editeur, annee_publication,
-                           format, nb_pages, image_couverture, oeuvre_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                           format, nb_pages, image_couverture, oeuvre_id${partielle.columns})
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10${partielle.values})`,
     [
       raw.isbn,
       raw.titleId,

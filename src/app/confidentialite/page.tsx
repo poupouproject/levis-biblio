@@ -94,6 +94,11 @@ export default function PrivacyPage(): JSX.Element {
           </li>
           <li>Le site n’a aucune base de données d’usagers.</li>
           <li>
+            Si un document de votre dossier manque à notre copie du catalogue (une nouveauté), sa
+            notice publique y est ajoutée : titre, auteur, ISBN et couverture. Rien ne la relie à
+            vous : elle est ajoutée par un compte de service du site, sans nom d’usager.
+          </li>
+          <li>
             Tant que la Ville ne l’a pas autorisé, la version en ligne présente un dossier fictif
             (démonstration) : rien n’y est transmis au portail.
           </li>
@@ -138,8 +143,9 @@ export default function PrivacyPage(): JSX.Element {
       <Card title="Contenus externes" icon={ImageIcon}>
         <List>
           <li>
-            Les couvertures sont chargées par votre navigateur depuis le portail de la Ville, comme
-            lorsque vous consultez son site. Le portail reçoit alors votre adresse IP.
+            Les couvertures sont demandées au portail de la Ville par notre hébergeur, qui les
+            réduit et les garde en cache. Votre navigateur ne contacte pas le portail pour les
+            afficher.
           </li>
           <li>
             Les résumés Google Livres sont demandés par notre serveur, avec le seul ISBN du livre :

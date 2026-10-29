@@ -18,12 +18,17 @@ Documentation complète : `docs/catalogue.md`.
   `scripts/structurer-catalogue.mjs --remplacer`, et l'un comme l'autre seulement à la demande
   du propriétaire. Interroger : `docker exec supabase_db_levis-biblio psql -U postgres -c "…"`
   (dans Git Bash, `MSYS_NO_PATHCONV=1` pour les chemins du conteneur).
+  Ne pas endosser un nouveau rôle dans une transaction de test (`grant … to current_user` puis
+  `set local role`) : dans ce conteneur, ça a fait planter Postgres (signal 11, récupération
+  automatique, aucune perte). Se connecter plutôt directement sous le rôle
+  (`DATABASE_INJECTION_URL`), dans une transaction annulée.
 - **Supabase en ligne** : même schéma et mêmes données que la base locale (copie des tables
   après chaque restructuration, pour garder les mêmes identifiants). Plan gratuit, disque
   limité : jamais de recalcul de tout le catalogue en place (disque plein) ; vider, migrer,
   recharger (voir `docs/catalogue.md`).
 - **Qui calcule quoi** : le site analyse (série, tome, clé de regroupement, auteur ;
-  `ingestion.ts` pour une notice, `structurer-catalogue.mjs` pour tout) ; Postgres calcule le
+  `ingestion.ts` pour une notice, `injection.ts` pour les nouveautés de Mon dossier,
+  `structurer-catalogue.mjs` pour tout) ; Postgres calcule le
   reste (colonnes générées, déclencheurs, vecteurs). Les fonctions SQL `replier`,
   `groupe_format`, `annee_plausible`, `isbn_formes` doublent `normalize.ts` : changer l'un,
   c'est changer l'autre, et le vérifier sur toutes les notices.
@@ -79,5 +84,7 @@ la Ville : ne pas les reprendre. Détails : `docs/catalogue.md`.
 
 ## Couvertures
 
-URL du portail (`btlffile/<isbn>/cover`). Sur Vercel, chargées directement par le navigateur
-(`unoptimized`, voir `Cover.tsx`). Sans image : couverture typographique générée.
+URL du portail (`btlffile/<isbn>/cover`), toujours servie par l'optimiseur d'images (aussi sur
+Vercel, région Montréal). Quota Hobby : 5 000 conversions par mois ; ne pas ajouter de
+largeurs à `imageSizes` / `deviceSizes` ni de qualités sans mesurer, chaque combinaison est une
+conversion de plus. Sans image : couverture typographique générée.

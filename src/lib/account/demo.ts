@@ -24,6 +24,7 @@ import {
 import { branchName } from '@/lib/levis/config';
 import type { LevisClient } from '@/lib/levis/client';
 import { LevisError } from '@/lib/levis/errors';
+import { readyCovers } from './covers';
 import { addDays, formatDate, renewalRefusedMessage, todayIso } from './format';
 
 /**
@@ -343,7 +344,7 @@ function demoCheckouts(state: DemoState): CheckoutsResult {
       total: items.length,
       overdue: items.filter((c) => c.dueDate !== null && c.dueDate < today).length,
     },
-    covers: Promise.resolve(covers),
+    covers: readyCovers(covers),
   };
 }
 
@@ -381,7 +382,7 @@ function demoHolds(state: DemoState): HoldsResult {
   return {
     holds: items,
     summary: { total: items.length, ready: items.filter((h) => h.status === 'ready').length },
-    covers: Promise.resolve(covers),
+    covers: readyCovers(covers),
   };
 }
 

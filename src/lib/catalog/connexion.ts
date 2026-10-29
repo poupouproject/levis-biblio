@@ -166,6 +166,7 @@ export class CatalogSelector {
       search: (query) => this.watch(() => store.search(query)),
       suggest: (q, limit) => this.watch(() => store.suggest(q, limit)),
       getWork: (id) => this.watch(() => store.getWork(id)),
+      editionCovers: (titleIds) => this.watch(() => store.editionCovers(titleIds)),
       getSeries: (slug) => this.watch(() => store.getSeries(slug)),
       related: (work, limit) => this.watch(() => store.related(work, limit)),
       newest: (limit) => this.watch(() => store.newest(limit)),

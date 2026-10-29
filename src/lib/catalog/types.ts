@@ -16,6 +16,12 @@ export interface RawEdition {
   subjects: string[] | null;
 }
 
+/** ISBN et couverture d'une notice, retrouvés par son title_id (Mon dossier). */
+export interface EditionCover {
+  isbn: string | null;
+  cover: string | null;
+}
+
 export interface CatalogEdition {
   titleId: string;
   isbn: string | null;

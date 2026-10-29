@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import {
   ArrowRight,
   BookOpen,
@@ -13,7 +14,10 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
-import { getCatalog } from '@/lib/catalog/source';
+import { unstable_cache } from 'next/cache';
+import { getCatalog, type CatalogSourceName } from '@/lib/catalog/source';
+import type { CatalogStore } from '@/lib/catalog/store';
+import type { CatalogWork, SeriesSummary } from '@/lib/catalog/types';
 import { AUTEURS_DICI, RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { searchHref } from '@/lib/catalog/query';
 import type { FormatGroup } from '@/lib/catalog/normalize';
@@ -22,9 +26,6 @@ import { Shelf } from '@/components/catalog/Shelf';
 import { SeriesCard, WorkCard } from '@/components/catalog/WorkCard';
 import { Cover } from '@/components/catalog/Cover';
 import { OpenBranches } from '@/components/branches/OpenBranches';
-
-// Données publiques : page régénérée toutes les heures plutôt qu'à chaque visite.
-export const revalidate = 3600;
 
 const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
   livre: BookOpen,
@@ -37,8 +38,15 @@ const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
   autre: Library,
 };
 
-export default async function Home(): Promise<JSX.Element> {
-  const { catalog, source, totalEditions } = await getCatalog();
+interface HomeData {
+  newest: CatalogWork[];
+  series: SeriesSummary[];
+  local: CatalogWork[];
+  formats: Awaited<ReturnType<CatalogStore['formatCounts']>>;
+  served: number;
+}
+
+async function loadHome(catalog: CatalogStore): Promise<HomeData> {
   const [newest, series, local, formats, served] = await Promise.all([
     catalog.newest(18),
     catalog.topSeries(10),
@@ -46,6 +54,42 @@ export default async function Home(): Promise<JSX.Element> {
     catalog.formatCounts(),
     catalog.editionCount(),
   ]);
+  return { newest, series, local, formats, served };
+}
+
+interface HomePage extends HomeData {
+  source: CatalogSourceName;
+  totalEditions: number;
+}
+
+async function loadHomePage(): Promise<HomePage> {
+  const { catalog, source, totalEditions } = await getCatalog();
+  return { ...(await loadHome(catalog)), source, totalEditions };
+}
+
+/**
+ * Étagères et compteurs de la base, partagés par tous les visiteurs et toutes les instances
+ * (cache de données de Next), renouvelés en arrière-plan après 1 h : personne n'attend la base,
+ * sauf la toute première visite. Jamais le jeu de démo : il ne doit pas remplacer la base 1 h.
+ * `unstable_cache` plutôt que `'use cache'` : sur Vercel, ce dernier garde ses entrées en
+ * mémoire, instance par instance (rien de partagé), à moins de `'use cache: remote'`.
+ */
+const cachedHome = unstable_cache(
+  async () => {
+    const page = await loadHomePage();
+    if (page.source !== 'postgres') throw new Error('Jeu de démo : pas de cache partagé.');
+    return page;
+  },
+  ['accueil'],
+  { revalidate: 3600 },
+);
+
+export default async function Home(): Promise<JSX.Element> {
+  // Jamais rendue au build : le catalogue change (notices ajoutées) et une base lente au
+  // déploiement ferait échouer le build.
+  await connection();
+  const { newest, series, local, formats, served, source, totalEditions } =
+    await cachedHome().catch(loadHomePage);
   const heroCovers = newest.slice(0, 5);
 
   return (

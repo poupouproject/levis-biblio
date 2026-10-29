@@ -1,5 +1,21 @@
 # levis-biblio
 
+## 0.9.0
+
+### Nouveautés
+
+- Mon dossier : les couvertures et les ISBN des emprunts et des réservations s'affichent presque aussitôt, tirés du catalogue. Seuls les documents trop récents pour y figurer attendent encore le portail de la Ville.
+- Les nouveautés de votre dossier absentes du catalogue y sont ajoutées : la prochaine fois, leur couverture s'affiche aussitôt, et tout le monde peut les trouver dans la recherche.
+
+### Correctifs
+
+- La page d'accueil est préparée à la visite plutôt qu'au déploiement : elle suit les ajouts au catalogue, et une base lente ne bloque plus la mise en ligne.
+- Page « Confidentialité » : votre navigateur ne contacte plus le portail de la Ville pour afficher les couvertures.
+- Page « Confidentialité » : explique l'ajout au catalogue des nouveautés de Mon dossier, sans lien avec l'usager.
+- Les couvertures s'affichent plus vite et pèsent beaucoup moins sur mobile : elles sont réduites à la taille de l'écran, converties dans un format moderne et gardées en cache.
+- Mon dossier : les couvertures ne se font plus attendre quand le catalogue tarde à répondre, et l'ISBN s'affiche aussi pour un document dont la copie du catalogue n'en a pas.
+- Le site demande aux moteurs de recherche de ne pas le parcourir pour l'instant, le temps d'obtenir l'accord de la Ville.
+
 ## 0.8.0
 
 ### Nouveautés

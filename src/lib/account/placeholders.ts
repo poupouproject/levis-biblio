@@ -3,12 +3,13 @@
 import type {
   Checkout,
   CheckoutsSummary,
-  CoverMap,
+  CoverStreams,
   Fines,
   HistoryEntry,
   Hold,
   Profile,
 } from '@/types';
+import { readyCovers } from './covers';
 import { addDays, todayIso } from './format';
 
 const TITLES = [
@@ -19,8 +20,8 @@ const TITLES = [
 
 const pick = (i: number): string => TITLES[i % TITLES.length] ?? '';
 
-/** Promesse de couvertures déjà résolue et vide : les vignettes s'affichent en bloc. */
-export const NO_COVERS: Promise<CoverMap> = Promise.resolve({});
+/** Couvertures déjà résolues et vides : les vignettes s'affichent en bloc. */
+export const NO_COVERS: CoverStreams = readyCovers({});
 
 export function placeholderCheckouts(count = 3): {
   checkouts: Checkout[];

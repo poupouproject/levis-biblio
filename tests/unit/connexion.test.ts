@@ -91,6 +91,7 @@ function fakeStore(name: string, fail: () => Error | null): CatalogStore {
     search: answer,
     suggest: answer,
     getWork: answer,
+    editionCovers: answer,
     getSeries: answer,
     related: answer,
     newest: answer,
