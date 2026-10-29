@@ -8,7 +8,7 @@ import { FloatingSearchProvider, HeaderSearchButton } from '@/components/search/
 import { DemoBadge } from '@/components/ui/DemoBadge';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { Toaster } from '@/components/ui/Toaster';
-import { isDemoMode } from '@/lib/account/demo';
+import { isDemoBadgeVisible } from '@/lib/account/demo';
 import { RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
@@ -57,7 +57,7 @@ export default function RootLayout({
                   Bêta
                 </span>
                 {/* Lu au rendu du serveur : sur Vercel, la variable est fixée au déploiement. */}
-                {isDemoMode() && <DemoBadge />}
+                {isDemoBadgeVisible() && <DemoBadge />}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <HeaderSearchButton />

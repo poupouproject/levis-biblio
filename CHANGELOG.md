@@ -1,5 +1,11 @@
 # levis-biblio
 
+## 0.7.1
+
+### Correctifs
+
+- La pastille « Démo » peut rester affichée même quand Mon dossier se connecte au vrai portail des bibliothèques.
+
 ## 0.7.0
 
 ### Nouveautés
