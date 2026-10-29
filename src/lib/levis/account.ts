@@ -5,6 +5,7 @@ import type {
   Checkout,
   CheckoutsSummary,
   CoverMap,
+  CoverStreams,
   Fines,
   HistoryEntry,
   Hold,
@@ -12,7 +13,9 @@ import type {
   Preferences,
   Profile,
 } from '@/types';
+import { readyCovers, resolveCovers, type CoverRequest } from '@/lib/account/covers';
 import { formatDate, renewalRefusedMessage } from '@/lib/account/format';
+import { getCatalog } from '@/lib/catalog/source';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
 import { LevisError, ParseError } from './errors';
@@ -96,6 +99,20 @@ async function loadExtras(client: LevisClient, kind: 'checkouts' | 'holds'): Pro
   }
 }
 
+/** Couvertures et ISBN : le catalogue d'abord, le portail seulement pour ce qui y manque. */
+function loadCovers(
+  client: LevisClient,
+  kind: 'checkouts' | 'holds',
+  items: CoverRequest[],
+): CoverStreams {
+  if (items.length === 0) return readyCovers({});
+  return resolveCovers(
+    items,
+    async (titleIds) => (await getCatalog()).catalog.editionCovers(titleIds),
+    () => loadExtras(client, kind),
+  );
+}
+
 // ─── Emprunts ────────────────────────────────────────────────────────────────
 
 interface CheckoutsData {
@@ -126,13 +143,17 @@ const publicCheckout = (parsed: ParsedCheckout): Checkout => ({
 export interface CheckoutsResult {
   checkouts: Checkout[];
   summary: CheckoutsSummary;
-  /** Promesse non attendue : la page s'affiche sans attendre les couvertures. */
-  covers: Promise<CoverMap>;
+  /** Promesses non attendues : la page s'affiche sans attendre les couvertures. */
+  covers: CoverStreams;
 }
 
 export async function getCheckouts(client: LevisClient): Promise<CheckoutsResult> {
   const { checkouts, summary } = await loadCheckouts(client);
-  const covers = checkouts.length > 0 ? loadExtras(client, 'checkouts') : Promise.resolve({});
+  const covers = loadCovers(
+    client,
+    'checkouts',
+    checkouts.map((c) => ({ id: c.barcode, titleId: c.titleId })),
+  );
   return { checkouts: checkouts.map(publicCheckout), summary, covers };
 }
 
@@ -214,12 +235,16 @@ async function loadHolds(client: LevisClient): Promise<HoldsData> {
 export interface HoldsResult {
   holds: Hold[];
   summary: HoldsSummary;
-  covers: Promise<CoverMap>;
+  covers: CoverStreams;
 }
 
 export async function getHolds(client: LevisClient): Promise<HoldsResult> {
   const { holds, summary } = await loadHolds(client);
-  const covers = holds.length > 0 ? loadExtras(client, 'holds') : Promise.resolve({});
+  const covers = loadCovers(
+    client,
+    'holds',
+    holds.map((h) => ({ id: h.holdId, titleId: h.titleId })),
+  );
   return { holds, summary, covers };
 }
 

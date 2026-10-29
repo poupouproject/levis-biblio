@@ -30,6 +30,7 @@ export type {
   ActionResultParts,
   CoverInfo,
   CoverMap,
+  CoverStreams,
   SessionStatus,
 } from './account';
 

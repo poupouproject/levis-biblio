@@ -17,6 +17,7 @@ import {
 import type {
   CatalogEdition,
   CatalogWork,
+  EditionCover,
   FacetCount,
   Period,
   RawEdition,
@@ -67,6 +68,7 @@ export interface CatalogStats {
 export class Catalog {
   private readonly indexed: IndexedWork[];
   private readonly byId = new Map<string, IndexedWork>();
+  private readonly editionsByTitleId = new Map<string, EditionCover>();
   private readonly seriesBySlug = new Map<string, SeriesEntry>();
   private readonly authors: AuthorEntry[];
   private readonly authorAliases = new Map<string, string[]>();
@@ -118,6 +120,13 @@ export class Catalog {
       for (const edition of raw) {
         const id = edition.titleId ?? edition.isbn;
         if (id) this.byId.set(id, item);
+        // Plusieurs lignes peuvent partager un title_id : on garde celle qui a une couverture
+        if (edition.titleId && !this.editionsByTitleId.get(edition.titleId)?.cover) {
+          this.editionsByTitleId.set(edition.titleId, {
+            isbn: edition.isbn,
+            cover: edition.cover,
+          });
+        }
       }
       for (const name of item.work.authors) {
         const f = fold(name);
@@ -221,6 +230,16 @@ export class Catalog {
 
   getWork(id: string): CatalogWork | null {
     return this.byId.get(id)?.work ?? null;
+  }
+
+  /** ISBN et couverture des notices connues, par title_id ; les inconnues sont absentes. */
+  editionCovers(titleIds: string[]): Record<string, EditionCover> {
+    const out: Record<string, EditionCover> = {};
+    for (const id of titleIds) {
+      const edition = this.editionsByTitleId.get(id);
+      if (edition) out[id] = edition;
+    }
+    return out;
   }
 
   /** Séries dont le nom contient tous les mots : nom exact d'abord, puis les plus populaires. */

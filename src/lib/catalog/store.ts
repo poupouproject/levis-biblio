@@ -4,6 +4,7 @@ import type { Catalog } from './engine';
 import type { FormatGroup } from './normalize';
 import type {
   CatalogWork,
+  EditionCover,
   FacetCount,
   SearchQuery,
   SearchResult,
@@ -17,6 +18,8 @@ export interface CatalogStore {
   suggest(q: string, limit?: number): Promise<Suggestion[]>;
   /** Par title_id de n'importe quelle édition de l'œuvre, ou par ISBN. */
   getWork(id: string): Promise<CatalogWork | null>;
+  /** ISBN et couverture de la notice exacte, par title_id ; les inconnues sont absentes. */
+  editionCovers(titleIds: string[]): Promise<Record<string, EditionCover>>;
   getSeries(slug: string): Promise<SeriesWithWorks | null>;
   /** Autres œuvres des mêmes auteurs, une par série, hors série de l'œuvre. */
   related(work: CatalogWork, limit?: number): Promise<CatalogWork[]>;
@@ -34,6 +37,7 @@ export function memoryStore(catalog: Catalog): CatalogStore {
     search: (query) => Promise.resolve(catalog.search(query)),
     suggest: (q, limit) => Promise.resolve(catalog.suggest(q, limit)),
     getWork: (id) => Promise.resolve(catalog.getWork(id)),
+    editionCovers: (titleIds) => Promise.resolve(catalog.editionCovers(titleIds)),
     getSeries: (slug) => {
       const entry = catalog.getSeries(slug);
       return Promise.resolve(entry ? { summary: entry.summary, works: entry.works } : null);

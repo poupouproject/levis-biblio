@@ -28,7 +28,7 @@ describe.skipIf(!card || !pin)('Portail SirsiDynix (lecture seule)', () => {
       expect(c.title.length).toBeGreaterThan(0);
       expect(c.dueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
-    const coverMap = await covers;
+    const coverMap = { ...(await covers.known), ...(await covers.late) };
     expect(checkouts.some((c) => coverMap[c.barcode])).toBe(true);
     console.info(
       `emprunts: ${String(checkouts.length)}, avec couverture: ${String(checkouts.filter((c) => coverMap[c.barcode]).length)}`,

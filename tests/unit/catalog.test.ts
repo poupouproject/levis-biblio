@@ -239,6 +239,14 @@ describe('moteur de recherche', () => {
     expect(catalog.getWork('201')?.cover).toBe('https://x/3.jpg');
   });
 
+  it('retrouve l’ISBN et la couverture de la notice exacte par title_id', () => {
+    expect(catalog.editionCovers(['101', '103', '999'])).toEqual({
+      '101': { isbn: '9782723434621', cover: 'https://x/1.jpg' },
+      // L'édition 103 n'a pas de couverture : pas celle de son œuvre (102)
+      '103': { isbn: null, cover: null },
+    });
+  });
+
   it('place les tomes de la série exacte en premier, dans l’ordre', () => {
     const r = catalog.search({ ...EMPTY_QUERY, q: 'one piece' });
     expect(r.works.map((w) => w.id)).toEqual(['101', '102', '104']);

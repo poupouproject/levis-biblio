@@ -1,0 +1,85 @@
+import { describe, expect, it, vi } from 'vitest';
+import { readyCovers, resolveCovers } from '@/lib/account/covers';
+import type { EditionCover } from '@/lib/catalog/types';
+import type { CoverMap } from '@/types';
+
+const URL_1 = 'https://x/1/cover';
+const URL_2 = 'https://x/2/cover';
+
+const lookupOf =
+  (known: Record<string, EditionCover>) =>
+  (ids: string[]): Promise<Record<string, EditionCover>> =>
+    Promise.resolve(Object.fromEntries(ids.flatMap((id) => (known[id] ? [[id, known[id]]] : []))));
+
+const ITEMS = [
+  { id: 'b1', titleId: '101' },
+  { id: 'b2', titleId: '102' },
+];
+
+describe('couvertures de Mon dossier', () => {
+  it('prend tout dans le catalogue sans appeler le portail', async () => {
+    const portal = vi.fn((): Promise<CoverMap> => Promise.resolve({}));
+    const covers = resolveCovers(
+      ITEMS,
+      lookupOf({ '101': { isbn: '111', cover: URL_1 }, '102': { isbn: '222', cover: URL_2 } }),
+      portal,
+    );
+    expect(await covers.known).toEqual({
+      b1: { url: URL_1, isbn: '111' },
+      b2: { url: URL_2, isbn: '222' },
+    });
+    expect(await covers.late).toEqual({});
+    expect(portal).not.toHaveBeenCalled();
+  });
+
+  it('livre le catalogue sans attendre le portail, qui ne complète que ce qui manque', async () => {
+    let answer: (map: CoverMap) => void = () => undefined;
+    const portal = vi.fn(
+      () =>
+        new Promise<CoverMap>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const covers = resolveCovers(ITEMS, lookupOf({ '101': { isbn: '111', cover: URL_1 } }), portal);
+    // Le portail n'a pas encore répondu : le catalogue est déjà là
+    expect(await covers.known).toEqual({ b1: { url: URL_1, isbn: '111' } });
+    answer({ b1: { url: 'https://portail/ignore', isbn: '999' }, b2: { url: URL_2, isbn: '222' } });
+    expect(await covers.late).toEqual({ b2: { url: URL_2, isbn: '222' } });
+    expect(portal).toHaveBeenCalledTimes(1);
+  });
+
+  it('garde l’ISBN du catalogue quand ni lui ni le portail n’ont de couverture', async () => {
+    const covers = resolveCovers(
+      [{ id: 'b1', titleId: '101' }],
+      lookupOf({ '101': { isbn: '111', cover: null } }),
+      () => Promise.resolve({}),
+    );
+    expect(await covers.known).toEqual({});
+    expect(await covers.late).toEqual({ b1: { url: null, isbn: '111' } });
+  });
+
+  it('se rabat sur le portail si le catalogue ne répond pas', async () => {
+    const covers = resolveCovers(
+      [{ id: 'h1', titleId: '101' }],
+      () => Promise.reject(new Error('base injoignable')),
+      () => Promise.resolve({ h1: { url: URL_1, isbn: '111' } }),
+    );
+    expect(await covers.known).toEqual({});
+    expect(await covers.late).toEqual({ h1: { url: URL_1, isbn: '111' } });
+  });
+
+  it('passe par le portail pour un document sans title_id, sans interroger le catalogue', async () => {
+    const lookup = vi.fn(lookupOf({}));
+    const covers = resolveCovers([{ id: 'h1', titleId: null }], lookup, () =>
+      Promise.resolve({ h1: { url: URL_1, isbn: null } }),
+    );
+    expect(await covers.late).toEqual({ h1: { url: URL_1, isbn: null } });
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('des couvertures déjà résolues n’attendent rien du portail', async () => {
+    const covers = readyCovers({ b1: { url: URL_1, isbn: '111' } });
+    expect(await covers.known).toEqual({ b1: { url: URL_1, isbn: '111' } });
+    expect(await covers.late).toEqual({});
+  });
+});

@@ -25,7 +25,14 @@ import {
   type SeriesRow,
 } from './sql';
 import type { CatalogStore } from './store';
-import type { CatalogWork, SearchQuery, SearchResult, SeriesSummary, Suggestion } from './types';
+import type {
+  CatalogWork,
+  EditionCover,
+  SearchQuery,
+  SearchResult,
+  SeriesSummary,
+  Suggestion,
+} from './types';
 
 /** Les compteurs d'un parcours ne changent qu'à la restructuration du catalogue. */
 const CACHE_MS = 60 * 60 * 1000;
@@ -218,6 +225,22 @@ export class PostgresCatalog implements CatalogStore {
       subjects: row.sujets ?? [],
       editions: rowsToEditions(row.editions),
     };
+  }
+
+  async editionCovers(titleIds: string[]): Promise<Record<string, EditionCover>> {
+    if (titleIds.length === 0) return {};
+    // Plusieurs lignes peuvent partager un title_id : celle qui a une couverture d'abord
+    const rows = await this.rows<{
+      title_id: string;
+      isbn: string | null;
+      couverture: string | null;
+    }>(
+      `select distinct on (title_id) title_id, isbn, image_couverture as couverture
+         from editions where title_id = any($1::text[])
+        order by title_id, image_couverture is null, isbn nulls last`,
+      [titleIds],
+    );
+    return Object.fromEntries(rows.map((r) => [r.title_id, { isbn: r.isbn, cover: r.couverture }]));
   }
 
   async getSeries(slug: string): Promise<{ summary: SeriesSummary; works: CatalogWork[] } | null> {

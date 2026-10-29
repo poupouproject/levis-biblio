@@ -52,7 +52,8 @@ describe('mode démonstration : lectures', () => {
   it('a une couverture servie localement pour chaque document', async () => {
     const { holds, covers: holdCovers } = holdsOf();
     const { checkouts, covers: checkoutCovers } = checkoutsOf();
-    const covers = { ...(await holdCovers), ...(await checkoutCovers) };
+    const covers = { ...(await holdCovers.known), ...(await checkoutCovers.known) };
+    expect({ ...(await holdCovers.late), ...(await checkoutCovers.late) }).toEqual({});
     for (const id of [...holds.map((h) => h.holdId), ...checkouts.map((c) => c.barcode)]) {
       const url = covers[id]?.url ?? '';
       expect(url).toMatch(/^\/maquette\/couvertures\//);
