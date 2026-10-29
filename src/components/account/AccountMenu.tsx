@@ -24,6 +24,16 @@ const LINKS: { href: string; label: string; icon: LucideIcon }[] = [
 const TRIGGER =
   'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100';
 
+/** Lien vers le dossier, sans session connue (aussi dans la coquille statique). */
+export function AccountLink(): JSX.Element {
+  return (
+    <Link href="/compte" className={TRIGGER}>
+      <UserRound className="h-4 w-4" aria-hidden />
+      Mon dossier
+    </Link>
+  );
+}
+
 /**
  * Menu de compte de l'en-tête. Connecté : initiale et prénom, avec les liens du dossier
  * et la déconnexion. Sinon : simple lien vers la connexion.
@@ -71,14 +81,7 @@ export function AccountMenu(): JSX.Element {
     };
   }, [open]);
 
-  if (firstName === null) {
-    return (
-      <Link href="/compte" className={TRIGGER}>
-        <UserRound className="h-4 w-4" aria-hidden />
-        Mon dossier
-      </Link>
-    );
-  }
+  if (firstName === null) return <AccountLink />;
 
   const name = firstName || 'Mon compte';
   const close = (): void => {

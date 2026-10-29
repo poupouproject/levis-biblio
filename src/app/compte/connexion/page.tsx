@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Tout dépend de la requête (session ouverte, motif, erreur de connexion) : page rendue d'un bloc.
+export const instant = false;
+
 const REASONS = {
   expiree: {
     icon: Clock,

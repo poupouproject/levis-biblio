@@ -15,6 +15,7 @@ import { daysUntil, formatDate, plural, relativeDue, todayIso } from '@/lib/acco
 import {
   NO_COVERS,
   PLACEHOLDER_FINES,
+  PLACEHOLDER_TODAY,
   placeholderCheckouts,
   placeholderHolds,
 } from '@/lib/account/placeholders';
@@ -25,20 +26,13 @@ import { DueBadge } from '@/components/account/DueBadge';
 import { BranchButton } from '@/components/branches/BranchButton';
 import { SkeletonScope } from '@/components/ui/Skeleton';
 
-export default async function OverviewPage(): Promise<JSX.Element> {
-  const { firstName } = await requireAccount();
+export default function OverviewPage(): JSX.Element {
   const placeholderHoldList = placeholderHolds(2);
   return (
     <>
-      <PageHeader
-        title={firstName ? `Bonjour ${firstName}` : 'Bonjour'}
-        subtitle={new Date().toLocaleDateString('fr-CA', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          timeZone: 'America/Toronto',
-        })}
-      />
+      <Suspense fallback={<PageHeader title="Bonjour" subtitle="" />}>
+        <Greeting />
+      </Suspense>
       <Suspense
         fallback={
           <SkeletonScope label="Chargement de votre dossier…">
@@ -50,7 +44,7 @@ export default async function OverviewPage(): Promise<JSX.Element> {
                 covers: NO_COVERS,
               }}
               fines={PLACEHOLDER_FINES}
-              today={todayIso()}
+              today={PLACEHOLDER_TODAY}
             />
           </SkeletonScope>
         }
@@ -58,6 +52,22 @@ export default async function OverviewPage(): Promise<JSX.Element> {
         <OverviewSection />
       </Suspense>
     </>
+  );
+}
+
+/** Prénom et date du jour : propres à la requête, hors de la coquille statique. */
+async function Greeting(): Promise<JSX.Element> {
+  const { firstName } = await requireAccount();
+  return (
+    <PageHeader
+      title={firstName ? `Bonjour ${firstName}` : 'Bonjour'}
+      subtitle={new Date().toLocaleDateString('fr-CA', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'America/Toronto',
+      })}
+    />
   );
 }
 

@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCatalog } from '@/lib/catalog/source';
+import { getSeries } from '@/lib/catalog/cached';
 import type { SeriesWithWorks } from '@/lib/catalog/types';
 import { simulateAvailability } from '@/lib/catalog/availability';
 import { searchHref } from '@/lib/catalog/query';
@@ -13,7 +13,7 @@ type Params = Promise<{ slug: string }>;
 
 async function load(slug: string): Promise<SeriesWithWorks | null> {
   if (!/^[a-z0-9-]{1,120}$/.test(slug)) return null;
-  return (await getCatalog()).catalog.getSeries(slug);
+  return getSeries(slug);
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {

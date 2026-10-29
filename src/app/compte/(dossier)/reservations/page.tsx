@@ -4,7 +4,7 @@ import { getHolds, type HoldsResult } from '@/lib/levis/account';
 import { BRANCHES } from '@/lib/levis/config';
 import { withAccount } from '@/lib/account/dal';
 import { plural, todayIso } from '@/lib/account/format';
-import { NO_COVERS, placeholderHolds } from '@/lib/account/placeholders';
+import { NO_COVERS, PLACEHOLDER_TODAY, placeholderHolds } from '@/lib/account/placeholders';
 import { HoldsList } from '@/components/account/HoldsList';
 import { EmptyState, PageHeader } from '@/components/account/PageParts';
 import { SkeletonScope } from '@/components/ui/Skeleton';
@@ -19,7 +19,7 @@ export default function HoldsPage(): JSX.Element {
             holds={holds}
             summary={{ total: holds.length, ready: 0 }}
             covers={NO_COVERS}
-            today={todayIso()}
+            today={PLACEHOLDER_TODAY}
           />
         </SkeletonScope>
       }

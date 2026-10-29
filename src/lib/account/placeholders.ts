@@ -10,13 +10,19 @@ import type {
   Profile,
 } from '@/types';
 import { readyCovers } from './covers';
-import { addDays, todayIso } from './format';
+import { addDays } from './format';
 
 const TITLES = [
   'Titre du document en cours de chargement',
   'Un autre titre assez long, tome 2',
   'Titre plus court',
 ];
+
+/**
+ * Date fixe des squelettes : ils sont prérendus dans la coquille statique, où la date du jour
+ * n'est pas encore connue. Jamais affichée (texte masqué).
+ */
+export const PLACEHOLDER_TODAY = '2026-01-15';
 
 const pick = (i: number): string => TITLES[i % TITLES.length] ?? '';
 
@@ -27,7 +33,7 @@ export function placeholderCheckouts(count = 3): {
   checkouts: Checkout[];
   summary: CheckoutsSummary;
 } {
-  const today = todayIso();
+  const today = PLACEHOLDER_TODAY;
   return {
     checkouts: Array.from({ length: count }, (_, i) => ({
       barcode: `squelette-${String(i)}`,
@@ -64,7 +70,7 @@ export function placeholderHolds(count = 3): Hold[] {
 }
 
 export function placeholderHistory(count = 6): HistoryEntry[] {
-  const today = todayIso();
+  const today = PLACEHOLDER_TODAY;
   return Array.from({ length: count }, (_, i) => ({
     title: pick(i),
     author: 'Nom, Prénom de l’auteur',

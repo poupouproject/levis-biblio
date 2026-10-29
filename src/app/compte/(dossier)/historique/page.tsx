@@ -5,7 +5,7 @@ import type { HistoryEntry } from '@/types';
 import { getHistory } from '@/lib/levis/account';
 import { withAccount } from '@/lib/account/dal';
 import { todayIso } from '@/lib/account/format';
-import { placeholderHistory } from '@/lib/account/placeholders';
+import { PLACEHOLDER_TODAY, placeholderHistory } from '@/lib/account/placeholders';
 import { HistoryList } from '@/components/account/HistoryList';
 import { EmptyState, PageHeader } from '@/components/account/PageParts';
 import { SkeletonScope } from '@/components/ui/Skeleton';
@@ -17,7 +17,7 @@ export default function HistoryPage(): JSX.Element {
       <Suspense
         fallback={
           <SkeletonScope label="Chargement de votre historique…">
-            <HistoryContent entries={placeholderHistory(6)} today={todayIso()} />
+            <HistoryContent entries={placeholderHistory(6)} today={PLACEHOLDER_TODAY} />
           </SkeletonScope>
         }
       >

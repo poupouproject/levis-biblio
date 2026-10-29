@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
 import { Library, MapPin } from 'lucide-react';
-import { AccountMenu } from '@/components/account/AccountMenu';
+import { Suspense } from 'react';
+import { AccountLink, AccountMenu } from '@/components/account/AccountMenu';
 import { FloatingSearchProvider, HeaderSearchButton } from '@/components/search/FloatingSearch';
 import { DemoBadge } from '@/components/ui/DemoBadge';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
@@ -68,7 +69,10 @@ export default function RootLayout({
                   <MapPin className="h-4 w-4" aria-hidden />
                   <span className="sr-only sm:not-sr-only">Bibliothèques</span>
                 </Link>
-                <AccountMenu />
+                {/* Il suit l'adresse de la page : connue seulement à la requête sur /oeuvre/… */}
+                <Suspense fallback={<AccountLink />}>
+                  <AccountMenu />
+                </Suspense>
               </div>
             </div>
           </header>
