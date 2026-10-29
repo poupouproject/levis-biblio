@@ -14,7 +14,10 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
+import { unstable_cache } from 'next/cache';
 import { getCatalog } from '@/lib/catalog/source';
+import type { CatalogStore } from '@/lib/catalog/store';
+import type { CatalogWork, SeriesSummary } from '@/lib/catalog/types';
 import { AUTEURS_DICI, RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { searchHref } from '@/lib/catalog/query';
 import type { FormatGroup } from '@/lib/catalog/normalize';
@@ -35,11 +38,15 @@ const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
   autre: Library,
 };
 
-export default async function Home(): Promise<JSX.Element> {
-  // Jamais rendue au build : le catalogue change (notices ajoutées) et une base lente au
-  // déploiement ferait échouer le build. Les étagères sont gardées 1 h en mémoire (postgres.ts).
-  await connection();
-  const { catalog, source, totalEditions } = await getCatalog();
+interface HomeData {
+  newest: CatalogWork[];
+  series: SeriesSummary[];
+  local: CatalogWork[];
+  formats: Awaited<ReturnType<CatalogStore['formatCounts']>>;
+  served: number;
+}
+
+async function loadHome(catalog: CatalogStore): Promise<HomeData> {
   const [newest, series, local, formats, served] = await Promise.all([
     catalog.newest(18),
     catalog.topSeries(10),
@@ -47,6 +54,33 @@ export default async function Home(): Promise<JSX.Element> {
     catalog.formatCounts(),
     catalog.editionCount(),
   ]);
+  return { newest, series, local, formats, served };
+}
+
+/**
+ * Étagères et compteurs de la base, partagés par tous les visiteurs et toutes les instances
+ * (cache de données de Next), renouvelés en arrière-plan après 1 h : personne n'attend la base,
+ * sauf la toute première visite. Jamais le jeu de démo : il ne doit pas remplacer la base 1 h.
+ */
+const cachedHome = unstable_cache(
+  async () => {
+    const { catalog, source } = await getCatalog();
+    if (source !== 'postgres') throw new Error('Jeu de démo : pas de cache partagé.');
+    return loadHome(catalog);
+  },
+  ['accueil'],
+  { revalidate: 3600 },
+);
+
+export default async function Home(): Promise<JSX.Element> {
+  // Jamais rendue au build : le catalogue change (notices ajoutées) et une base lente au
+  // déploiement ferait échouer le build.
+  await connection();
+  const { catalog, source, totalEditions } = await getCatalog();
+  const { newest, series, local, formats, served } =
+    source === 'postgres'
+      ? await cachedHome().catch(() => loadHome(catalog))
+      : await loadHome(catalog);
   const heroCovers = newest.slice(0, 5);
 
   return (
