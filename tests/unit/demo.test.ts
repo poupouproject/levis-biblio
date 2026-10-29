@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import {
   demoChangePickup,
@@ -6,6 +6,8 @@ import {
   demoRead,
   demoRenew,
   demoUpdatePreferences,
+  isDemoBadgeVisible,
+  isDemoMode,
   newDemoState,
 } from '@/lib/account/demo';
 import {
@@ -111,5 +113,30 @@ describe('mode démonstration : actions', () => {
     };
     expect(demoUpdatePreferences(state, prefs).preferences).toEqual(prefs);
     expect(demoRead(getProfile, state).preferences).toEqual(prefs);
+  });
+});
+
+describe('pastille « Démo »', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('est absente sans variable', () => {
+    vi.stubEnv('LEVIS_DEMO', '');
+    vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
+    expect(isDemoBadgeVisible()).toBe(false);
+  });
+
+  it('se commande seule, sans activer le mode démonstration', () => {
+    vi.stubEnv('LEVIS_DEMO', '');
+    vi.stubEnv('LEVIS_BANNIERE_DEMO', '1');
+    expect(isDemoBadgeVisible()).toBe(true);
+    expect(isDemoMode()).toBe(false);
+  });
+
+  it('accompagne le mode démonstration', () => {
+    vi.stubEnv('LEVIS_DEMO', '1');
+    vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
+    expect(isDemoBadgeVisible()).toBe(true);
   });
 });

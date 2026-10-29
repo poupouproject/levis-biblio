@@ -39,6 +39,15 @@ export function isDemoMode(): boolean {
   return process.env.LEVIS_DEMO === '1';
 }
 
+/**
+ * Pastille « Démo » de l'en-tête (`LEVIS_BANNIERE_DEMO=1`). Indépendante de `LEVIS_DEMO` : on
+ * peut essayer le vrai Mon dossier tout en gardant la pastille, tant que les données du
+ * catalogue restent fictives ou partielles. Le mode démonstration l'affiche aussi.
+ */
+export function isDemoBadgeVisible(): boolean {
+  return isDemoMode() || process.env.LEVIS_BANNIERE_DEMO === '1';
+}
+
 export const DEMO_FIRST_NAME = 'Camille';
 
 /** Modifications apportées par le visiteur, scellées dans le cookie de session. */
