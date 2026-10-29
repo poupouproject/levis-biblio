@@ -52,5 +52,6 @@ données personnelles. Ne jamais commiter de vraies données de compte. Les fixt
   dans le statut (« Retirer avant le : AA-MM-JJ »).
 - Le portail ne donne pas le motif d'un refus de renouvellement (en pratique : réservé par
   un autre usager).
-- Les serveurs infonuagiques (Vercel) sont bloqués : en ligne, Mon dossier tourne en mode
-  démonstration (`LEVIS_DEMO=1`).
+- En ligne, Mon dossier tourne en mode démonstration (`LEVIS_DEMO=1`) : choix délibéré tant
+  que la Ville ne l'a pas autorisé. Depuis le passage du projet Vercel à la région de Montréal
+  (`yul1`), les couvertures passent ; Mon dossier depuis Vercel n'a pas été testé.

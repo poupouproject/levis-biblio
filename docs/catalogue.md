@@ -95,7 +95,7 @@ Chercher _dans_ les résumés (plein texte, vecteurs) demanderait de les stocker
 - `SearchBox` : combobox ARIA (flèches, Entrée, Échap), raccourci `/`, suggestions après 120 ms (requête annulée si la saisie change, réponses gardées en mémoire), recherches récentes dans le navigateur, mots en gras.
 - `Filters` : l'URL change dans une transition (`useTransition`). Le filtre change tout de suite à l'écran (`useOptimistic`) et les résultats s'estompent pendant le chargement. Panneau latéral sur grand écran, feuille du bas (`<dialog>` natif) sur mobile.
 - `Shelf` : étagère horizontale, aimantée au doigt, flèches sur ordinateur. Les cartes restent des composants serveur.
-- `Cover` : couverture 2:3. Sans image, une couverture typographique est générée à partir du titre. Sur Vercel, le portail refuse les requêtes du serveur, donc de l'optimiseur d'images : le navigateur charge alors la couverture directement (`NEXT_PUBLIC_VERCEL_ENV`).
+- `Cover` : couverture 2:3. Sans image, une couverture typographique est générée à partir du titre. Partout, la couverture passe par l'optimiseur d'images (AVIF ou WebP, quelques largeurs partagées, cache de 31 jours : `next.config.ts`). Sur Vercel, le projet est dans la région de Montréal (`yul1`), que le portail laisse passer pour les couvertures. Le plan Hobby compte 5 000 conversions par mois : au-delà, les nouvelles couvertures tombent en erreur et la couverture typographique les remplace.
 
 ## 5. Limites connues
 

@@ -3,10 +3,6 @@
 import { useState, type JSX } from 'react';
 import Image from 'next/image';
 
-// Sur Vercel, le portail de la Ville refuse les requêtes du serveur (et donc de l'optimiseur
-// d'images) : le navigateur charge alors la couverture directement.
-const DIRECT = process.env.NEXT_PUBLIC_VERCEL_ENV !== undefined;
-
 const PALETTES = [
   ['#1e3a5f', '#d4a853'],
   ['#5b2333', '#f0c987'],
@@ -60,7 +56,6 @@ export function Cover({
           fill
           sizes={sizes}
           priority={priority ?? false}
-          unoptimized={DIRECT}
           className="bg-zinc-100 object-cover dark:bg-zinc-800"
           onError={() => {
             setFailed(true);

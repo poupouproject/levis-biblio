@@ -79,5 +79,7 @@ la Ville : ne pas les reprendre. Détails : `docs/catalogue.md`.
 
 ## Couvertures
 
-URL du portail (`btlffile/<isbn>/cover`). Sur Vercel, chargées directement par le navigateur
-(`unoptimized`, voir `Cover.tsx`). Sans image : couverture typographique générée.
+URL du portail (`btlffile/<isbn>/cover`), toujours servie par l'optimiseur d'images (aussi sur
+Vercel, région Montréal). Quota Hobby : 5 000 conversions par mois ; ne pas ajouter de
+largeurs à `imageSizes` / `deviceSizes` ni de qualités sans mesurer, chaque combinaison est une
+conversion de plus. Sans image : couverture typographique générée.

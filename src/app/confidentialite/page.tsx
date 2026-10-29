@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 // À changer à chaque modification du texte.
-const MISE_A_JOUR = '29 octobre 2026';
+const MISE_A_JOUR = '30 octobre 2026';
 
 const DEPOT = 'https://github.com/poupouproject/levis-biblio';
 
@@ -138,8 +138,9 @@ export default function PrivacyPage(): JSX.Element {
       <Card title="Contenus externes" icon={ImageIcon}>
         <List>
           <li>
-            Les couvertures sont chargées par votre navigateur depuis le portail de la Ville, comme
-            lorsque vous consultez son site. Le portail reçoit alors votre adresse IP.
+            Les couvertures sont demandées au portail de la Ville par notre hébergeur, qui les
+            réduit et les garde en cache. Votre navigateur ne contacte pas le portail pour les
+            afficher.
           </li>
           <li>
             Les résumés Google Livres sont demandés par notre serveur, avec le seul ISBN du livre :
