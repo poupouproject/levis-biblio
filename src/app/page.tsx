@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import Link from 'next/link';
+import { connection } from 'next/server';
 import {
   ArrowRight,
   BookOpen,
@@ -23,9 +24,6 @@ import { SeriesCard, WorkCard } from '@/components/catalog/WorkCard';
 import { Cover } from '@/components/catalog/Cover';
 import { OpenBranches } from '@/components/branches/OpenBranches';
 
-// Données publiques : page régénérée toutes les heures plutôt qu'à chaque visite.
-export const revalidate = 3600;
-
 const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
   livre: BookOpen,
   'gros-caracteres': Type,
@@ -38,6 +36,9 @@ const FORMAT_ICONS: Record<FormatGroup, LucideIcon> = {
 };
 
 export default async function Home(): Promise<JSX.Element> {
+  // Jamais rendue au build : le catalogue change (notices ajoutées) et une base lente au
+  // déploiement ferait échouer le build. Les étagères sont gardées 1 h en mémoire (postgres.ts).
+  await connection();
   const { catalog, source, totalEditions } = await getCatalog();
   const [newest, series, local, formats, served] = await Promise.all([
     catalog.newest(18),

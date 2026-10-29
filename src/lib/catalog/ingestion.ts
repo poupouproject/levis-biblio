@@ -154,7 +154,11 @@ async function workFor(
  * Idempotente : une notice déjà connue (même ISBN, ou même title_id sans ISBN) est laissée.
  * À appeler dans une transaction : en cas d'erreur, l'appelant annule tout.
  */
-export async function injectNotice(db: Queryable, raw: RawEdition): Promise<InjectionResult> {
+export async function injectNotice(
+  db: Queryable,
+  raw: RawEdition,
+  options: { partielle?: boolean } = {},
+): Promise<InjectionResult> {
   const analysis = analyzeNotice(raw);
   if (!analysis) return { statut: 'ignoree', raison: 'notice sans titre' };
   const { rows: known } = await db.query<{ id: string }>(
@@ -166,11 +170,15 @@ export async function injectNotice(db: Queryable, raw: RawEdition): Promise<Inje
 
   const auteurId = raw.author ? await authorFor(db, raw.author) : null;
   const work = await workFor(db, raw, analysis);
-  // L'insertion déclenche le recalcul de l'œuvre, puis de sa série et de ses auteurs
+  // L'insertion déclenche le recalcul de l'œuvre, puis de sa série et de ses auteurs.
+  // Notice partielle (Mon dossier) : marquée à compléter, et sans date d'ajout.
+  const partielle = options.partielle
+    ? { columns: ', notice_partielle, created_at', values: ', true, null' }
+    : { columns: '', values: '' };
   await db.query(
     `insert into editions (isbn, title_id, titre_brut, auteur_brut, editeur, annee_publication,
-                           format, nb_pages, image_couverture, oeuvre_id)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                           format, nb_pages, image_couverture, oeuvre_id${partielle.columns})
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10${partielle.values})`,
     [
       raw.isbn,
       raw.titleId,

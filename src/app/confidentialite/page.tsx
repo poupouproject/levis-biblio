@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 // À changer à chaque modification du texte.
-const MISE_A_JOUR = '30 octobre 2026';
+const MISE_A_JOUR = '29 octobre 2026';
 
 const DEPOT = 'https://github.com/poupouproject/levis-biblio';
 
@@ -93,6 +93,11 @@ export default function PrivacyPage(): JSX.Element {
             jamais votre carte ni votre NIP.
           </li>
           <li>Le site n’a aucune base de données d’usagers.</li>
+          <li>
+            Si un document de votre dossier manque à notre copie du catalogue (une nouveauté), sa
+            notice publique y est ajoutée : titre, auteur, ISBN et couverture. Rien ne la relie à
+            vous, et elle ne porte aucune date d’ajout.
+          </li>
           <li>
             Tant que la Ville ne l’a pas autorisé, la version en ligne présente un dossier fictif
             (démonstration) : rien n’y est transmis au portail.

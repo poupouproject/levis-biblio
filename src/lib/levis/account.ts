@@ -1,5 +1,6 @@
 import 'server-only';
 import { load } from 'cheerio';
+import { after } from 'next/server';
 import type {
   ActionItemResult,
   Checkout,
@@ -15,6 +16,7 @@ import type {
 } from '@/types';
 import { readyCovers, resolveCovers, type CoverRequest } from '@/lib/account/covers';
 import { formatDate, renewalRefusedMessage } from '@/lib/account/format';
+import { injectNotices, injectionEnabled } from '@/lib/catalog/injection';
 import { getCatalog } from '@/lib/catalog/source';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
@@ -99,18 +101,33 @@ async function loadExtras(client: LevisClient, kind: 'checkouts' | 'holds'): Pro
   }
 }
 
-/** Couvertures et ISBN : le catalogue d'abord, le portail seulement pour ce qui y manque. */
+/**
+ * Couvertures et ISBN : le catalogue d'abord, le portail seulement pour ce qui y manque. Les
+ * documents absents du catalogue y sont ajoutés après la réponse, sans la retarder.
+ */
 function loadCovers(
   client: LevisClient,
   kind: 'checkouts' | 'holds',
   items: CoverRequest[],
 ): CoverStreams {
   if (items.length === 0) return readyCovers({});
-  return resolveCovers(
+  const { known, late, newNotices } = resolveCovers(
     items,
     async (titleIds) => (await getCatalog()).catalog.editionCovers(titleIds),
     () => loadExtras(client, kind),
   );
+  if (injectionEnabled()) {
+    try {
+      after(async () => {
+        // Comparé au jeu de démo, presque tout semblerait manquer : la base seulement
+        if ((await getCatalog()).source !== 'postgres') return;
+        await injectNotices(await newNotices);
+      });
+    } catch {
+      // Hors d'une requête (tests) : rien à ajouter
+    }
+  }
+  return { known, late };
 }
 
 // ─── Emprunts ────────────────────────────────────────────────────────────────
@@ -152,7 +169,11 @@ export async function getCheckouts(client: LevisClient): Promise<CheckoutsResult
   const covers = loadCovers(
     client,
     'checkouts',
-    checkouts.map((c) => ({ id: c.barcode, titleId: c.titleId })),
+    checkouts.map((c) => ({
+      id: c.barcode,
+      titleId: c.titleId,
+      notice: { title: c.title, author: c.author },
+    })),
   );
   return { checkouts: checkouts.map(publicCheckout), summary, covers };
 }
@@ -243,7 +264,11 @@ export async function getHolds(client: LevisClient): Promise<HoldsResult> {
   const covers = loadCovers(
     client,
     'holds',
-    holds.map((h) => ({ id: h.holdId, titleId: h.titleId })),
+    holds.map((h) => ({
+      id: h.holdId,
+      titleId: h.titleId,
+      notice: { title: h.title, author: h.author },
+    })),
   );
   return { holds, summary, covers };
 }

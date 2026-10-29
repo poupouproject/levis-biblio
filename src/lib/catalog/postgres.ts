@@ -34,7 +34,10 @@ import type {
   Suggestion,
 } from './types';
 
-/** Les compteurs d'un parcours ne changent qu'à la restructuration du catalogue. */
+/**
+ * Compteurs et étagères de l'accueil, gardés en mémoire : ils ne changent qu'à la
+ * restructuration du catalogue ou à l'ajout d'une notice (visible au plus 1 h plus tard).
+ */
 const CACHE_MS = 60 * 60 * 1000;
 
 interface SearchRow {
@@ -272,30 +275,40 @@ export class PostgresCatalog implements CatalogStore {
   }
 
   /** Nouveautés avec couverture, une seule par série pour varier l'étagère. */
-  async newest(limit = 18): Promise<CatalogWork[]> {
-    const rows = await this.rows<CardRow>(
-      `select ${CARD_COLUMNS} from (
-         select r.*, row_number() over (
-                  partition by coalesce(r.serie_id::text, r.ref) order by ${BASE_ORDER}) as rang
-           from catalogue_oeuvres r where r.couverture is not null and r.annee >= $1) x
-        where rang = 1 order by ${BASE_ORDER} limit $2`,
-      [this.recentYear(), limit],
-    );
-    return rows.map(rowToWork);
+  newest(limit = 18): Promise<CatalogWork[]> {
+    return this.cached(`nouveautes|${String(limit)}`, async () => {
+      const rows = await this.rows<CardRow>(
+        `select ${CARD_COLUMNS} from (
+           select r.*, row_number() over (
+                    partition by coalesce(r.serie_id::text, r.ref) order by ${BASE_ORDER}) as rang
+             from catalogue_oeuvres r where r.couverture is not null and r.annee >= $1) x
+          where rang = 1 order by ${BASE_ORDER} limit $2`,
+        [this.recentYear(), limit],
+      );
+      return rows.map(rowToWork);
+    });
   }
 
-  async topSeries(limit = 10): Promise<SeriesSummary[]> {
-    const rows = await this.rows<SeriesRow>(
-      `select nom, slug, nb_tomes, couvertures, annee_max, auteurs from series
-        where nb_tomes >= 4 and cardinality(couvertures) >= 3
-        order by nb_tomes desc, slug limit $1`,
-      [limit],
-    );
-    return rows.map(rowToSeries);
+  topSeries(limit = 10): Promise<SeriesSummary[]> {
+    return this.cached(`series|${String(limit)}`, async () => {
+      const rows = await this.rows<SeriesRow>(
+        `select nom, slug, nb_tomes, couvertures, annee_max, auteurs from series
+          where nb_tomes >= 4 and cardinality(couvertures) >= 3
+          order by nb_tomes desc, slug limit $1`,
+        [limit],
+      );
+      return rows.map(rowToSeries);
+    });
   }
 
   /** Œuvres avec couverture des auteurs donnés, une par série, en alternant les auteurs. */
-  async byAuthors(names: string[], limit = 18): Promise<CatalogWork[]> {
+  byAuthors(names: string[], limit = 18): Promise<CatalogWork[]> {
+    return this.cached(`auteurs|${String(limit)}|${names.join('|')}`, () =>
+      this.loadByAuthors(names, limit),
+    );
+  }
+
+  private async loadByAuthors(names: string[], limit: number): Promise<CatalogWork[]> {
     // En SQL : une œuvre par série, puis au plus `limit` par auteur ; l'entrelacement en TS
     const rows = await this.rows<CardRow & { bucket: number; serie_id: string | null }>(
       `with a as (select id as auteur_id, array_position($1::text[], nom_cle) - 1 as bucket

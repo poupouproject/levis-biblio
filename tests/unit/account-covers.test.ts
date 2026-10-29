@@ -77,6 +77,48 @@ describe('couvertures de Mon dossier', () => {
     expect(lookup).not.toHaveBeenCalled();
   });
 
+  it('propose d’ajouter au catalogue les seuls documents qui en sont absents', async () => {
+    const covers = resolveCovers(
+      [
+        { id: 'b1', titleId: '101', notice: { title: 'Connu', author: null } },
+        { id: 'b2', titleId: '102', notice: { title: 'Connu sans couverture', author: null } },
+        {
+          id: 'b3',
+          titleId: '103',
+          notice: { title: 'One Piece. 25, Nouveauté', author: 'Oda, Eiichirô, 1975-' },
+        },
+        { id: 'b4', titleId: '103', notice: { title: 'One Piece. 25, Nouveauté', author: null } },
+        { id: 'b5', titleId: null, notice: { title: 'Sans identifiant', author: null } },
+      ],
+      lookupOf({ '101': { isbn: '111', cover: URL_1 }, '102': { isbn: '222', cover: null } }),
+      () => Promise.resolve({ b3: { url: URL_2, isbn: '9782723434621' } }),
+    );
+    expect(await covers.newNotices).toEqual([
+      {
+        isbn: '9782723434621',
+        titleId: '103',
+        title: 'One Piece. 25, Nouveauté',
+        author: 'Oda, Eiichirô, 1975-',
+        publisher: null,
+        year: null,
+        format: null,
+        pages: null,
+        cover: URL_2,
+        summary: null,
+        subjects: null,
+      },
+    ]);
+  });
+
+  it('n’ajoute rien si le catalogue n’a pas répondu', async () => {
+    const covers = resolveCovers(
+      [{ id: 'b1', titleId: '101', notice: { title: 'Titre', author: null } }],
+      () => Promise.reject(new Error('base injoignable')),
+      () => Promise.resolve({ b1: { url: URL_1, isbn: '111' } }),
+    );
+    expect(await covers.newNotices).toEqual([]);
+  });
+
   it('des couvertures déjà résolues n’attendent rien du portail', async () => {
     const covers = readyCovers({ b1: { url: URL_1, isbn: '111' } });
     expect(await covers.known).toEqual({ b1: { url: URL_1, isbn: '111' } });
