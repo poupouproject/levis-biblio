@@ -7,8 +7,8 @@ import type { RawEdition } from './types';
 /**
  * Ajout au catalogue des notices découvertes dans Mon dossier (absentes du relevé). Connexion
  * distincte, au rôle limité `levisbiblio_injection` (lire, ajouter, mettre à jour ; jamais
- * supprimer) : migration 20261030000000_injection_mon_dossier.sql. Sans
- * DATABASE_INJECTION_URL, rien n'est ajouté.
+ * supprimer) : migrations 20261030000000_injection_mon_dossier.sql et
+ * 20261030000100_injection_politiques.sql. Sans DATABASE_INJECTION_URL, rien n'est ajouté.
  */
 export function injectionEnabled(): boolean {
   return Boolean(process.env.DATABASE_INJECTION_URL);

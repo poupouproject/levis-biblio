@@ -20,7 +20,8 @@ Documentation complète : `docs/catalogue.md`.
   (dans Git Bash, `MSYS_NO_PATHCONV=1` pour les chemins du conteneur).
   Ne pas endosser un nouveau rôle dans une transaction de test (`grant … to current_user` puis
   `set local role`) : dans ce conteneur, ça a fait planter Postgres (signal 11, récupération
-  automatique, aucune perte).
+  automatique, aucune perte). Se connecter plutôt directement sous le rôle
+  (`DATABASE_INJECTION_URL`), dans une transaction annulée.
 - **Supabase en ligne** : même schéma et mêmes données que la base locale (copie des tables
   après chaque restructuration, pour garder les mêmes identifiants). Plan gratuit, disque
   limité : jamais de recalcul de tout le catalogue en place (disque plein) ; vider, migrer,
