@@ -119,13 +119,13 @@ Après chaque action, la liste est relue et le résultat de chaque document est 
 
 ## 5. Configuration
 
-| Variable                                    | Rôle                                                                                                  |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `LEVIS_SESSION_SECRET`                      | Obligatoire. Clé du cookie scellé (voir `.env.example`).                                              |
-| `LEVIS_USER_AGENT`                          | Optionnel. Remplace le User-Agent envoyé au portail.                                                  |
-| `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`.                                            |
-| `LEVIS_DEMO`                                | Optionnel. `1` : mode démonstration (voir ci-dessous).                                                |
-| `LEVIS_BANNIERE_DEMO`                       | Optionnel. `1` : pastille « Démo » dans l'en-tête, sans activer le mode démonstration de Mon dossier. |
+| Variable                                    | Rôle                                                                                                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LEVIS_SESSION_SECRET`                      | Obligatoire. Clé du cookie scellé (voir `.env.example`).                                                                                                                         |
+| `LEVIS_USER_AGENT`                          | Optionnel. Remplace le User-Agent envoyé au portail.                                                                                                                             |
+| `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`.                                                                                                                       |
+| `LEVIS_DEMO`                                | Optionnel. `1` : mode démonstration (voir ci-dessous).                                                                                                                           |
+| `LEVIS_BANNIERE_DEMO`                       | Optionnel. `1` : pastille « Démo » dans l'en-tête, sans activer le mode démonstration de Mon dossier. La connexion propose aussi le dossier fictif, en option (voir ci-dessous). |
 
 ### Mode démonstration (`LEVIS_DEMO=1`)
 
@@ -136,6 +136,8 @@ Le portail de la Ville refuse les requêtes venant de Vercel : en production, Mo
 - Les actions (renouveler, annuler, suspendre, réactiver, changer de succursale, préférences) fonctionnent. Leurs effets sont gardés dans le cookie de session : chaque visiteur a sa propre démo, remise à zéro à la déconnexion.
 - Les couvertures sont servies depuis `public/maquette/couvertures/` : rien ne vient du portail.
 - Un bandeau « Démonstration : dossier fictif » s'affiche en haut de chaque page du dossier.
+
+Avec la seule pastille (`LEVIS_BANNIERE_DEMO=1`, sans `LEVIS_DEMO`), la page de connexion garde le vrai formulaire (carte et NIP) et propose en dessous « Explorer le dossier de démonstration ». Ce bouton ouvre le même dossier fictif, sans requête au portail. Sans aucune des deux variables, l'option n'est pas affichée et la route de connexion la refuse.
 
 ## 6. Tests
 

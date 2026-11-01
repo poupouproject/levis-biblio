@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
       request.headers.get('x-real-ip')?.trim(),
       request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim(),
     ].find(Boolean) ?? 'local';
-  const result = await attemptLogin(card, field('pin'), ip);
+  const result = await attemptLogin(card, field('pin'), ip, field('demo') === '1');
 
   const jar = await cookies();
   if (result.ok) {

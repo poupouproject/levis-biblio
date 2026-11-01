@@ -1,7 +1,7 @@
 import 'server-only';
 import { login } from '@/lib/levis/auth';
 import { InvalidCredentialsError, LevisError } from '@/lib/levis/errors';
-import { DEMO_FIRST_NAME, isDemoMode, newDemoState } from './demo';
+import { DEMO_FIRST_NAME, isDemoAccountOffered, isDemoMode, newDemoState } from './demo';
 import { allowLoginAttempt, recordLoginSuccess } from './rate-limit';
 import { getAccountSession } from './session';
 
@@ -29,13 +29,15 @@ export function isLoginErrorCode(value: string | undefined): value is LoginError
 /**
  * Valide, limite les tentatives, ouvre la session sur le portail et la scelle dans le cookie.
  * Le NIP ne quitte pas cette fonction : ni conservé ni journalisé.
+ * `demo` : le visiteur a choisi le dossier fictif (option offerte avec la pastille « Démo »).
  */
 export async function attemptLogin(
   rawCard: string,
   pin: string,
   ip: string,
+  demo = false,
 ): Promise<{ ok: true } | { ok: false; code: LoginErrorCode }> {
-  if (isDemoMode()) {
+  if (isDemoMode() || (demo && isDemoAccountOffered())) {
     // Dossier fictif : rien n'est envoyé au portail, la carte et le NIP sont ignorés.
     const session = await getAccountSession();
     session.demo = newDemoState();

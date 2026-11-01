@@ -49,6 +49,14 @@ export function isDemoBadgeVisible(): boolean {
   return isDemoMode() || process.env.LEVIS_BANNIERE_DEMO === '1';
 }
 
+/**
+ * Le dossier fictif peut-il s'ouvrir ? En mode démonstration, c'est le seul parcours. Avec la
+ * seule pastille « Démo », il est proposé en option, sous le vrai formulaire de connexion.
+ */
+export function isDemoAccountOffered(): boolean {
+  return isDemoBadgeVisible();
+}
+
 export const DEMO_FIRST_NAME = 'Camille';
 
 /** Modifications apportées par le visiteur, scellées dans le cookie de session. */
