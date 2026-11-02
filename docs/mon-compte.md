@@ -137,7 +137,7 @@ Le portail de la Ville refuse les requêtes venant de Vercel : en production, Mo
 - Les couvertures sont servies depuis `public/maquette/couvertures/` : rien ne vient du portail.
 - Un bandeau « Démonstration : dossier fictif » s'affiche en haut de chaque page du dossier.
 
-Avec la seule pastille (`LEVIS_BANNIERE_DEMO=1`, sans `LEVIS_DEMO`), la page de connexion garde le vrai formulaire (carte et NIP) et propose en dessous « Explorer le dossier de démonstration ». Ce bouton ouvre le même dossier fictif, sans requête au portail. Sans aucune des deux variables, l'option n'est pas affichée et la route de connexion la refuse.
+Avec la seule pastille (`LEVIS_BANNIERE_DEMO=1`, sans `LEVIS_DEMO`), la page de connexion garde le vrai formulaire (carte et NIP) et propose en dessous « Explorer le dossier de démonstration ». Ce bouton ouvre le même dossier fictif, sans requête au portail ; seule une vraie session déjà ouverte dans un autre onglet est d'abord fermée. Le cookie ne porte jamais les deux sessions à la fois : ouvrir l'une efface l'autre. Sans aucune des deux variables, l'option n'est pas affichée et la route de connexion la refuse avec un message dédié, sans tenter de vraie connexion.
 
 ## 6. Tests
 

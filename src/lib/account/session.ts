@@ -7,7 +7,8 @@ import type { DemoState } from './demo';
 /**
  * Contenu du cookie scellé (chiffré + signé, httpOnly). Aucun identifiant n'y figure :
  * seulement la session ouverte sur le portail de la Ville et le prénom pour l'accueil.
- * En mode démonstration, `demo` remplace `levis` (voir src/lib/account/demo.ts).
+ * Le dossier fictif tient dans `demo` (voir src/lib/account/demo.ts). `levis` et `demo` s'excluent :
+ * les ouvrir uniquement avec `openPortalSession` et `openDemoSession`.
  */
 export interface AccountSession {
   levis?: LevisSessionState;
@@ -18,6 +19,28 @@ export interface AccountSession {
 /** Vrai si une session (portail ou démo) est ouverte. */
 export function isSignedIn(session: AccountSession): boolean {
   return session.levis !== undefined || session.demo !== undefined;
+}
+
+/** Vraie session : efface le dossier fictif, qui aurait priorité à la lecture et dans les actions. */
+export function openPortalSession(
+  session: AccountSession,
+  state: LevisSessionState,
+  firstName: string,
+): void {
+  delete session.demo;
+  session.levis = state;
+  session.firstName = firstName;
+}
+
+/** Dossier fictif : efface la vraie session, à fermer d'abord sur le portail. */
+export function openDemoSession(
+  session: AccountSession,
+  state: DemoState,
+  firstName: string,
+): void {
+  delete session.levis;
+  session.demo = state;
+  session.firstName = firstName;
 }
 
 /** Durée maximale d'une session, renouvelée à chaque action. */

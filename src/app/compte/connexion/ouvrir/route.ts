@@ -34,12 +34,15 @@ export async function POST(request: Request): Promise<Response> {
     return seeOther('/compte');
   }
 
-  jar.set(CARD_FLASH_COOKIE, card.slice(0, 30), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/compte/connexion',
-    maxAge: 120,
-  });
+  // Le dossier fictif refusé n'a pas de carte à préremplir.
+  if (result.code !== 'demo') {
+    jar.set(CARD_FLASH_COOKIE, card.slice(0, 30), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/compte/connexion',
+      maxAge: 120,
+    });
+  }
   return seeOther(`/compte/connexion?erreur=${result.code}`);
 }

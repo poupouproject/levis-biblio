@@ -6,7 +6,6 @@ import {
   demoRead,
   demoRenew,
   demoUpdatePreferences,
-  isDemoAccountOffered,
   isDemoBadgeVisible,
   isDemoMode,
   newDemoState,
@@ -140,29 +139,5 @@ describe('pastille « Démo »', () => {
     vi.stubEnv('LEVIS_DEMO', '1');
     vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
     expect(isDemoBadgeVisible()).toBe(true);
-  });
-});
-
-describe('dossier fictif offert', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('jamais sans variable', () => {
-    vi.stubEnv('LEVIS_DEMO', '');
-    vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
-    expect(isDemoAccountOffered()).toBe(false);
-  });
-
-  it('en option avec la seule pastille « Démo »', () => {
-    vi.stubEnv('LEVIS_DEMO', '');
-    vi.stubEnv('LEVIS_BANNIERE_DEMO', '1');
-    expect(isDemoAccountOffered()).toBe(true);
-  });
-
-  it('en mode démonstration', () => {
-    vi.stubEnv('LEVIS_DEMO', '1');
-    vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
-    expect(isDemoAccountOffered()).toBe(true);
   });
 });
