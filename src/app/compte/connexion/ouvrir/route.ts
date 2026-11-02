@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
       request.headers.get('x-real-ip')?.trim(),
       request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim(),
     ].find(Boolean) ?? 'local';
-  const result = await attemptLogin(card, field('pin'), ip);
+  const result = await attemptLogin(card, field('pin'), ip, field('demo') === '1');
 
   const jar = await cookies();
   if (result.ok) {
@@ -34,12 +34,15 @@ export async function POST(request: Request): Promise<Response> {
     return seeOther('/compte');
   }
 
-  jar.set(CARD_FLASH_COOKIE, card.slice(0, 30), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/compte/connexion',
-    maxAge: 120,
-  });
+  // Le dossier fictif refusé n'a pas de carte à préremplir.
+  if (result.code !== 'demo') {
+    jar.set(CARD_FLASH_COOKIE, card.slice(0, 30), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/compte/connexion',
+      maxAge: 120,
+    });
+  }
   return seeOther(`/compte/connexion?erreur=${result.code}`);
 }

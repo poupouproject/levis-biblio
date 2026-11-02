@@ -1,5 +1,17 @@
 # levis-biblio
 
+## 0.10.0
+
+### Nouveautés
+
+- Quand la pastille « Démo » est affichée sans le mode démonstration, la page de connexion propose aussi d'explorer un dossier fictif, sous le formulaire habituel : on peut essayer Mon dossier sans carte, sans que rien ne soit envoyé aux bibliothèques.
+
+### Correctifs
+
+- Le bouton « Explorer le dossier de démonstration » proposé sous le formulaire de connexion est plus lisible en thème clair.
+- Si le dossier de démonstration n'est plus offert alors que la page de connexion était déjà ouverte, un message l'explique clairement au lieu de demander un numéro de carte.
+- Se connecter avec sa carte après avoir ouvert le dossier de démonstration affiche bien son vrai dossier, et un renouvellement ne peut plus être annoncé réussi sans être envoyé à la bibliothèque. Ouvrir le dossier de démonstration ferme aussi une vraie session restée ouverte dans un autre onglet.
+
 ## 0.9.0
 
 ### Nouveautés
