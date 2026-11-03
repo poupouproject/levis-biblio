@@ -8,6 +8,7 @@ import type {
   CatalogWork,
   FacetCount,
   Period,
+  SearchField,
   SearchQuery,
   SeriesSummary,
 } from './types';
@@ -41,10 +42,28 @@ export function isBrowse(query: SearchQuery): boolean {
  * Titres approchants (fautes de frappe) seulement si le texte n'a rien trouvé du tout : quand
  * ce sont les filtres qui vident les résultats, on ne propose pas d'autres titres.
  */
-export function needsApproximate(q: string, correspondances: number | null): boolean {
+export function needsApproximate(
+  q: string,
+  correspondances: number | null,
+  field: SearchField = 'tout',
+): boolean {
+  // Les titres approchants ne remplacent pas un auteur, une série ou un ISBN introuvable
+  if (field !== 'tout' && field !== 'titre') return false;
   const { isbn, tokens } = parseText(q);
   return !isbn && tokens.length > 0 && (correspondances ?? 0) === 0;
 }
+
+// Restriction à un champ ($13), en plus du plein texte sur toute la notice : chaque mot dans le
+// champ, comme le moteur en mémoire (engine.ts, fieldMatcher). Champ ISBN : un ISBN complet.
+const FIELD_SQL = `case when cardinality($2::text[]) = 0 then true else case $13::text
+  when 'titre' then not exists (select 1 from unnest($2::text[]) t
+    where strpos(r.titre_cle || ' ' || public.replier(coalesce(r.sous_titre, '')), t) = 0)
+  when 'auteur' then exists (select 1 from unnest(string_to_array(r.auteurs_cle, '|')) a
+    where not exists (select 1 from unnest($2::text[]) t where strpos(a, t) = 0))
+  when 'serie' then r.serie_cle is not null
+    and not exists (select 1 from unnest($2::text[]) t where strpos(r.serie_cle, t) = 0)
+  when 'isbn' then $4::text is not null
+  else true end end`;
 
 /**
  * Ordre de base, sans requête : couverture d'abord, puis les plus récents, puis les populaires.
@@ -100,6 +119,7 @@ export function searchSql(mode: SearchMode, withFacets: boolean): string {
     mode === 'exact'
       ? '($1::text is null or r.document @@ q.tsq) and ($4::text is null or r.isbns @> array[$4::text])'
       : '$3::text operator(extensions.<%) r.titre_cle';
+  // Le champ s'applique aussi aux titres approchants (« Titre » seulement, voir needsApproximate)
   // Chaque facette ignore son propre filtre ; `correspondances` les ignore tous : c'est lui qui
   // dit si le texte a trouvé quelque chose (sinon, recherche approchante)
   const facets = withFacets
@@ -125,6 +145,7 @@ export function searchSql(mode: SearchMode, withFacets: boolean): string {
         from catalogue_oeuvres r, q
        where ${match}
          and ($5::uuid[] is null or r.auteur_ids && $5::uuid[])
+         and ${FIELD_SQL}
     ),
     f as (
       select m.*, (cardinality($6::text[]) = 0 or m.formats && $6::text[]) as ok_f,
@@ -146,7 +167,7 @@ export function searchSql(mode: SearchMode, withFacets: boolean): string {
       from agg`;
 }
 
-/** Paramètres de searchSql, dans l'ordre ($1 à $12). */
+/** Paramètres de searchSql, dans l'ordre ($1 à $13). */
 export function searchValues(
   query: SearchQuery,
   authorIds: string[] | null,
@@ -166,6 +187,7 @@ export function searchValues(
     query.branch,
     query.sort,
     query.limit,
+    query.field,
   ];
 }
 

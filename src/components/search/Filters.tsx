@@ -15,6 +15,8 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import type { FormatGroup } from '@/lib/catalog/normalize';
 import type { FacetCount, Period, SearchQuery, SortOrder } from '@/lib/catalog/types';
 import { searchHref } from '@/lib/catalog/query';
+import { PageSearch } from '@/components/search/FloatingSearch';
+import { FieldChips } from '@/components/search/FieldChips';
 
 interface BranchOption {
   code: string;
@@ -65,6 +67,25 @@ export function SearchShell({
         {children}
       </div>
     </SearchContext>
+  );
+}
+
+/** Barre de recherche de la page de résultats, avec le champ choisi par les puces. */
+export function ResultsSearch({ popular }: { popular: string[] }): JSX.Element {
+  const { query } = useSearch();
+  return <PageSearch defaultValue={query.q} popular={popular} field={query.field} />;
+}
+
+/** Puces de champ de la page : un changement relance la recherche affichée. */
+export function SearchFieldChips(): JSX.Element {
+  const { query, update } = useSearch();
+  return (
+    <FieldChips
+      value={query.field}
+      onChange={(field) => {
+        if (field !== query.field) update({ field });
+      }}
+    />
   );
 }
 

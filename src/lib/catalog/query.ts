@@ -1,12 +1,35 @@
 // Recherche ↔ paramètres d'URL. Partagé client/serveur : une recherche est un lien partageable.
 import { FORMAT_LABELS, type FormatGroup } from './normalize';
-import type { Period, SearchQuery, SortOrder } from './types';
+import type { Period, SearchField, SearchQuery, SortOrder } from './types';
 
 export const PAGE_SIZE = 24;
 /** Au-delà, on invite à préciser la recherche plutôt que d'afficher toujours plus. */
 export const MAX_LIMIT = 240;
 const PERIODS: Period[] = ['recent', '2010', '2000', 'older'];
 const SORTS: SortOrder[] = ['pertinence', 'recent', 'titre'];
+
+interface FieldInfo {
+  /** Libellé court de la puce. */
+  label: string;
+  placeholder: string;
+  /** Complète « Résultats pour « … » » ; vide pour « Tout ». */
+  within: string;
+}
+
+/** Champs de recherche, dans l'ordre des puces. */
+export const FIELD_INFO: Record<SearchField, FieldInfo> = {
+  tout: { label: 'Tout', placeholder: 'Titre, auteur, série, ISBN…', within: '' },
+  titre: { label: 'Titre', placeholder: 'Titre de l’œuvre…', within: 'dans les titres' },
+  auteur: { label: 'Auteur', placeholder: 'Nom de l’auteur…', within: 'parmi les auteurs' },
+  serie: { label: 'Série', placeholder: 'Nom de la série…', within: 'parmi les séries' },
+  isbn: { label: 'ISBN', placeholder: 'ISBN à 10 ou 13 chiffres…', within: 'par ISBN' },
+};
+
+export const SEARCH_FIELDS = Object.keys(FIELD_INFO) as SearchField[];
+
+export function parseField(value: string): SearchField {
+  return SEARCH_FIELDS.includes(value as SearchField) ? (value as SearchField) : 'tout';
+}
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -22,6 +45,7 @@ export function parseSearchParams(params: Params): SearchQuery {
   const limit = Number.parseInt(first(params.n), 10);
   return {
     q: first(params.q).slice(0, 120),
+    field: parseField(first(params.champ)),
     formats: [...new Set(formats)],
     period: PERIODS.includes(period as Period) ? (period as Period) : null,
     author: first(params.auteur).slice(0, 120) || null,
@@ -36,6 +60,8 @@ export function parseSearchParams(params: Params): SearchQuery {
 export function toSearchString(query: Partial<SearchQuery>): string {
   const p = new URLSearchParams();
   if (query.q) p.set('q', query.q);
+  // Gardé sans texte : l'onglet choisi avant de taper reste choisi (le parcours l'ignore)
+  if (query.field && query.field !== 'tout') p.set('champ', query.field);
   if (query.author) p.set('auteur', query.author);
   if (query.formats && query.formats.length > 0) p.set('format', query.formats.join(','));
   if (query.period) p.set('periode', query.period);

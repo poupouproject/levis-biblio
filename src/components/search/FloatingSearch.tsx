@@ -4,9 +4,13 @@ import { createContext, use, useRef, useState, type JSX, type ReactNode } from '
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { SearchBox } from '@/components/search/SearchBox';
+import { FieldChips } from '@/components/search/FieldChips';
+import { parseField } from '@/lib/catalog/query';
+import type { SearchField } from '@/lib/catalog/types';
 
 interface FloatingSearchContext {
-  open: () => void;
+  /** `field` : le champ choisi par la page qui ouvre le panneau. */
+  open: (field?: SearchField) => void;
   draft: string;
   setDraft: (value: string) => void;
 }
@@ -19,6 +23,12 @@ export function pageQuery(location: Pick<Location, 'pathname' | 'search'>): stri
   return new URLSearchParams(location.search).get('q') ?? '';
 }
 
+/** Champ de la page de résultats, `null` ailleurs. */
+export function pageField(location: Pick<Location, 'pathname' | 'search'>): SearchField | null {
+  if (location.pathname !== '/recherche') return null;
+  return parseField(new URLSearchParams(location.search).get('champ') ?? '');
+}
+
 function useFloatingSearch(): FloatingSearchContext {
   const context = use(Context);
   if (!context) throw new Error('FloatingSearchProvider manquant');
@@ -28,8 +38,8 @@ function useFloatingSearch(): FloatingSearchContext {
 /**
  * Recherche flottante : panneau en haut de l'écran (élément <dialog> natif), ouvert par la loupe
  * de l'en-tête ou, sur écran tactile, par la barre de l'accueil. Le champ en haut, le clavier
- * mobile ne cache plus les suggestions. La saisie est conservée à la fermeture et partagée
- * avec la barre de l'accueil.
+ * mobile ne cache plus les suggestions. La saisie et le champ choisi sont conservés à la
+ * fermeture ; la saisie est partagée avec la barre de l'accueil.
  */
 export function FloatingSearchProvider({
   popular,
@@ -40,14 +50,17 @@ export function FloatingSearchProvider({
 }): JSX.Element {
   const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState('');
+  const [field, setField] = useState<SearchField>('tout');
   const close = (): void => {
     dialog.current?.close();
   };
-  const open = (): void => {
+  const open = (fromPage?: SearchField): void => {
     // Sur la page de résultats, le panneau reprend la recherche affichée plutôt que la dernière
     // saisie du panneau
     const shown = pageQuery(window.location);
     if (shown !== null) setDraft(shown);
+    const shownField = fromPage ?? pageField(window.location);
+    if (shownField !== null) setField(shownField);
     dialog.current?.showModal();
     // Dans le geste de l'utilisateur : sans quoi le clavier mobile ne s'ouvre pas
     dialog.current?.querySelector('input')?.focus();
@@ -74,6 +87,12 @@ export function FloatingSearchProvider({
             value={draft}
             onValueChange={setDraft}
             onNavigate={close}
+            field={field}
+            below={
+              <div className="mt-2">
+                <FieldChips value={field} onChange={setField} />
+              </div>
+            }
             trailing={
               <button
                 type="button"
@@ -122,6 +141,32 @@ export function HeroSearch({ popular }: { popular: string[] }): JSX.Element {
       value={draft}
       onValueChange={setDraft}
       onTouchFocus={open}
+    />
+  );
+}
+
+/**
+ * Barre de la page de résultats : comme celle de l'accueil, elle ouvre la recherche flottante
+ * sur écran tactile, avec le champ choisi.
+ */
+export function PageSearch({
+  defaultValue,
+  popular,
+  field,
+}: {
+  defaultValue: string;
+  popular: string[];
+  field: SearchField;
+}): JSX.Element {
+  const { open } = useFloatingSearch();
+  return (
+    <SearchBox
+      defaultValue={defaultValue}
+      popular={popular}
+      field={field}
+      onTouchFocus={() => {
+        open(field);
+      }}
     />
   );
 }

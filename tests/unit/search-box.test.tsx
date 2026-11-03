@@ -5,6 +5,8 @@ import {
   FloatingSearchProvider,
   HeaderSearchButton,
   HeroSearch,
+  PageSearch,
+  pageField,
   pageQuery,
 } from '@/components/search/FloatingSearch';
 
@@ -62,6 +64,14 @@ describe('pageQuery', () => {
   });
 });
 
+describe('pageField', () => {
+  it('lit le champ de la page de résultats, « Tout » par défaut', () => {
+    expect(pageField({ pathname: '/recherche', search: '?q=oda&champ=auteur' })).toBe('auteur');
+    expect(pageField({ pathname: '/recherche', search: '?q=oda' })).toBe('tout');
+    expect(pageField({ pathname: '/', search: '?champ=auteur' })).toBeNull();
+  });
+});
+
 describe('<SearchBox>', () => {
   it('reste modifiable sans saisie contrôlée', () => {
     render(<SearchBox popular={[]} />);
@@ -91,6 +101,18 @@ describe('<SearchBox>', () => {
     });
     expect(second.defaultPrevented).toBe(false);
     expect(input).toHaveValue('tintin');
+  });
+
+  it('cherche dans le champ choisi, mais les recherches populaires partout', () => {
+    render(<SearchBox popular={['Astérix']} field="auteur" />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveAttribute('placeholder', 'Nom de l’auteur…');
+    fireEvent.focus(input);
+    fireEvent.click(screen.getByRole('option', { name: 'Astérix' }));
+    expect(push).toHaveBeenLastCalledWith('/recherche?q=Ast%C3%A9rix');
+    fireEvent.change(input, { target: { value: 'oda' } });
+    fireEvent.submit(screen.getByRole('search'));
+    expect(push).toHaveBeenLastCalledWith('/recherche?q=oda&champ=auteur');
   });
 
   it('panneau vide : Chercher mène au catalogue', () => {
@@ -138,5 +160,24 @@ describe('Recherche flottante', () => {
     if (!hero) throw new Error('barre de l’accueil absente');
     fireEvent.focus(hero);
     expect(screen.getByRole('dialog', { hidden: true })).toHaveAttribute('open');
+  });
+
+  it('sur écran tactile, la barre de la page de résultats ouvre le panneau avec son champ', () => {
+    touchScreen(true);
+    render(
+      <FloatingSearchProvider popular={[]}>
+        <PageSearch defaultValue="oda" popular={[]} field="serie" />
+      </FloatingSearchProvider>,
+    );
+    const [bar] = screen.getAllByRole('combobox', { hidden: true });
+    if (!bar) throw new Error('barre de la page absente');
+    fireEvent.focus(bar);
+    expect(screen.getByRole('dialog', { hidden: true })).toHaveAttribute('open');
+    const serie = screen.getByRole('button', { name: 'Série', hidden: true });
+    expect(serie).toHaveAttribute('aria-pressed', 'true');
+    // Changer de champ dans le panneau change ce que cherche le panneau
+    fireEvent.click(screen.getByRole('button', { name: 'Titre', hidden: true }));
+    const panel = screen.getAllByRole('combobox', { hidden: true })[1];
+    expect(panel).toHaveAttribute('placeholder', 'Titre de l’œuvre…');
   });
 });

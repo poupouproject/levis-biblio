@@ -69,8 +69,12 @@ export interface SeriesSummary {
 export type Period = 'recent' | '2010' | '2000' | 'older';
 export type SortOrder = 'pertinence' | 'recent' | 'titre';
 
+/** Où chercher le texte : partout (« tout »), ou dans un seul champ de la notice. */
+export type SearchField = 'tout' | 'titre' | 'auteur' | 'serie' | 'isbn';
+
 export interface SearchQuery {
   q: string;
+  field: SearchField;
   formats: FormatGroup[];
   period: Period | null;
   author: string | null;

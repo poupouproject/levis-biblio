@@ -63,6 +63,7 @@ describe('recherche Postgres : requête plein texte', () => {
       'PDL',
       'pertinence',
       24,
+      'tout',
     ]);
     // Un ISBN se cherche dans la liste des ISBN, pas dans le texte
     expect(searchValues({ ...EMPTY_QUERY, q: '2070360024' }, null, 2025).slice(0, 4)).toEqual([
@@ -77,7 +78,7 @@ describe('recherche Postgres : requête plein texte', () => {
     for (const mode of ['exact', 'approchant'] as const) {
       const sql = searchSql(mode, true);
       expect(sql).not.toContain('one piece');
-      for (let n = 1; n <= 12; n++) expect(sql).toContain(`$${String(n)}`);
+      for (let n = 1; n <= 13; n++) expect(sql).toContain(`$${String(n)}`);
     }
   });
 
@@ -189,6 +190,10 @@ describe('recherche Postgres : titres approchants', () => {
     expect(needsApproximate('harry potter', 56)).toBe(false);
     expect(needsApproximate('9782070360024', 0)).toBe(false);
     expect(needsApproximate('', 0)).toBe(false);
+    // Un auteur ou une série introuvable n'est pas remplacé par des titres proches
+    expect(needsApproximate('harry poter', 0, 'titre')).toBe(true);
+    expect(needsApproximate('tremblai', 0, 'auteur')).toBe(false);
+    expect(needsApproximate('harry poter', 0, 'serie')).toBe(false);
   });
 
   const card = {
