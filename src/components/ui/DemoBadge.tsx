@@ -2,14 +2,13 @@
 
 import { useEffect, type JSX } from 'react';
 import { toast } from 'react-toastify';
-import { TOAST_DURATION_MS } from '@/components/ui/Toaster';
 import { REPO_URL } from '@/lib/site';
 
 const DEMO_TOAST_ID = 'mode-demo';
 const DEMO_TOAST_SEEN_KEY = 'lb-demo-toast-vue';
 
-/** Plus long que les autres notifications : le message s’adresse au visiteur, pas à une action. */
-const DEMO_TOAST_DURATION_MS = 2 * TOAST_DURATION_MS;
+/** 10 secondes : le temps de lire le message sans qu’il encombre l’écran. */
+const DEMO_TOAST_DURATION_MS = 10_000;
 
 /** Une fois par session d’onglet : un rechargement ne ressert pas le message à qui l’a déjà lu. */
 function demoToastAlreadySeen(): boolean {
