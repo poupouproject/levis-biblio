@@ -1,5 +1,20 @@
 # levis-biblio
 
+## 0.11.0
+
+### Nouveautés
+
+- Recherche ciblée : des puces « Tout · Titre · Auteur · Série · ISBN » limitent la recherche à un champ, sur la page de résultats et dans la recherche flottante. Le choix reste dans le lien, et une recherche sans résultat propose de chercher partout.
+
+### Correctifs
+
+- Le message « Vous explorez une démo » se ferme après 10 secondes au lieu de 20.
+- Page de résultats : changer de champ relance la recherche avec le texte tapé dans la barre, même pas encore envoyé. Sans texte, le champ choisi s’applique à la prochaine recherche.
+- La recherche flottante repart de « Tout » sur une autre page, au lieu de garder le champ d’une recherche précédente.
+- Sur téléphone et tablette, toucher la barre de la page de résultats ouvre la recherche flottante, comme sur l’accueil : les suggestions restent visibles au-dessus du clavier.
+- Recherche dans les titres : une faute de frappe propose de nouveau les titres approchants au lieu de n’afficher aucun résultat.
+- Le titre de l’onglet indique le champ cherché, par exemple « oda parmi les auteurs ».
+
 ## 0.10.0
 
 ### Nouveautés

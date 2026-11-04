@@ -11,7 +11,7 @@ import {
 import { Catalog, EMPTY_QUERY, groupKey } from '@/lib/catalog/engine';
 import { parseSearchParams, searchHref } from '@/lib/catalog/query';
 import { simulateAvailability } from '@/lib/catalog/availability';
-import type { RawEdition } from '@/lib/catalog/types';
+import type { RawEdition, SearchField } from '@/lib/catalog/types';
 
 const NOW = new Date('2026-10-20T12:00:00Z');
 
@@ -300,6 +300,31 @@ describe('moteur de recherche', () => {
     expect(catalog.suggest('o')).toEqual([]);
   });
 
+  it('cherche dans un seul champ : titre, auteur, série ou ISBN', () => {
+    const ids = (q: string, field: SearchField): string[] =>
+      catalog.search({ ...EMPTY_QUERY, q, field }).works.map((w) => w.id);
+    // « Clark » est un auteur, pas un titre
+    expect(ids('clark', 'auteur')).toEqual(['201']);
+    expect(ids('clark', 'titre')).toEqual([]);
+    // Le sous-titre fait partie du titre ; la série, non
+    expect(ids('romance dawn', 'titre')).toEqual(['101']);
+    expect(ids('one piece', 'titre')).toEqual(['104']);
+    expect(ids('one piece', 'serie').sort()).toEqual(['101', '102', '104']);
+    expect(ids('oda', 'serie')).toEqual([]);
+    // ISBN complet seulement, sous ses formes 10 et 13 chiffres
+    expect(ids('2-7234-3462-1', 'isbn')).toEqual(['101']);
+    expect(ids('one', 'isbn')).toEqual([]);
+    // Sans texte, le champ est ignoré : on parcourt tout
+    expect(catalog.search({ ...EMPTY_QUERY, field: 'serie' }).total).toBe(5);
+  });
+
+  it('n’affiche les séries en tête que pour « Tout » et « Série »', () => {
+    expect(catalog.search({ ...EMPTY_QUERY, q: 'one piece', field: 'serie' }).series).not.toEqual(
+      [],
+    );
+    expect(catalog.search({ ...EMPTY_QUERY, q: 'one piece', field: 'titre' }).series).toEqual([]);
+  });
+
   it('donne la série complète et les étagères de l’accueil', () => {
     expect(catalog.getSeries('one-piece')?.works.map((w) => w.series?.volume)).toEqual([1, 2]);
     expect(catalog.newest().map((w) => w.id)).toEqual(['201']);
@@ -327,6 +352,14 @@ describe('recherche ↔ URL', () => {
       limit: 240,
     });
     expect(parseSearchParams({ succursale: '<script>' }).branch).toBeNull();
+    expect(parseSearchParams({ q: 'oda', champ: 'auteur' }).field).toBe('auteur');
+    expect(parseSearchParams({ champ: 'sujet' }).field).toBe('tout');
+  });
+
+  it('garde le champ dans le lien, sauf « Tout »', () => {
+    expect(searchHref({ q: 'oda', field: 'auteur' })).toBe('/recherche?q=oda&champ=auteur');
+    expect(searchHref({ field: 'serie' })).toBe('/recherche?champ=serie');
+    expect(searchHref({ q: 'oda', field: 'tout' })).toBe('/recherche?q=oda');
   });
 
   it('écrit un lien sans les valeurs par défaut', () => {

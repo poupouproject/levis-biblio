@@ -21,6 +21,7 @@ import type {
   FacetCount,
   Period,
   RawEdition,
+  SearchField,
   SearchQuery,
   SearchResult,
   SeriesSummary,
@@ -38,6 +39,9 @@ interface IndexedWork {
   work: CatalogWork;
   hay: string; // Titre, sous-titre, série, auteurs, éditeur
   titleFold: string;
+  /** Titre et sous-titre : le champ « Titre » de la recherche. */
+  titleHay: string;
+  isbns: string[];
   seriesFold: string;
   authorFolds: string[];
   popularity: number;
@@ -295,12 +299,14 @@ export class Catalog {
     const authorSet = authorFold
       ? new Set(this.authorAliases.get(authorFold) ?? [authorFold])
       : null;
+    const inField = fieldMatcher(query.field, tokens, isbn);
 
     // 1. Correspondance texte + auteur (avant les filtres, pour les compteurs de facettes)
     const matched: { item: IndexedWork; score: number }[] = [];
     for (const item of this.indexed) {
       if (authorSet && !item.authorFolds.some((a) => authorSet.has(a))) continue;
       if (tokens.length > 0 && !tokens.every((t) => item.hay.includes(t))) continue;
+      if (!inField(item)) continue;
       matched.push({ item, score: tokens.length > 0 ? score(item, tokens, phrase) : 0 });
     }
 
@@ -347,7 +353,10 @@ export class Catalog {
     }
 
     // 4. Séries correspondant à la requête (affichées en tête)
-    const series = tokens.length === 0 ? [] : this.matchSeries(tokens, 3).map((s) => s.summary);
+    const series =
+      tokens.length === 0 || !showsSeries(query.field)
+        ? []
+        : this.matchSeries(tokens, 3).map((s) => s.summary);
 
     return {
       total: results.length,
@@ -506,6 +515,7 @@ export function interleave<T extends { bucket: number; key: string }>(
 
 export const EMPTY_QUERY: SearchQuery = {
   q: '',
+  field: 'tout',
   formats: [],
   period: null,
   author: null,
@@ -514,6 +524,36 @@ export const EMPTY_QUERY: SearchQuery = {
   sort: 'pertinence',
   limit: 24,
 };
+
+/** Cartes de séries en tête des résultats : pas quand on cherche un titre, un auteur ou un ISBN. */
+export function showsSeries(field: SearchField): boolean {
+  return field === 'tout' || field === 'serie';
+}
+
+/**
+ * Restriction à un champ, en plus de la correspondance sur toute la notice. Le champ ISBN
+ * n'accepte qu'un ISBN complet : un bout de numéro n'identifie rien.
+ */
+function fieldMatcher(
+  field: SearchField,
+  tokens: string[],
+  isbn: string | null,
+): (item: IndexedWork) => boolean {
+  if (tokens.length === 0) return () => true;
+  const all = (text: string): boolean => tokens.every((t) => text.includes(t));
+  switch (field) {
+    case 'tout':
+      return () => true;
+    case 'titre':
+      return (item) => all(item.titleHay);
+    case 'auteur':
+      return (item) => item.authorFolds.some((a) => all(a));
+    case 'serie':
+      return (item) => item.seriesFold !== '' && all(item.seriesFold);
+    case 'isbn':
+      return (item) => isbn !== null && item.isbns.includes(isbn);
+  }
+}
 
 /** Nombre de caractères non ASCII (accents) : sert à préférer « René » à « Rene ». */
 function accents(name: string): number {
@@ -609,18 +649,22 @@ function buildWork(
   const titleFold = fold(parsed.title);
   const seriesFold = series ? fold(series.name) : '';
   const authorFolds = authors.map(fold);
+  const subtitleFold = fold(parsed.subtitle ?? '');
+  const isbns = editions.flatMap((e) => isbnForms(e.isbn));
   return {
     work,
     titleFold,
+    titleHay: subtitleFold ? `${titleFold} ${subtitleFold}` : titleFold,
+    isbns,
     seriesFold,
     authorFolds,
     hay: [
       titleFold,
-      fold(parsed.subtitle ?? ''),
+      subtitleFold,
       seriesFold,
       ...authorFolds,
       fold(first.publisher ?? ''),
-      ...editions.flatMap((e) => isbnForms(e.isbn)),
+      ...isbns,
     ]
       .filter(Boolean)
       .join(' '),

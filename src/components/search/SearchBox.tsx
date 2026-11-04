@@ -13,8 +13,8 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Clock, Layers, Loader2, Search, TrendingUp, User, X } from 'lucide-react';
-import type { Suggestion } from '@/lib/catalog/types';
-import { searchHref } from '@/lib/catalog/query';
+import type { SearchField, Suggestion } from '@/lib/catalog/types';
+import { FIELD_INFO, searchHref } from '@/lib/catalog/query';
 import { fold, tokenize } from '@/lib/catalog/normalize';
 import { Cover } from '@/components/catalog/Cover';
 
@@ -140,6 +140,10 @@ interface BaseProps {
   onTouchFocus?: (() => void) | undefined;
   /** À droite du champ (bouton « Annuler » du panneau) : les suggestions passent dessous. */
   trailing?: ReactNode;
+  /** Champ où chercher le texte saisi (les recherches récentes et populaires cherchent partout). */
+  field?: SearchField | undefined;
+  /** Sous le champ, avant les suggestions (puces de champ du panneau). */
+  below?: ReactNode;
 }
 
 /** Saisie contrôlée de l'extérieur (partagée avec la recherche flottante) : les deux ensemble. */
@@ -160,6 +164,8 @@ export function SearchBox({
   onValueChange,
   onTouchFocus,
   trailing,
+  field = 'tout',
+  below,
 }: SearchBoxProps): JSX.Element {
   const router = useRouter();
   const id = useId();
@@ -306,7 +312,7 @@ export function SearchBox({
   const choose = (option: Option): void => {
     if (option.type === 'query') {
       setValue(option.q);
-      go(searchHref({ q: option.q }), option.q);
+      go(searchHref({ q: option.q, field: typed ? field : 'tout' }), option.q);
     } else {
       go(option.suggestion.href, value.trim() || undefined);
     }
@@ -316,9 +322,9 @@ export function SearchBox({
     e.preventDefault();
     const chosen = active >= 0 ? options[active] : undefined;
     if (chosen) choose(chosen);
-    else if (value.trim()) go(searchHref({ q: value.trim() }), value.trim());
+    else if (value.trim()) go(searchHref({ q: value.trim(), field }), value.trim());
     // Panneau de l'en-tête vide : on parcourt le catalogue, comme l'ancien lien « Catalogue »
-    else if (floating) go(searchHref({}));
+    else if (floating) go(searchHref({ field }));
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
@@ -377,7 +383,7 @@ export function SearchBox({
             autoFocus={autoFocus}
             enterKeyHint="search"
             value={value}
-            placeholder="Titre, auteur, série, ISBN…"
+            placeholder={FIELD_INFO[field].placeholder}
             onChange={(e) => {
               setValue(e.target.value);
               setOpen(true);
@@ -435,6 +441,7 @@ export function SearchBox({
         </div>
         {trailing}
       </div>
+      {below}
 
       {showList && (
         <ul
@@ -446,9 +453,10 @@ export function SearchBox({
             e.preventDefault();
           }}
           // Flottante : la liste s'insère dans le panneau, sous le champ placé en haut de l'écran
+          // et ses puces de champ
           className={`mt-2 overflow-y-auto overscroll-contain p-1.5 ${
             floating
-              ? 'max-h-[calc(var(--hauteur-visible,100dvh)-6rem)] sm:pointer-fine:max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))]'
+              ? 'max-h-[calc(var(--hauteur-visible,100dvh)-8.5rem)] sm:pointer-fine:max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))]'
               : 'absolute top-full right-0 left-0 z-50 max-h-[min(70vh,calc(var(--hauteur-visible,100dvh)-10rem))] rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-[#1a1a1a]'
           }`}
         >
@@ -484,6 +492,7 @@ export function SearchBox({
                     {typed ? (
                       <>
                         Rechercher « <strong>{option.q}</strong> »
+                        {field !== 'tout' && ` ${FIELD_INFO[field].within}`}
                       </>
                     ) : (
                       option.q

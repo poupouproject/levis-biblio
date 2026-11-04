@@ -3,17 +3,25 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SearchX } from 'lucide-react';
 import { getCatalog } from '@/lib/catalog/source';
-import { MAX_LIMIT, PAGE_SIZE, parseSearchParams, searchHref } from '@/lib/catalog/query';
+import {
+  MAX_LIMIT,
+  describeSearch,
+  PAGE_SIZE,
+  parseSearchParams,
+  searchHref,
+} from '@/lib/catalog/query';
+import { normalizeIsbn } from '@/lib/catalog/normalize';
 import { PERIOD_LABELS } from '@/lib/catalog/engine';
 import { FORMAT_LABELS } from '@/lib/catalog/normalize';
 import { RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { BRANCHES } from '@/lib/levis/branches';
-import { SearchBox } from '@/components/search/SearchBox';
 import {
   ActiveFilters,
   FilterSheet,
   FilterSidebar,
   PendingArea,
+  ResultsSearch,
+  SearchFieldChips,
   SearchShell,
   SortSelect,
 } from '@/components/search/Filters';
@@ -27,7 +35,7 @@ export async function generateMetadata({
   searchParams: Params;
 }): Promise<Metadata> {
   const query = parseSearchParams(await searchParams);
-  const subject = query.q || query.author;
+  const subject = query.q ? describeSearch(query.q, query.field) : query.author;
   return { title: subject ? `${subject} — Recherche | LévisBiblio` : 'Catalogue | LévisBiblio' };
 }
 
@@ -47,7 +55,7 @@ export default async function SearchPage({
     query.formats.length > 0 || query.period !== null || query.available || query.branch !== null;
 
   const heading = query.q
-    ? `Résultats pour « ${query.q} »`
+    ? `Résultats pour ${describeSearch(`« ${query.q} »`, query.field)}`
     : query.author
       ? `Œuvres de ${query.author}`
       : 'Parcourir le catalogue';
@@ -56,7 +64,10 @@ export default async function SearchPage({
     <SearchShell query={query}>
       <div className="flex flex-col gap-5">
         <div className="sticky top-14 z-40 -mx-4 bg-zinc-50/90 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6 dark:bg-[#0f0f0f]/90">
-          <SearchBox defaultValue={query.q} popular={RECHERCHES_POPULAIRES} />
+          <ResultsSearch popular={RECHERCHES_POPULAIRES} />
+        </div>
+        <div className="-mt-3">
+          <SearchFieldChips />
         </div>
 
         <div className="flex flex-col gap-3">
@@ -160,11 +171,21 @@ export default async function SearchPage({
                       Aucune œuvre trouvée
                     </p>
                     <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      {filtered
-                        ? 'Retirez un filtre, ou vérifiez l’orthographe.'
-                        : 'Essayez un autre mot : titre, auteur, série ou ISBN.'}
+                      {query.field === 'isbn' && query.q && !normalizeIsbn(query.q)
+                        ? 'Entrez un ISBN complet : 10 ou 13 chiffres, avec ou sans tirets.'
+                        : filtered
+                          ? 'Retirez un filtre, ou vérifiez l’orthographe.'
+                          : 'Essayez un autre mot : titre, auteur, série ou ISBN.'}
                     </p>
                   </div>
+                  {query.field !== 'tout' && query.q && (
+                    <Link
+                      href={searchHref({ ...query, field: 'tout', limit: 0 })}
+                      className="rounded-xl bg-[#d4a853] px-4 py-2 text-sm font-semibold text-white hover:bg-[#b88f42]"
+                    >
+                      Chercher « {query.q} » partout
+                    </Link>
+                  )}
                   <div className="flex flex-wrap justify-center gap-2">
                     {RECHERCHES_POPULAIRES.slice(0, 4).map((q) => (
                       <Link
