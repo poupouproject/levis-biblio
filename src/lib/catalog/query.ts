@@ -27,6 +27,12 @@ export const FIELD_INFO: Record<SearchField, FieldInfo> = {
 
 export const SEARCH_FIELDS = Object.keys(FIELD_INFO) as SearchField[];
 
+/** Texte cherché suivi de son champ (« oda parmi les auteurs ») : titre de page et d'onglet. */
+export function describeSearch(q: string, field: SearchField): string {
+  const within = FIELD_INFO[field].within;
+  return within ? `${q} ${within}` : q;
+}
+
 export function parseField(value: string): SearchField {
   return SEARCH_FIELDS.includes(value as SearchField) ? (value as SearchField) : 'tout';
 }

@@ -82,6 +82,12 @@ describe('recherche Postgres : requête plein texte', () => {
     }
   });
 
+  it('n’exige les mots tels quels dans le champ que pour la recherche exacte', () => {
+    // « harry poter » dans « Titre » : la faute de frappe doit laisser passer les titres proches
+    expect(searchSql('exact', true)).toContain("when 'titre' then");
+    expect(searchSql('approchant', true)).not.toContain("when 'titre' then");
+  });
+
   it('met en cache les compteurs d’un parcours selon les seuls filtres', () => {
     const a = browseKey({ ...EMPTY_QUERY, formats: ['audio', 'livre'], limit: 24 }, 2025);
     const b = browseKey({ ...EMPTY_QUERY, formats: ['livre', 'audio'], limit: 48 }, 2025);

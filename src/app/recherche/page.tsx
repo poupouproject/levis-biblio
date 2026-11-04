@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { SearchX } from 'lucide-react';
 import { getCatalog } from '@/lib/catalog/source';
 import {
-  FIELD_INFO,
   MAX_LIMIT,
+  describeSearch,
   PAGE_SIZE,
   parseSearchParams,
   searchHref,
@@ -35,7 +35,7 @@ export async function generateMetadata({
   searchParams: Params;
 }): Promise<Metadata> {
   const query = parseSearchParams(await searchParams);
-  const subject = query.q || query.author;
+  const subject = query.q ? describeSearch(query.q, query.field) : query.author;
   return { title: subject ? `${subject} — Recherche | LévisBiblio` : 'Catalogue | LévisBiblio' };
 }
 
@@ -54,9 +54,8 @@ export default async function SearchPage({
   const filtered =
     query.formats.length > 0 || query.period !== null || query.available || query.branch !== null;
 
-  const within = query.field === 'tout' ? '' : ` ${FIELD_INFO[query.field].within}`;
   const heading = query.q
-    ? `Résultats pour « ${query.q} »${within}`
+    ? `Résultats pour ${describeSearch(`« ${query.q} »`, query.field)}`
     : query.author
       ? `Œuvres de ${query.author}`
       : 'Parcourir le catalogue';

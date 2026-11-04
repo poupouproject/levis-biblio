@@ -6,6 +6,7 @@ import {
   useId,
   useOptimistic,
   useRef,
+  useState,
   useTransition,
   type JSX,
   type ReactNode,
@@ -13,7 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { FormatGroup } from '@/lib/catalog/normalize';
-import type { FacetCount, Period, SearchQuery, SortOrder } from '@/lib/catalog/types';
+import type { FacetCount, Period, SearchField, SearchQuery, SortOrder } from '@/lib/catalog/types';
 import { searchHref } from '@/lib/catalog/query';
 import { PageSearch } from '@/components/search/FloatingSearch';
 import { FieldChips } from '@/components/search/FieldChips';
@@ -27,6 +28,12 @@ interface SearchContextValue {
   query: SearchQuery;
   update: (patch: Partial<SearchQuery>) => void;
   pending: boolean;
+  /** Saisie de la barre, pas encore envoyée. */
+  draft: string;
+  setDraft: (value: string) => void;
+  /** Champ des puces, pas encore appliqué quand la barre est vide. */
+  field: SearchField;
+  setField: (field: SearchField) => void;
 }
 
 const SearchContext = createContext<SearchContextValue | null>(null);
@@ -53,6 +60,16 @@ export function SearchShell({
   const [pending, startTransition] = useTransition();
   // Les filtres changent tout de suite à l'écran ; l'URL et les résultats suivent dans la transition
   const [optimistic, setOptimistic] = useOptimistic(query);
+  // Saisie et champ partagés par la barre et les puces : ils suivent l'URL (retour arrière, lien
+  // de suggestion), ajustés pendant le rendu plutôt que dans un effet
+  const [draft, setDraft] = useState(query.q);
+  const [field, setField] = useState(query.field);
+  const [synced, setSynced] = useState({ q: query.q, field: query.field });
+  if (synced.q !== query.q || synced.field !== query.field) {
+    setSynced({ q: query.q, field: query.field });
+    setDraft(query.q);
+    setField(query.field);
+  }
   const update = (patch: Partial<SearchQuery>): void => {
     // Un nouveau filtre repart de la première page
     const next = { ...optimistic, limit: 0, ...patch };
@@ -62,7 +79,7 @@ export function SearchShell({
     });
   };
   return (
-    <SearchContext value={{ query: optimistic, update, pending }}>
+    <SearchContext value={{ query: optimistic, update, pending, draft, setDraft, field, setField }}>
       <div data-pending={pending || undefined} className="group/search">
         {children}
       </div>
@@ -72,18 +89,23 @@ export function SearchShell({
 
 /** Barre de recherche de la page de résultats, avec le champ choisi par les puces. */
 export function ResultsSearch({ popular }: { popular: string[] }): JSX.Element {
-  const { query } = useSearch();
-  return <PageSearch defaultValue={query.q} popular={popular} field={query.field} />;
+  const { draft, setDraft, field } = useSearch();
+  return <PageSearch value={draft} onValueChange={setDraft} popular={popular} field={field} />;
 }
 
-/** Puces de champ de la page : un changement relance la recherche affichée. */
+/**
+ * Puces de champ de la page : un changement relance la recherche avec le texte de la barre,
+ * même pas encore envoyé. Barre vide : le champ attend la prochaine recherche.
+ */
 export function SearchFieldChips(): JSX.Element {
-  const { query, update } = useSearch();
+  const { query, update, draft, field, setField } = useSearch();
   return (
     <FieldChips
-      value={query.field}
-      onChange={(field) => {
-        if (field !== query.field) update({ field });
+      value={field}
+      onChange={(next) => {
+        setField(next);
+        const q = draft.trim();
+        if (q && (next !== query.field || q !== query.q)) update({ field: next, q });
       }}
     />
   );

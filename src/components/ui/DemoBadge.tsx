@@ -7,9 +7,6 @@ import { REPO_URL } from '@/lib/site';
 const DEMO_TOAST_ID = 'mode-demo';
 const DEMO_TOAST_SEEN_KEY = 'lb-demo-toast-vue';
 
-/** 10 secondes : le temps de lire le message sans qu’il encombre l’écran. */
-const DEMO_TOAST_DURATION_MS = 10_000;
-
 /** Une fois par session d’onglet : un rechargement ne ressert pas le message à qui l’a déjà lu. */
 function demoToastAlreadySeen(): boolean {
   try {
@@ -30,6 +27,7 @@ function markDemoToastSeen(): void {
 
 function showDemoToast(): void {
   // `toastId` : un second clic (ou le double effet de React en développement) ne l’empile pas.
+  // Durée : celle des autres notifications (Toaster).
   toast.info(
     <div className="text-[0.8125rem] leading-snug sm:text-sm sm:leading-normal">
       <p className="font-semibold">Vous explorez une démo</p>
@@ -50,10 +48,7 @@ function showDemoToast(): void {
         .
       </p>
     </div>,
-    {
-      toastId: DEMO_TOAST_ID,
-      autoClose: DEMO_TOAST_DURATION_MS,
-    },
+    { toastId: DEMO_TOAST_ID },
   );
 }
 

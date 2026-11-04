@@ -29,6 +29,20 @@ export function pageField(location: Pick<Location, 'pathname' | 'search'>): Sear
   return parseField(new URLSearchParams(location.search).get('champ') ?? '');
 }
 
+/**
+ * Champ du panneau à son ouverture : celui de la page de résultats (ou donné par la page),
+ * sinon celui choisi sur cette même page, sinon « Tout ».
+ */
+export function openingField(
+  location: Pick<Location, 'pathname' | 'search'>,
+  chosen: { field: SearchField; page: string | null },
+  fromPage?: SearchField,
+): SearchField {
+  const shown = fromPage ?? pageField(location);
+  if (shown !== null) return shown;
+  return chosen.page === location.pathname ? chosen.field : 'tout';
+}
+
 function useFloatingSearch(): FloatingSearchContext {
   const context = use(Context);
   if (!context) throw new Error('FloatingSearchProvider manquant');
@@ -38,8 +52,8 @@ function useFloatingSearch(): FloatingSearchContext {
 /**
  * Recherche flottante : panneau en haut de l'écran (élément <dialog> natif), ouvert par la loupe
  * de l'en-tête ou, sur écran tactile, par la barre de l'accueil. Le champ en haut, le clavier
- * mobile ne cache plus les suggestions. La saisie et le champ choisi sont conservés à la
- * fermeture ; la saisie est partagée avec la barre de l'accueil.
+ * mobile ne cache plus les suggestions. La saisie est conservée à la fermeture et partagée avec
+ * la barre de l'accueil ; le champ choisi, seulement tant qu'on reste sur la même page.
  */
 export function FloatingSearchProvider({
   popular,
@@ -51,6 +65,12 @@ export function FloatingSearchProvider({
   const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState('');
   const [field, setField] = useState<SearchField>('tout');
+  // Page où le champ a été choisi : ailleurs, le panneau repart de « Tout »
+  const fieldPage = useRef<string | null>(null);
+  const chooseField = (value: SearchField): void => {
+    setField(value);
+    fieldPage.current = window.location.pathname;
+  };
   const close = (): void => {
     dialog.current?.close();
   };
@@ -59,8 +79,7 @@ export function FloatingSearchProvider({
     // saisie du panneau
     const shown = pageQuery(window.location);
     if (shown !== null) setDraft(shown);
-    const shownField = fromPage ?? pageField(window.location);
-    if (shownField !== null) setField(shownField);
+    chooseField(openingField(window.location, { field, page: fieldPage.current }, fromPage));
     dialog.current?.showModal();
     // Dans le geste de l'utilisateur : sans quoi le clavier mobile ne s'ouvre pas
     dialog.current?.querySelector('input')?.focus();
@@ -86,11 +105,15 @@ export function FloatingSearchProvider({
             popular={popular}
             value={draft}
             onValueChange={setDraft}
-            onNavigate={close}
+            onNavigate={() => {
+              close();
+              // Recherche lancée : le champ vaut pour elle, pas pour la page qu'on quitte
+              fieldPage.current = null;
+            }}
             field={field}
             below={
               <div className="mt-2">
-                <FieldChips value={field} onChange={setField} />
+                <FieldChips value={field} onChange={chooseField} />
               </div>
             }
             trailing={
@@ -147,21 +170,24 @@ export function HeroSearch({ popular }: { popular: string[] }): JSX.Element {
 
 /**
  * Barre de la page de résultats : comme celle de l'accueil, elle ouvre la recherche flottante
- * sur écran tactile, avec le champ choisi.
+ * sur écran tactile, avec le champ choisi. Saisie contrôlée : les puces de la page la reprennent.
  */
 export function PageSearch({
-  defaultValue,
+  value,
+  onValueChange,
   popular,
   field,
 }: {
-  defaultValue: string;
+  value: string;
+  onValueChange: (value: string) => void;
   popular: string[];
   field: SearchField;
 }): JSX.Element {
   const { open } = useFloatingSearch();
   return (
     <SearchBox
-      defaultValue={defaultValue}
+      value={value}
+      onValueChange={onValueChange}
       popular={popular}
       field={field}
       onTouchFocus={() => {

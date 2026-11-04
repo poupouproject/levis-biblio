@@ -6,6 +6,7 @@ import {
   HeaderSearchButton,
   HeroSearch,
   PageSearch,
+  openingField,
   pageField,
   pageQuery,
 } from '@/components/search/FloatingSearch';
@@ -69,6 +70,25 @@ describe('pageField', () => {
     expect(pageField({ pathname: '/recherche', search: '?q=oda&champ=auteur' })).toBe('auteur');
     expect(pageField({ pathname: '/recherche', search: '?q=oda' })).toBe('tout');
     expect(pageField({ pathname: '/', search: '?champ=auteur' })).toBeNull();
+  });
+});
+
+describe('openingField', () => {
+  const home = { pathname: '/', search: '' };
+
+  it('reprend le champ de la page de résultats, ou celui donné par la page', () => {
+    const results = { pathname: '/recherche', search: '?q=oda&champ=auteur' };
+    expect(openingField(results, { field: 'titre', page: '/recherche' })).toBe('auteur');
+    expect(openingField(results, { field: 'tout', page: null }, 'serie')).toBe('serie');
+  });
+
+  it('garde le champ choisi sur la même page', () => {
+    expect(openingField(home, { field: 'auteur', page: '/' })).toBe('auteur');
+  });
+
+  it('repart de « Tout » ailleurs ou après une recherche', () => {
+    expect(openingField(home, { field: 'auteur', page: '/recherche' })).toBe('tout');
+    expect(openingField(home, { field: 'auteur', page: null })).toBe('tout');
   });
 });
 
@@ -166,7 +186,7 @@ describe('Recherche flottante', () => {
     touchScreen(true);
     render(
       <FloatingSearchProvider popular={[]}>
-        <PageSearch defaultValue="oda" popular={[]} field="serie" />
+        <PageSearch value="oda" onValueChange={vi.fn()} popular={[]} field="serie" />
       </FloatingSearchProvider>,
     );
     const [bar] = screen.getAllByRole('combobox', { hidden: true });
