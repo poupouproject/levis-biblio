@@ -9,6 +9,7 @@ import {
   MONTHS_SHORT,
   comparisonText,
   daysText,
+  readerProfile,
   volumeRanges,
   type RecapSeries,
   type YearRecap,
@@ -265,6 +266,25 @@ export function PaceSlide({ pace }: { pace: NonNullable<YearRecap['pace']> }): J
           </li>
         )}
       </ul>
+    </Centered>
+  );
+}
+
+/** Le profil de lecture, en ruban comme sur l'image à partager. */
+export function ProfileSlide({ recap }: { recap: YearRecap }): JSX.Element {
+  // À l'écran, la personne voit ses propres titres
+  const profile = readerProfile(recap, true);
+  return (
+    <Centered>
+      <Kicker>Votre profil de lecture</Kicker>
+      <p className="self-start" style={enter('recap-pop', 300, 900)}>
+        <span className="inline-block -rotate-3 rounded-full bg-[#f0c987] px-6 py-3 text-4xl leading-tight font-black text-[#1a1a1a] uppercase">
+          {profile.label}
+        </span>
+      </p>
+      <p className="text-xl font-semibold text-[#f0c987]" style={enter('recap-rise', 1200)}>
+        {profile.reason}
+      </p>
     </Centered>
   );
 }

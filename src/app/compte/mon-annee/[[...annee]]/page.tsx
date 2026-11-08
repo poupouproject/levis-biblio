@@ -48,11 +48,12 @@ export default async function YearPage({
   const { annee } = await params;
   const today = todayIso();
   const year = yearParam(annee, today);
-  // Avant le 15 novembre, l'année en cours n'est pas prête : pas même besoin du dossier
-  if (!isRecapOpen(year, today)) return <ComingSoon year={year} />;
   const suite = returnPath(annee ? `/compte/mon-annee/${String(year)}` : '/compte/mon-annee');
-
+  // Connexion d'abord, comme tout le dossier, même pour annoncer que le bilan n'est pas prêt
   const { firstName, demo } = await requireAccount(suite);
+  // Avant le 15 novembre, l'année en cours n'est pas prête : inutile de lire le dossier
+  if (!isRecapOpen(year, today)) return <ComingSoon year={year} />;
+
   const { history, checkouts } = await withAccount(getYearLoans, suite);
   const recap = buildYearRecap(history, checkouts, year);
   const years = recapYears(history, checkouts).filter((y) => isRecapOpen(y, today));

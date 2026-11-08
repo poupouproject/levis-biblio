@@ -24,7 +24,8 @@ l'année précédente, mois le plus occupé, plume (auteur) de l'année, série 
 tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
 
 - **Saison**, comme les bilans de fin d'année : l'année en cours n'ouvre que le **15 novembre** ;
-  avant, `/compte/mon-annee/2026` invite à revenir à la fin de l'année (sans lire le dossier) et
+  avant, `/compte/mon-annee/2026` invite à revenir à la fin de l'année (après la connexion, comme
+  tout le dossier, mais sans lire le portail) et
   l'image de partage répond 404. Les années passées restent toujours accessibles. Sans année
   précise, `/compte/mon-annee` ouvre en janvier l'année qui vient de finir. Le bouton du sommaire
   n'apparaît que du 15 novembre au 31 janvier (`isRecapOpen`, `defaultRecapYear`,
@@ -40,9 +41,15 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   flèches, Espace et Échap au clavier ; bouton pause toujours visible ; onglet caché = pause.
   Animations CSS (`globals.css`) : supprimées, avec l'avance automatique, si l'usager réduit les
   animations ; le lecteur d'écran annonce chaque écran et lit les valeurs finales.
+- **Profil de lecture** (`readerProfile`) : un nom épicène, le premier trait marquant de l'année
+  (« Marathon de séries », « Lecture éclair », « Exploration tous azimuts », « Rat de
+  bibliothèque », sinon « Belle découverte »), avec sa raison ; écran du récit et ruban de l'image.
 - **Partage** : `/compte/mon-annee/partage?annee=2026` produit à la demande une image story
   (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Chiffres seulement, sauf si
-  l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20).
+  l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20). Style
+  affiche : total géant, ruban du profil, faits marquants. Police Inter (OFL) réduite aux
+  caractères latins (`assets/polices/`, ~50 Ko par graisse), lue avec `fs` et incluse au
+  déploiement par `outputFileTracingIncludes` (`next.config.ts`).
 - **Lien et code QR** : `/mon-annee`, le même pour tout le monde, sans aucune donnée ; chacun y
   voit sa propre année. Page d'accueil publique plutôt que redirection : le cookie
   `SameSite=Strict` n'accompagne pas un lien ouvert depuis une autre application ; le bouton

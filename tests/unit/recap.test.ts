@@ -8,6 +8,7 @@ import {
   defaultRecapYear,
   estimatedStart,
   isRecapOpen,
+  readerProfile,
   recapSeasonYear,
   recapYears,
   volumeRanges,
@@ -184,5 +185,44 @@ describe('récapitulatif : saison, comme les bilans de fin d’année', () => {
     expect(recapSeasonYear('2027-01-31')).toBe(2026);
     expect(recapSeasonYear('2027-02-01')).toBeNull();
     expect(recapSeasonYear('2026-07-01')).toBeNull();
+  });
+});
+
+describe('récapitulatif : profil de lecture', () => {
+  const base = buildYearRecap(HISTORY, [], 2026);
+
+  it('compte les plumes différentes', () => {
+    expect(base.authors).toBe(3);
+  });
+
+  it('série suivie (5 tomes et plus) : le nom de la série seulement si l’usager le montre', () => {
+    const recap = {
+      ...base,
+      topSeries: { name: 'One Piece', slug: 'one-piece', volumes: [1, 2, 3, 4, 5] },
+    };
+    expect(readerProfile(recap, true)).toEqual({
+      kind: 'serie',
+      label: 'Marathon de séries',
+      reason: '5 tomes de One Piece cette année',
+    });
+    expect(readerProfile(recap, false).reason).toBe('5 tomes d’une même série cette année');
+  });
+
+  it('puis lecture éclair, variété, régularité, et un profil pour tout le monde', () => {
+    const fast = {
+      ...base,
+      total: 8,
+      pace: { averageDays: 9, fastest: { title: 'a', days: 1 }, longest: { title: 'b', days: 20 } },
+    };
+    expect(readerProfile(fast, false).kind).toBe('eclair');
+    expect(readerProfile({ ...base, authors: 12 }, false).kind).toBe('exploration');
+    expect(readerProfile({ ...base, streak: 7 }, false)).toMatchObject({
+      kind: 'regularite',
+      reason: '7 mois de suite à la bibliothèque',
+    });
+    expect(readerProfile({ ...base, total: 1, topSeries: null }, false)).toMatchObject({
+      kind: 'debut',
+      reason: '1 document cette année : à suivre!',
+    });
   });
 });

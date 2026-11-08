@@ -15,6 +15,12 @@ const lanAddresses = Object.values(networkInterfaces())
 const nextConfig: NextConfig = {
   allowedDevOrigins: lanAddresses,
 
+  // Polices de l'image du récapitulatif, lues avec fs (src/lib/account/share-image.tsx) : le
+  // traçage des fichiers ne les verrait pas seul.
+  outputFileTracingIncludes: {
+    '/compte/mon-annee/partage': ['./assets/polices/*.ttf'],
+  },
+
   images: {
     remotePatterns: [
       {

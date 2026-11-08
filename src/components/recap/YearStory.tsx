@@ -19,6 +19,7 @@ import {
   IntroSlide,
   MonthsSlide,
   PaceSlide,
+  ProfileSlide,
   SeriesSlide,
   StreakSlide,
   TotalSlide,
@@ -157,6 +158,12 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
         render: () => <StreakSlide recap={recap} />,
       });
     }
+    list.push({
+      id: 'profil',
+      label: 'Votre profil de lecture',
+      background: 'from-[#1a1a1a] to-[#3d2c5e]',
+      render: () => <ProfileSlide recap={recap} />,
+    });
     list.push({
       id: 'bilan',
       label: 'Votre année en bref, à partager',

@@ -101,6 +101,18 @@ export interface YearRecap {
   pace: { averageDays: number; longest: RecapBook; fastest: RecapBook } | null;
   /** Plus longue suite de mois consécutifs avec au moins un emprunt. */
   streak: number;
+  /** Nombre de plumes (auteurs) différentes. */
+  authors: number;
+}
+
+export type ReaderProfileKind = 'serie' | 'eclair' | 'exploration' | 'regularite' | 'debut';
+
+export interface ReaderProfile {
+  kind: ReaderProfileKind;
+  /** Nom épicène : il décrit une façon de lire, jamais la personne au masculin ou au féminin. */
+  label: string;
+  /** Ce qui vaut ce profil ; sans titre d'œuvre si l'usager ne veut pas les montrer. */
+  reason: string;
 }
 
 /** « One Piece. 26, À l'aventure en terre divine » → « One Piece, tome 26 ». */
@@ -253,6 +265,51 @@ export function daysText(days: number): string {
   return days === 1 ? 'en 1 jour' : `en ${String(days)} jours`;
 }
 
+/**
+ * Profil de lecture de l'année, comme les « personnalités » des bilans de fin d'année : le premier
+ * trait marquant, dans l'ordre série suivie, lecture rapide, variété, régularité.
+ * `titles` : le nom de la série peut figurer dans la raison (l'usager a choisi de le montrer).
+ */
+export function readerProfile(recap: YearRecap, titles: boolean): ReaderProfile {
+  const series = recap.topSeries;
+  if (series && series.volumes.length >= 5) {
+    const tomes = `${String(series.volumes.length)} tomes`;
+    return {
+      kind: 'serie',
+      label: 'Marathon de séries',
+      reason: titles
+        ? `${tomes} de ${series.name} cette année`
+        : `${tomes} d’une même série cette année`,
+    };
+  }
+  if (recap.pace && recap.pace.averageDays <= 10 && recap.total >= 5) {
+    return {
+      kind: 'eclair',
+      label: 'Lecture éclair',
+      reason: `${String(recap.pace.averageDays)} jours par document, en moyenne`,
+    };
+  }
+  if (recap.authors >= 10) {
+    return {
+      kind: 'exploration',
+      label: 'Exploration tous azimuts',
+      reason: `${String(recap.authors)} plumes différentes cette année`,
+    };
+  }
+  if (recap.streak >= 6) {
+    return {
+      kind: 'regularite',
+      label: 'Rat de bibliothèque',
+      reason: `${String(recap.streak)} mois de suite à la bibliothèque`,
+    };
+  }
+  return {
+    kind: 'debut',
+    label: 'Belle découverte',
+    reason: `${String(recap.total)} ${recap.total > 1 ? 'documents' : 'document'} cette année : à suivre!`,
+  };
+}
+
 /** Bilan d'une année civile. Les emprunts en cours y comptent, à leur date d'emprunt estimée. */
 export function buildYearRecap(
   history: HistoryEntry[],
@@ -296,5 +353,11 @@ export function buildYearRecap(
     topSeries: topSeriesOf(loans),
     pace: paceOf(loans),
     streak: longestStreak(months),
+    authors: new Set(
+      loans.flatMap((l) => {
+        const a = parseAuthor(l.author);
+        return a ? [fold(a.display)] : [];
+      }),
+    ).size,
   };
 }
