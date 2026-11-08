@@ -17,9 +17,11 @@ import {
   getHolds,
   getOverview,
   getProfile,
+  getYearLoans,
   type CheckoutsResult,
   type HoldAction,
   type HoldsResult,
+  type YearLoans,
 } from '@/lib/levis/account';
 import { branchName } from '@/lib/levis/config';
 import type { LevisClient } from '@/lib/levis/client';
@@ -306,8 +308,82 @@ function baseHistory(today: string): HistoryEntry[] {
       80,
       52,
     ),
-  ];
+    // Plus loin dans le passé : de quoi rendre parlant le récapitulatif de l'année (une série
+    // suivie, un mois chargé, l'année précédente pour comparer).
+    ...ONE_PIECE.map((subtitle, i) => {
+      const out = 200 - i * 5 - (i >= 6 ? 10 : 0) - (i >= 12 ? 15 : 0);
+      return item(`One Piece. ${String(i + 1)}, ${subtitle}`, ODA, out, out - 3 - (i % 4));
+    }),
+    item(
+      'Les royaumes de feu, la bande dessinée. 3, Le secret de la nuit',
+      'Sutherland, Tui, 1978-',
+      150,
+      129,
+    ),
+    item(
+      'Les royaumes de feu, la bande dessinée. 2, La princesse disparue',
+      'Sutherland, Tui, 1978-',
+      210,
+      189,
+    ),
+    item(
+      'Les royaumes de feu, la bande dessinée. 1, La prophétie',
+      'Sutherland, Tui, 1978-',
+      230,
+      209,
+    ),
+    item(
+      'Harry Potter. 3, Harry Potter et le prisonnier d’Azkaban',
+      'Rowling, J. K. (Joanne Kathleen), 1965-',
+      220,
+      199,
+    ),
+    item(
+      'Harry Potter. 2, Harry Potter et la chambre des secrets',
+      'Rowling, J. K. (Joanne Kathleen), 1965-',
+      240,
+      213,
+    ),
+    item(
+      'Harry Potter. 1, Harry Potter à l’école des sorciers',
+      'Rowling, J. K. (Joanne Kathleen), 1965-',
+      260,
+      239,
+    ),
+    item('Alice au pays des merveilles', 'Carroll, Lewis, 1832-1898', 280, 266),
+    item('Le petit prince', 'Saint-Exupéry, Antoine de, 1900-1944', 300, 298),
+    item('Mortelle Adèle. 3, Poussez-vous, les moches!', 'Mr Tan, 1978-', 400, 386),
+    item('Mortelle Adèle. 2, L’enfer, c’est les autres', 'Mr Tan, 1978-', 430, 416),
+    item('Mortelle Adèle. 1, Tout ça finira mal', 'Mr Tan, 1978-', 450, 436),
+    item('Les Légendaires. 2, Le gardien', 'Sobral, Patrick, 1968-', 500, 479),
+    item('Les Légendaires. 1, La pierre de Jovénia', 'Sobral, Patrick, 1968-', 520, 499),
+    item('Journal d’un dégonflé. 1, Carnet de bord de Greg Heffley', 'Kinney, Jeff', 560, 539),
+    item('Le Petit Nicolas', 'Goscinny, René, 1926-1977', 600, 590),
+  ].sort((a, b) => (b.checkedOut ?? '').localeCompare(a.checkedOut ?? ''));
 }
+
+const ODA = 'Oda, Eiichirô, 1975-';
+
+/** Tomes 1 à 17, lus avant les 19 à 25 du dossier : la série de l'année de la démo. */
+const ONE_PIECE = [
+  'À l’aube d’une grande aventure',
+  'Luffy versus la bande à Baggy!!',
+  'Une vérité qui blesse',
+  'Attaque au clair de lune',
+  'Pour qui sonne le glas',
+  'Le serment',
+  'Vieille canaille',
+  'Je ne mourrai pas!',
+  'Larmes',
+  'Ok, let’s stand up!',
+  'Le pire homme de l’est',
+  'Et ainsi naquit la légende',
+  'Tout ira bien!!',
+  'Instinct',
+  'Droit devant!!',
+  'Ceux qui portent la volonté',
+  'La couronne d’Hiluluk',
+];
 
 const BASE_PREFERENCES: Preferences = {
   language: 'fr_CA',
@@ -409,6 +485,13 @@ const DEMO_READS = new Map<Read, (state: DemoState) => unknown>([
   [getCheckouts, demoCheckouts],
   [getHolds, demoHolds],
   [getHistory, () => baseHistory(todayIso())],
+  [
+    getYearLoans,
+    (state): YearLoans => ({
+      history: baseHistory(todayIso()),
+      checkouts: demoCheckouts(state).checkouts,
+    }),
+  ],
   [getFines, () => NO_FINES],
   [getProfile, demoProfile],
   [

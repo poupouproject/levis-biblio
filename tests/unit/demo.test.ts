@@ -17,11 +17,13 @@ import {
   getHolds,
   getOverview,
   getProfile,
+  getYearLoans,
   type CheckoutsResult,
   type HoldsResult,
 } from '@/lib/levis/account';
 import type { LevisClient } from '@/lib/levis/client';
 import { todayIso } from '@/lib/account/format';
+import { buildYearRecap, recapYears } from '@/lib/account/recap';
 
 const holdsOf = (state = newDemoState()): HoldsResult => demoRead(getHolds, state);
 const checkoutsOf = (state = newDemoState()): CheckoutsResult => demoRead(getCheckouts, state);
@@ -36,6 +38,7 @@ describe('mode démonstration : lectures', () => {
       getFines,
       getProfile,
       getOverview,
+      getYearLoans,
     ];
     for (const read of reads) {
       expect(demoRead(read, state)).toBeTruthy();
@@ -139,5 +142,19 @@ describe('pastille « Démo »', () => {
     vi.stubEnv('LEVIS_DEMO', '1');
     vi.stubEnv('LEVIS_BANNIERE_DEMO', '');
     expect(isDemoBadgeVisible()).toBe(true);
+  });
+});
+
+describe('mode démonstration : récapitulatif de l’année', () => {
+  it('a de quoi remplir chaque écran : série suivie, plume, mois chargé, année précédente', () => {
+    const { history, checkouts } = demoRead(getYearLoans, newDemoState());
+    const years = recapYears(history, checkouts);
+    expect(years.length).toBeGreaterThanOrEqual(2);
+    const recaps = years.map((y) => buildYearRecap(history, checkouts, y));
+    // Les dates suivent aujourd'hui : selon le jour, la série tombe dans l'une ou l'autre année
+    expect(recaps.some((r) => r.topSeries?.name === 'One Piece')).toBe(true);
+    expect(recaps.some((r) => r.topAuthor?.name === 'Eiichirô Oda')).toBe(true);
+    expect(recaps.some((r) => (r.topMonth?.count ?? 0) >= 5)).toBe(true);
+    expect(recaps.some((r) => r.previousTotal !== null)).toBe(true);
   });
 });

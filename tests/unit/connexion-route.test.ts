@@ -34,3 +34,29 @@ describe('route de connexion : refus', () => {
     expect(jar.set).toHaveBeenCalledWith('lb_carte', '1234', expect.anything());
   });
 });
+
+describe('route de connexion : retour au récapitulatif', () => {
+  beforeEach(() => {
+    attemptLogin.mockReset();
+  });
+
+  it('connexion réussie : retour à la page demandée', async () => {
+    attemptLogin.mockResolvedValue({ ok: true });
+    const response = await post({ card: '1234', pin: 'nip', suite: '/compte/mon-annee/2025' });
+    expect(response.headers.get('location')).toBe('/compte/mon-annee/2025');
+  });
+
+  it('adresse non permise : le dossier, jamais un autre site', async () => {
+    attemptLogin.mockResolvedValue({ ok: true });
+    const response = await post({ card: '1234', pin: 'nip', suite: 'https://exemple.com' });
+    expect(response.headers.get('location')).toBe('/compte');
+  });
+
+  it('connexion refusée : la page demandée est gardée pour le prochain essai', async () => {
+    attemptLogin.mockResolvedValue({ ok: false, code: 'nip' });
+    const response = await post({ card: '1234', suite: '/compte/mon-annee' });
+    expect(response.headers.get('location')).toBe(
+      '/compte/connexion?erreur=nip&suite=%2Fcompte%2Fmon-annee',
+    );
+  });
+});

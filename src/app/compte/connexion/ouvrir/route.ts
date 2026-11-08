@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { CARD_FLASH_COOKIE, attemptLogin } from '@/lib/account/login';
 import { isSameOrigin } from '@/lib/account/origin';
 import { seeOther } from '@/lib/account/redirect';
+import { returnPath, withReturn } from '@/lib/account/return-path';
 
 /**
  * Connexion par envoi de formulaire classique, suivi d'une redirection 303.
@@ -27,11 +28,13 @@ export async function POST(request: Request): Promise<Response> {
       request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim(),
     ].find(Boolean) ?? 'local';
   const result = await attemptLogin(card, field('pin'), ip, field('demo') === '1');
+  // Page demandée avant la connexion (récapitulatif partagé par lien), seulement si permise
+  const suite = returnPath(field('suite'));
 
   const jar = await cookies();
   if (result.ok) {
     jar.delete({ name: CARD_FLASH_COOKIE, path: '/compte/connexion' });
-    return seeOther('/compte');
+    return seeOther(suite ?? '/compte');
   }
 
   // Le dossier fictif refusé n'a pas de carte à préremplir.
@@ -44,5 +47,5 @@ export async function POST(request: Request): Promise<Response> {
       maxAge: 120,
     });
   }
-  return seeOther(`/compte/connexion?erreur=${result.code}`);
+  return seeOther(withReturn(`/compte/connexion?erreur=${result.code}`, suite));
 }

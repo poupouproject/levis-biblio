@@ -93,6 +93,95 @@ html.dark {
   }
 }
 
+/* ─── Récapitulatif de l'année (src/components/recap) ───
+   Animations déclenchées à l'affichage de chaque écran, suspendues avec le récit
+   ([data-paused]) et supprimées si l'usager réduit les animations. */
+@property --recap-count {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+/* Compteur sans JavaScript : la propriété animée --recap-count est affichée par un compteur CSS.
+   Le compteur est posé sur l'élément (la propriété n'est pas héritée par ::after). */
+.recap-count {
+  counter-reset: recap var(--recap-count);
+}
+
+.recap-count::after {
+  content: counter(recap);
+}
+
+@keyframes recap-count {
+  from {
+    --recap-count: 0;
+  }
+}
+
+@keyframes recap-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes recap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes recap-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes recap-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes recap-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes recap-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14rem) rotate(var(--recap-tilt, 0deg));
+  }
+}
+
+@keyframes recap-light {
+  from {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+[data-recap][data-paused] * {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-recap] *,
+  [data-recap] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */

@@ -13,7 +13,37 @@
 | Réservations | `/compte/reservations` | Statut, lieu de retrait, rang dans la file, échéance, couverture          | Annuler, suspendre (dates), réactiver, changer de succursale               |
 | Historique   | `/compte/historique`   | Emprunts passés groupés par année, filtre local                           | Lien vers le catalogue                                                     |
 | Amendes      | `/compte/amendes`      | Montant dû, détail, amendes accumulées, total payé                        | Paiement : renvoi au portail officiel                                      |
+| Mon année    | `/compte/mon-annee`    | Récapitulatif de l'année en mode story (voir ci-dessous)                  | Partager une image ; lien et code QR `/mon-annee`                          |
 | Profil       | `/compte/profil`       | Coordonnées (lecture seule)                                               | Succursale par défaut, langue, historique on/off ; NIP : renvoi au portail |
+
+### Récapitulatif « Votre année à la bibliothèque »
+
+`/compte/mon-annee` (année en cours) ou `/compte/mon-annee/2025`, ouvert par le bouton du sommaire.
+Un écran par statistique, à la manière des bilans de fin d'année : total et comparaison avec
+l'année précédente, mois le plus occupé, plume (auteur) de l'année, série de l'année et prochain
+tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
+
+- **Calcul** (`src/lib/account/recap.ts`, pur et testé) à chaque visite, à partir de
+  `getYearLoans` : l'historique (documents **rendus** seulement, sans ID ni ISBN) et les emprunts
+  en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).
+  Série et auteur sont tirés du titre et du nom (`parseTitle`, `parseAuthor`) ; les couvertures
+  des tomes et le prochain tome viennent du catalogue (`getSeries`). Rien n'est stocké.
+- **Récit** (`src/components/recap/`) : écrit ici plutôt qu'avec `react-insta-stories`, évalué
+  et écarté (aucun rôle ARIA, zones de toucher en `<div>`, rien pour les animations réduites).
+  Toucher à droite ou à gauche, appui long pour suspendre, glisser vers le bas pour fermer ;
+  flèches, Espace et Échap au clavier ; bouton pause toujours visible ; onglet caché = pause.
+  Animations CSS (`globals.css`) : supprimées, avec l'avance automatique, si l'usager réduit les
+  animations ; le lecteur d'écran annonce chaque écran et lit les valeurs finales.
+- **Partage** : `/compte/mon-annee/partage?annee=2026` produit à la demande une image story
+  (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Chiffres seulement, sauf si
+  l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20).
+- **Lien et code QR** : `/mon-annee`, le même pour tout le monde, sans aucune donnée ; chacun y
+  voit sa propre année. Page d'accueil publique plutôt que redirection : le cookie
+  `SameSite=Strict` n'accompagne pas un lien ouvert depuis une autre application ; le bouton
+  « Voir mon année » navigue depuis le site, donc avec le cookie. Aperçu de lien générique
+  (`opengraph-image.tsx`). Code QR : `uqr` (`QrCode.tsx`, sans hook, aussi dans l'image).
+- **Retour après la connexion** : `?suite=` sur la connexion et après une session expirée,
+  limité aux pages du récapitulatif (`return-path.ts`) : jamais de redirection vers un autre site.
 
 Hors de portée, volontairement : paiement en ligne, changement de NIP, placer une nouvelle réservation (part d'une fiche du catalogue, protégée par Cloudflare).
 
@@ -52,7 +82,10 @@ src/lib/levis/                 Accès au portail (serveur seulement)
 src/lib/account/
   session.ts                   cookie scellé
   login.ts                     validation, limite de tentatives, ouverture de session
-  dal.ts                       requireAccount, withAccount
+  dal.ts                       requireAccount, withAccount (avec la page où revenir)
+  return-path.ts               pages permises après la connexion (`?suite=`)
+  recap.ts                     récapitulatif de l'année (calcul pur)
+  share-image.tsx              image du récapitulatif à partager (next/og)
   demo.ts                      mode démonstration : dossier fictif et actions simulées
   rate-limit.ts                limite des tentatives de connexion
   origin.ts                    contrôle d'origine des formulaires (Sec-Fetch-Site, repli Origin)
@@ -60,6 +93,7 @@ src/lib/account/
   format.ts                    dates relatives, échéances (partagé client/serveur)
 src/app/compte/                pages, actions, chargement, erreurs
 src/components/account/        composants UI
+src/components/recap/          récapitulatif en mode story, partage, code QR
 src/types/account.ts           types du domaine
 ```
 

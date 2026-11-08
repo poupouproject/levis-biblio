@@ -15,6 +15,7 @@ import { LoginForm } from '@/components/account/LoginForm';
 import { isDemoBadgeVisible, isDemoMode } from '@/lib/account/demo';
 import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { CARD_FLASH_COOKIE, LOGIN_ERRORS, isLoginErrorCode } from '@/lib/account/login';
+import { returnPath, type ReturnPath } from '@/lib/account/return-path';
 import { LEVIS_ORIGIN, LEVIS_LOGIN_PATH } from '@/lib/levis/config';
 
 export const metadata: Metadata = {
@@ -34,12 +35,14 @@ const REASONS = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ raison?: string; erreur?: string }>;
+  searchParams: Promise<{ raison?: string; erreur?: string; suite?: string }>;
 }): Promise<JSX.Element> {
-  const { raison, erreur } = await searchParams;
+  const { raison, erreur, suite: rawSuite } = await searchParams;
+  // Page où revenir après la connexion (lien partagé du récapitulatif), seulement si permise
+  const suite = returnPath(rawSuite);
   const session = await getAccountSession();
   // Après une expiration, on reste ici même si un cookie traîne : sinon, boucle avec le dossier.
-  if (isSignedIn(session) && raison !== 'expiree') redirect('/compte');
+  if (isSignedIn(session) && raison !== 'expiree') redirect(suite ?? '/compte');
   const reason = raison === 'expiree' || raison === 'deconnecte' ? REASONS[raison] : null;
   const error = isLoginErrorCode(erreur) ? LOGIN_ERRORS[erreur] : null;
   const defaultCard = error ? ((await cookies()).get(CARD_FLASH_COOKIE)?.value ?? '') : '';
@@ -75,10 +78,10 @@ export default async function LoginPage({
       )}
 
       {isDemoMode() ? (
-        <DemoLogin />
+        <DemoLogin suite={suite} />
       ) : (
         <>
-          <LoginForm error={error} defaultCard={defaultCard} />
+          <LoginForm error={error} defaultCard={defaultCard} suite={suite} />
           <a
             href={`${LEVIS_ORIGIN}${LEVIS_LOGIN_PATH}`}
             target="_blank"
@@ -88,7 +91,7 @@ export default async function LoginPage({
             NIP oublié? Le récupérer sur le portail des bibliothèques
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
-          {isDemoBadgeVisible() && <DemoOption />}
+          {isDemoBadgeVisible() && <DemoOption suite={suite} />}
         </>
       )}
     </div>
@@ -99,6 +102,7 @@ interface DemoFormProps {
   className: string;
   buttonClassName: string;
   icon: LucideIcon;
+  suite: ReturnPath | null;
   children: ReactNode;
 }
 
@@ -107,11 +111,13 @@ function DemoForm({
   className,
   buttonClassName,
   icon: Icon,
+  suite,
   children,
 }: DemoFormProps): JSX.Element {
   return (
     <form action="/compte/connexion/ouvrir" method="post" className={className}>
       <input type="hidden" name="demo" value="1" />
+      {suite && <input type="hidden" name="suite" value={suite} />}
       {children}
       <button
         type="submit"
@@ -125,9 +131,10 @@ function DemoForm({
 }
 
 /** Mode démonstration : pas de carte ni de NIP, un dossier fictif s'ouvre directement. */
-function DemoLogin(): JSX.Element {
+function DemoLogin({ suite }: { suite: ReturnPath | null }): JSX.Element {
   return (
     <DemoForm
+      suite={suite}
       className="flex flex-col gap-4"
       buttonClassName="bg-[#d4a853] text-white shadow-sm hover:bg-[#b88f42]"
       icon={LogIn}
@@ -146,9 +153,10 @@ function DemoLogin(): JSX.Element {
 }
 
 /** Pastille « Démo » sans mode démonstration : le vrai formulaire, et le dossier fictif en option. */
-function DemoOption(): JSX.Element {
+function DemoOption({ suite }: { suite: ReturnPath | null }): JSX.Element {
   return (
     <DemoForm
+      suite={suite}
       className="flex flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
       buttonClassName="border border-[#d4a853]/60 text-[#8a6a2c] hover:bg-[#d4a853]/10 dark:text-[#d4a853]"
       icon={FlaskConical}
