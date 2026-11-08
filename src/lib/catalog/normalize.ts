@@ -1,5 +1,18 @@
 // Nettoyage des notices brutes du catalogue (titres, auteurs, formats). Fonctions pures, testées.
 
+// Lettres sans forme décomposée, translittérées comme le fait `unaccent` dans Postgres
+// (public.replier) : « Guðmundsson » → « gudmundsson », pas « gu mundsson ».
+const LETTERS: Record<string, string> = {
+  ø: 'o',
+  ł: 'l',
+  đ: 'd',
+  ð: 'd',
+  þ: 'th',
+  ß: 'ss',
+  ı: 'i',
+  ħ: 'h',
+};
+
 /** Minuscules, sans accents ni ponctuation : sert à comparer et à chercher. */
 export function fold(value: string): string {
   return value
@@ -8,6 +21,7 @@ export function fold(value: string): string {
     .replace(/œ/gi, 'oe')
     .replace(/æ/gi, 'ae')
     .toLowerCase()
+    .replace(/[øłđðþßıħ]/g, (letter) => LETTERS[letter] ?? letter)
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
@@ -69,6 +83,37 @@ export interface ParsedTitle {
   subtitle: string | null;
   series: string | null;
   volume: number | null;
+  /** Numéro d'intégrale (« Sorcière. Intégrale 5 ») : dans la série, hors de la numérotation des tomes. */
+  omnibus: number | null;
+}
+
+// Autres écritures du tome dans les notices, essayées si « Série. N » ne convient pas :
+// « Titre. [2], Sous-titre », « Titre : 7 », « Titre : tome 3 », « Titre! 15 ».
+// Un nombre suivi d'un mot (« Salades : 500 recettes ») n'est jamais un tome.
+const VOLUME_PATTERNS: RegExp[] = [
+  /^(.+?)\.?\s+\[(\d{1,3})\](?:\s*[,.:]\s*(.*))?$/,
+  /^(.+?)\s:\s\[?(\d{1,3})\]?(?:\s:\s(.*))?$/,
+  /^(.+?)[\s,:.]+(?:tome|t\.|vol\.|volume|vol)\s*\.?\s*(\d{1,3})\s*$/i,
+  /^(.+?[!?])\s+(\d{1,3})$/,
+];
+
+// « Sorcière. Intégrale 5 », « La balade de Yaya : intégrale 1 » : une intégrale n'est pas le tome
+// de même numéro (elle en réunit plusieurs)
+const OMNIBUS = /^(.+?)[\s,:.]+int[ée]grale\s*\.?\s*(\d{1,3})\s*$/i;
+
+function matchVolume(text: string): { series: string; volume: number; rest: string } | null {
+  for (const pattern of VOLUME_PATTERNS) {
+    const match = pattern.exec(text);
+    const series = match?.[1]
+      ?.replace(GENRE_SUFFIX, '')
+      .replace(/[\s,.;:]+$/, '')
+      .trim();
+    const volume = match?.[2];
+    if (series && volume) {
+      return { series, volume: Number.parseInt(volume, 10), rest: (match[3] ?? '').trim() };
+    }
+  }
+  return null;
 }
 
 /**
@@ -81,6 +126,7 @@ export function parseTitle(raw: string): ParsedTitle {
   text = text.replace(/^\[(.+)\]$/, '$1');
   let series: string | null = null;
   let volume: number | null = null;
+  let omnibus: number | null = null;
 
   const seriesMatch = /^(.+?)\.\s+(\d{1,4})(?:\s*[,.:]\s*(.*))?$/.exec(text);
   // « Histoire du Québec. 1960, … » : une année, pas un tome
@@ -89,6 +135,18 @@ export function parseTitle(raw: string): ParsedTitle {
     series = seriesMatch[1].trim();
     volume = Number.parseInt(seriesMatch[2], 10);
     text = (seriesMatch[3] ?? '').trim();
+  } else if (OMNIBUS.test(text)) {
+    const match = OMNIBUS.exec(text);
+    series = match?.[1]?.replace(/[\s,.;:]+$/, '').trim() ?? null;
+    omnibus = match?.[2] ? Number.parseInt(match[2], 10) : null;
+    text = '';
+  } else {
+    const other = matchVolume(text);
+    if (other) {
+      series = other.series;
+      volume = other.volume;
+      text = other.rest;
+    }
   }
 
   text = text.replace(GENRE_SUFFIX, '').replace(/[\s,.;:/]+$/, '');
@@ -102,8 +160,15 @@ export function parseTitle(raw: string): ParsedTitle {
         .trim() || null;
     text = text.slice(0, colon).trim();
   }
-  if (!text) text = series && volume !== null ? `${series}, tome ${String(volume)}` : raw.trim();
-  return { title: capitalize(text), subtitle, series, volume };
+  if (!text) {
+    text =
+      series && volume !== null
+        ? `${series}, tome ${String(volume)}`
+        : series && omnibus !== null
+          ? `${series}, intégrale ${String(omnibus)}`
+          : raw.trim();
+  }
+  return { title: capitalize(text), subtitle, series, volume, omnibus };
 }
 
 function capitalize(value: string): string {

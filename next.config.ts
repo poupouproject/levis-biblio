@@ -35,6 +35,13 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ['image/avif', 'image/webp'],
+    // Le portail n'envoie aucun en-tête de cache, et une couverture ne change presque jamais :
+    // 31 jours (le maximum du CDN de Vercel) épargnent le quota de conversions du plan Hobby.
+    minimumCacheTTL: 31 * 24 * 60 * 60,
+    // Peu de largeurs, partagées par toutes les vignettes (32 à 420 px affichés) : chaque
+    // couverture n'est convertie qu'en quelques tailles, réutilisées d'une page à l'autre.
+    imageSizes: [64, 128, 256],
+    deviceSizes: [384, 640, 828, 1080],
   },
 
   headers() {

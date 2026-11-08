@@ -1,10 +1,18 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Clock, ExternalLink, FlaskConical, Library, LogIn } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FlaskConical,
+  Library,
+  LogIn,
+  type LucideIcon,
+} from 'lucide-react';
 import { LoginForm } from '@/components/account/LoginForm';
-import { isDemoMode } from '@/lib/account/demo';
+import { isDemoBadgeVisible, isDemoMode } from '@/lib/account/demo';
 import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { CARD_FLASH_COOKIE, LOGIN_ERRORS, isLoginErrorCode } from '@/lib/account/login';
 import { LEVIS_ORIGIN, LEVIS_LOGIN_PATH } from '@/lib/levis/config';
@@ -80,16 +88,50 @@ export default async function LoginPage({
             NIP oublié? Le récupérer sur le portail des bibliothèques
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
+          {isDemoBadgeVisible() && <DemoOption />}
         </>
       )}
     </div>
   );
 }
 
+interface DemoFormProps {
+  className: string;
+  buttonClassName: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}
+
+/** Ouvre le dossier fictif, sans carte ni NIP. `children` : le texte qui présente l'option. */
+function DemoForm({
+  className,
+  buttonClassName,
+  icon: Icon,
+  children,
+}: DemoFormProps): JSX.Element {
+  return (
+    <form action="/compte/connexion/ouvrir" method="post" className={className}>
+      <input type="hidden" name="demo" value="1" />
+      {children}
+      <button
+        type="submit"
+        className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-colors ${buttonClassName}`}
+      >
+        <Icon className="h-5 w-5" aria-hidden />
+        Explorer le dossier de démonstration
+      </button>
+    </form>
+  );
+}
+
 /** Mode démonstration : pas de carte ni de NIP, un dossier fictif s'ouvre directement. */
 function DemoLogin(): JSX.Element {
   return (
-    <form action="/compte/connexion/ouvrir" method="post" className="flex flex-col gap-4">
+    <DemoForm
+      className="flex flex-col gap-4"
+      buttonClassName="bg-[#d4a853] text-white shadow-sm hover:bg-[#b88f42]"
+      icon={LogIn}
+    >
       <div className="flex gap-3 rounded-xl border border-[#d4a853]/40 bg-[#d4a853]/10 p-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
         <FlaskConical className="h-5 w-5 flex-shrink-0 text-[#d4a853]" aria-hidden />
         <p>
@@ -99,13 +141,22 @@ function DemoLogin(): JSX.Element {
           bibliothèques.
         </p>
       </div>
-      <button
-        type="submit"
-        className="flex items-center justify-center gap-2 rounded-xl bg-[#d4a853] px-4 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-[#b88f42]"
-      >
-        <LogIn className="h-5 w-5" aria-hidden />
-        Explorer le dossier de démonstration
-      </button>
-    </form>
+    </DemoForm>
+  );
+}
+
+/** Pastille « Démo » sans mode démonstration : le vrai formulaire, et le dossier fictif en option. */
+function DemoOption(): JSX.Element {
+  return (
+    <DemoForm
+      className="flex flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+      buttonClassName="border border-[#d4a853]/60 text-[#8a6a2c] hover:bg-[#d4a853]/10 dark:text-[#d4a853]"
+      icon={FlaskConical}
+    >
+      <p className="text-center text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+        Pas de carte sous la main? Essayez Mon dossier avec un dossier fictif : rien n’est envoyé
+        aux bibliothèques.
+      </p>
+    </DemoForm>
   );
 }

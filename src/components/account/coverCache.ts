@@ -16,8 +16,9 @@ export function knownCover(id: string): CoverInfo | null | undefined {
 /**
  * Mémorise toute la réponse reçue, pas seulement l'élément affiché : le sommaire reçoit les
  * couvertures de tous les emprunts et réservations, que les autres onglets réutilisent aussitôt.
+ * `requestedId` : élément à noter « sans couverture » s'il manque (réponse définitive seulement).
  */
-export function rememberCovers(map: CoverMap, requestedId: string): void {
+export function rememberCovers(map: CoverMap, requestedId?: string): void {
   for (const [id, info] of Object.entries(map)) known.set(id, info);
-  if (!(requestedId in map)) known.set(requestedId, null);
+  if (requestedId !== undefined && !(requestedId in map)) known.set(requestedId, null);
 }

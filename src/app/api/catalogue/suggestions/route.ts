@@ -6,7 +6,7 @@ import { getCatalog } from '@/lib/catalog/source';
 export async function GET(request: NextRequest): Promise<NextResponse<Suggestion[]>> {
   const q = (request.nextUrl.searchParams.get('q') ?? '').slice(0, 80);
   const { catalog } = await getCatalog();
-  return NextResponse.json(catalog.suggest(q), {
+  return NextResponse.json(await catalog.suggest(q), {
     headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' },
   });
 }

@@ -111,6 +111,15 @@ export interface CoverInfo {
 
 export type CoverMap = Record<string, CoverInfo>;
 
+/**
+ * Couvertures en deux temps : celles du catalogue (quelques millisecondes), puis celles que le
+ * portail fournit pour les documents absents du catalogue (recherche lente : 2 à 10 s).
+ */
+export interface CoverStreams {
+  known: Promise<CoverMap>;
+  late: Promise<CoverMap>;
+}
+
 export interface ActionItemResult {
   id: string;
   title: string;

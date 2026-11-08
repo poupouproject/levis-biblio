@@ -17,9 +17,11 @@ import {
 import type {
   CatalogEdition,
   CatalogWork,
+  EditionCover,
   FacetCount,
   Period,
   RawEdition,
+  SearchField,
   SearchQuery,
   SearchResult,
   SeriesSummary,
@@ -37,6 +39,9 @@ interface IndexedWork {
   work: CatalogWork;
   hay: string; // Titre, sous-titre, série, auteurs, éditeur
   titleFold: string;
+  /** Titre et sous-titre : le champ « Titre » de la recherche. */
+  titleHay: string;
+  isbns: string[];
   seriesFold: string;
   authorFolds: string[];
   popularity: number;
@@ -67,6 +72,7 @@ export interface CatalogStats {
 export class Catalog {
   private readonly indexed: IndexedWork[];
   private readonly byId = new Map<string, IndexedWork>();
+  private readonly editionsByTitleId = new Map<string, EditionCover>();
   private readonly seriesBySlug = new Map<string, SeriesEntry>();
   private readonly authors: AuthorEntry[];
   private readonly authorAliases = new Map<string, string[]>();
@@ -88,14 +94,11 @@ export class Catalog {
       if (!row.title) continue;
       const parsed = parseTitle(row.title);
       const author = parseAuthor(row.author);
-      const tome = parsed.series ? `s:${fold(parsed.series)}|${String(parsed.volume)}` : null;
+      const { key, tome } = groupKey(parsed, author?.key ?? null);
       if (tome && !author) {
         orphanTomes.push({ row, parsed, tome });
         continue;
       }
-      const key = tome
-        ? `${tome}|${author?.key ?? ''}`
-        : `t:${fold(parsed.title)}|${author?.key ?? ''}`;
       const group = groups.get(key);
       if (group) group.raw.push(row);
       else {
@@ -121,6 +124,20 @@ export class Catalog {
       for (const edition of raw) {
         const id = edition.titleId ?? edition.isbn;
         if (id) this.byId.set(id, item);
+        // Plusieurs lignes peuvent partager un title_id : comme Postgres, celle qui a une
+        // couverture d'abord, puis un ISBN
+        const current = edition.titleId ? this.editionsByTitleId.get(edition.titleId) : undefined;
+        if (
+          edition.titleId &&
+          (!current ||
+            (edition.cover && !current.cover) ||
+            (Boolean(edition.cover) === Boolean(current.cover) && edition.isbn && !current.isbn))
+        ) {
+          this.editionsByTitleId.set(edition.titleId, {
+            isbn: edition.isbn,
+            cover: edition.cover,
+          });
+        }
       }
       for (const name of item.work.authors) {
         const f = fold(name);
@@ -165,9 +182,7 @@ export class Catalog {
       bySurname.set(surname, [...(bySurname.get(surname) ?? []), entry]);
     }
     for (const entries of bySurname.values()) {
-      const full = entries
-        .filter((e) => e.fold.includes(' '))
-        .sort((a, b) => b.count - a.count);
+      const full = entries.filter((e) => e.fold.includes(' ')).sort((a, b) => b.count - a.count);
       const bare = entries.filter((e) => !e.fold.includes(' '));
       const canonical = full[0];
       const fullTotal = full.reduce((n, e) => n + e.count, 0);
@@ -192,7 +207,9 @@ export class Catalog {
       else groups.set(work.series.slug, [work]);
     }
     for (const [slug, works] of groups) {
-      works.sort((a, b) => (a.series?.volume ?? 0) - (b.series?.volume ?? 0));
+      // Tomes dans l'ordre, puis les intégrales (sans numéro de tome)
+      const order = (w: CatalogWork): number => w.series?.volume ?? Number.MAX_SAFE_INTEGER;
+      works.sort((a, b) => order(a) - order(b));
       const authorCounts = new Map<string, number>();
       for (const w of works)
         for (const a of w.authors) authorCounts.set(a, (authorCounts.get(a) ?? 0) + 1);
@@ -224,6 +241,16 @@ export class Catalog {
 
   getWork(id: string): CatalogWork | null {
     return this.byId.get(id)?.work ?? null;
+  }
+
+  /** ISBN et couverture des notices connues, par title_id ; les inconnues sont absentes. */
+  editionCovers(titleIds: string[]): Record<string, EditionCover> {
+    const out: Record<string, EditionCover> = {};
+    for (const id of titleIds) {
+      const edition = this.editionsByTitleId.get(id);
+      if (edition) out[id] = edition;
+    }
+    return out;
   }
 
   /** Séries dont le nom contient tous les mots : nom exact d'abord, puis les plus populaires. */
@@ -272,12 +299,14 @@ export class Catalog {
     const authorSet = authorFold
       ? new Set(this.authorAliases.get(authorFold) ?? [authorFold])
       : null;
+    const inField = fieldMatcher(query.field, tokens, isbn);
 
     // 1. Correspondance texte + auteur (avant les filtres, pour les compteurs de facettes)
     const matched: { item: IndexedWork; score: number }[] = [];
     for (const item of this.indexed) {
       if (authorSet && !item.authorFolds.some((a) => authorSet.has(a))) continue;
       if (tokens.length > 0 && !tokens.every((t) => item.hay.includes(t))) continue;
+      if (!inField(item)) continue;
       matched.push({ item, score: tokens.length > 0 ? score(item, tokens, phrase) : 0 });
     }
 
@@ -324,7 +353,10 @@ export class Catalog {
     }
 
     // 4. Séries correspondant à la requête (affichées en tête)
-    const series = tokens.length === 0 ? [] : this.matchSeries(tokens, 3).map((s) => s.summary);
+    const series =
+      tokens.length === 0 || !showsSeries(query.field)
+        ? []
+        : this.matchSeries(tokens, 3).map((s) => s.summary);
 
     return {
       total: results.length,
@@ -415,25 +447,14 @@ export class Catalog {
   /** Œuvres avec couverture des auteurs donnés, une par série, en alternant les auteurs. */
   byAuthors(names: string[], limit = 18): CatalogWork[] {
     const wanted = names.map(fold);
-    const buckets = wanted.map(() => [] as CatalogWork[]);
-    const seen = new Set<string>();
+    const items: { bucket: number; key: string; work: CatalogWork }[] = [];
     for (const item of this.indexed) {
       if (!item.work.cover) continue;
-      const i = wanted.findIndex((a) => item.authorFolds.includes(a));
-      if (i === -1) continue;
-      const key = item.work.series?.slug ?? item.work.id;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      buckets[i]?.push(item.work);
+      const bucket = wanted.findIndex((a) => item.authorFolds.includes(a));
+      if (bucket === -1) continue;
+      items.push({ bucket, key: item.work.series?.slug ?? item.work.id, work: item.work });
     }
-    const out: CatalogWork[] = [];
-    for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
-      for (const bucket of buckets) {
-        const w = bucket[round];
-        if (w && out.length < limit) out.push(w);
-      }
-    }
-    return out;
+    return interleave(items, wanted.length, limit).map((i) => i.work);
   }
 
   formatCounts(): FacetCount<FormatGroup>[] {
@@ -446,8 +467,55 @@ export class Catalog {
   }
 }
 
+/**
+ * Clé de regroupement d'une édition en œuvre : même tome de série (ou même titre) et même
+ * auteur (nom de famille replié). `tome` est la partie série et tome, sans l'auteur : un tome
+ * sans auteur rejoint le seul tome de même numéro qui en a un.
+ */
+export function groupKey(
+  parsed: ReturnType<typeof parseTitle>,
+  authorKey: string | null,
+): { key: string; tome: string | null } {
+  // Une intégrale a sa propre place dans la série, distincte du tome de même numéro
+  const place =
+    parsed.omnibus !== null ? `integrale ${String(parsed.omnibus)}` : String(parsed.volume);
+  const tome = parsed.series ? `s:${fold(parsed.series)}|${place}` : null;
+  return {
+    key: tome ? `${tome}|${authorKey ?? ''}` : `t:${fold(parsed.title)}|${authorKey ?? ''}`,
+    tome,
+  };
+}
+
+/**
+ * Étagère « auteurs d'ici » : une œuvre par série, en alternant les auteurs. `bucket` donne
+ * l'auteur (sa position dans la liste demandée) de chaque œuvre, déjà triée par ordre de base.
+ * Partagé par le moteur en mémoire et par Postgres.
+ */
+export function interleave<T extends { bucket: number; key: string }>(
+  items: T[],
+  authors: number,
+  limit: number,
+): T[] {
+  const buckets: T[][] = Array.from({ length: authors }, () => []);
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.key)) continue;
+    seen.add(item.key);
+    buckets[item.bucket]?.push(item);
+  }
+  const out: T[] = [];
+  for (let round = 0; out.length < limit && buckets.some((b) => b.length > round); round++) {
+    for (const bucket of buckets) {
+      const item = bucket[round];
+      if (item && out.length < limit) out.push(item);
+    }
+  }
+  return out;
+}
+
 export const EMPTY_QUERY: SearchQuery = {
   q: '',
+  field: 'tout',
   formats: [],
   period: null,
   author: null,
@@ -456,6 +524,36 @@ export const EMPTY_QUERY: SearchQuery = {
   sort: 'pertinence',
   limit: 24,
 };
+
+/** Cartes de séries en tête des résultats : pas quand on cherche un titre, un auteur ou un ISBN. */
+export function showsSeries(field: SearchField): boolean {
+  return field === 'tout' || field === 'serie';
+}
+
+/**
+ * Restriction à un champ, en plus de la correspondance sur toute la notice. Le champ ISBN
+ * n'accepte qu'un ISBN complet : un bout de numéro n'identifie rien.
+ */
+function fieldMatcher(
+  field: SearchField,
+  tokens: string[],
+  isbn: string | null,
+): (item: IndexedWork) => boolean {
+  if (tokens.length === 0) return () => true;
+  const all = (text: string): boolean => tokens.every((t) => text.includes(t));
+  switch (field) {
+    case 'tout':
+      return () => true;
+    case 'titre':
+      return (item) => all(item.titleHay);
+    case 'auteur':
+      return (item) => item.authorFolds.some((a) => all(a));
+    case 'serie':
+      return (item) => item.seriesFold !== '' && all(item.seriesFold);
+    case 'isbn':
+      return (item) => isbn !== null && item.isbns.includes(isbn);
+  }
+}
 
 /** Nombre de caractères non ASCII (accents) : sert à préférer « René » à « Rene ». */
 function accents(name: string): number {
@@ -546,22 +644,27 @@ function buildWork(
     summary,
     subjects,
     editions,
+    editionCount: editions.length,
   };
   const titleFold = fold(parsed.title);
   const seriesFold = series ? fold(series.name) : '';
   const authorFolds = authors.map(fold);
+  const subtitleFold = fold(parsed.subtitle ?? '');
+  const isbns = editions.flatMap((e) => isbnForms(e.isbn));
   return {
     work,
     titleFold,
+    titleHay: subtitleFold ? `${titleFold} ${subtitleFold}` : titleFold,
+    isbns,
     seriesFold,
     authorFolds,
     hay: [
       titleFold,
-      fold(parsed.subtitle ?? ''),
+      subtitleFold,
       seriesFold,
       ...authorFolds,
       fold(first.publisher ?? ''),
-      ...editions.flatMap((e) => isbnForms(e.isbn)),
+      ...isbns,
     ]
       .filter(Boolean)
       .join(' '),

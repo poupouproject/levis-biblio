@@ -11,7 +11,7 @@ import {
   Truck,
   Users,
 } from 'lucide-react';
-import type { Branch, CoverMap, Hold, HoldStatus } from '@/types';
+import type { Branch, CoverStreams, Hold, HoldStatus } from '@/types';
 import { changePickupAction, holdAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { addDays, formatDate } from '@/lib/account/format';
@@ -23,7 +23,7 @@ import { ItemMessage } from './ActionFeedback';
 
 interface HoldsListProps {
   holds: Hold[];
-  covers: Promise<CoverMap>;
+  covers: CoverStreams;
   branches: readonly Branch[];
   today: string;
 }

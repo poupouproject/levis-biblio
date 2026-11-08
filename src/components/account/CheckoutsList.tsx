@@ -2,7 +2,7 @@
 
 import { useState, type JSX } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
-import type { Checkout, CoverMap } from '@/types';
+import type { Checkout, CoverStreams } from '@/types';
 import { renewAction } from '@/app/compte/actions';
 import { useAccountAction } from '@/hooks/useAccountAction';
 import { plural } from '@/lib/account/format';
@@ -13,7 +13,7 @@ import { ItemMessage } from './ActionFeedback';
 
 interface CheckoutsListProps {
   checkouts: Checkout[];
-  covers: Promise<CoverMap>;
+  covers: CoverStreams;
   today: string;
 }
 

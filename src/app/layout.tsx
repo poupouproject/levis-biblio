@@ -8,7 +8,7 @@ import { FloatingSearchProvider, HeaderSearchButton } from '@/components/search/
 import { DemoBadge } from '@/components/ui/DemoBadge';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { Toaster } from '@/components/ui/Toaster';
-import { isDemoMode } from '@/lib/account/demo';
+import { isDemoBadgeVisible } from '@/lib/account/demo';
 import { RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
@@ -57,7 +57,7 @@ export default function RootLayout({
                   Bêta
                 </span>
                 {/* Lu au rendu du serveur : sur Vercel, la variable est fixée au déploiement. */}
-                {isDemoMode() && <DemoBadge />}
+                {isDemoBadgeVisible() && <DemoBadge />}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <HeaderSearchButton />
@@ -90,6 +90,14 @@ export default function RootLayout({
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
               Indépendant de la Ville de Lévis. Ce service agit comme une interface par-dessus les
               outils existants.
+            </p>
+            <p className="mt-3 text-xs">
+              <Link
+                href="/confidentialite"
+                className="text-zinc-600 underline underline-offset-2 hover:text-[#8a6a2c] dark:text-zinc-400 dark:hover:text-[#d4a853]"
+              >
+                Confidentialité
+              </Link>
             </p>
           </div>
         </footer>

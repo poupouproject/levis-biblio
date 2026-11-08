@@ -1,5 +1,72 @@
 # levis-biblio
 
+## 0.11.0
+
+### Nouveautés
+
+- Recherche ciblée : des puces « Tout · Titre · Auteur · Série · ISBN » limitent la recherche à un champ, sur la page de résultats et dans la recherche flottante. Le choix reste dans le lien, et une recherche sans résultat propose de chercher partout.
+
+### Correctifs
+
+- Le message « Vous explorez une démo » se ferme après 10 secondes au lieu de 20.
+- Page de résultats : changer de champ relance la recherche avec le texte tapé dans la barre, même pas encore envoyé. Sans texte, le champ choisi s’applique à la prochaine recherche.
+- La recherche flottante repart de « Tout » sur une autre page, au lieu de garder le champ d’une recherche précédente.
+- Sur téléphone et tablette, toucher la barre de la page de résultats ouvre la recherche flottante, comme sur l’accueil : les suggestions restent visibles au-dessus du clavier.
+- Recherche dans les titres : une faute de frappe propose de nouveau les titres approchants au lieu de n’afficher aucun résultat.
+- Le titre de l’onglet indique le champ cherché, par exemple « oda parmi les auteurs ».
+
+## 0.10.0
+
+### Nouveautés
+
+- Quand la pastille « Démo » est affichée sans le mode démonstration, la page de connexion propose aussi d'explorer un dossier fictif, sous le formulaire habituel : on peut essayer Mon dossier sans carte, sans que rien ne soit envoyé aux bibliothèques.
+
+### Correctifs
+
+- Le bouton « Explorer le dossier de démonstration » proposé sous le formulaire de connexion est plus lisible en thème clair.
+- Si le dossier de démonstration n'est plus offert alors que la page de connexion était déjà ouverte, un message l'explique clairement au lieu de demander un numéro de carte.
+- Se connecter avec sa carte après avoir ouvert le dossier de démonstration affiche bien son vrai dossier, et un renouvellement ne peut plus être annoncé réussi sans être envoyé à la bibliothèque. Ouvrir le dossier de démonstration ferme aussi une vraie session restée ouverte dans un autre onglet.
+
+## 0.9.0
+
+### Nouveautés
+
+- Mon dossier : les couvertures et les ISBN des emprunts et des réservations s'affichent presque aussitôt, tirés du catalogue. Seuls les documents trop récents pour y figurer attendent encore le portail de la Ville.
+- Les nouveautés de votre dossier absentes du catalogue y sont ajoutées : la prochaine fois, leur couverture s'affiche aussitôt, et tout le monde peut les trouver dans la recherche.
+
+### Correctifs
+
+- La page d'accueil est préparée à la visite plutôt qu'au déploiement : elle suit les ajouts au catalogue, et une base lente ne bloque plus la mise en ligne.
+- Page « Confidentialité » : votre navigateur ne contacte plus le portail de la Ville pour afficher les couvertures.
+- Page « Confidentialité » : explique l'ajout au catalogue des nouveautés de Mon dossier, sans lien avec l'usager.
+- Les couvertures s'affichent plus vite et pèsent beaucoup moins sur mobile : elles sont réduites à la taille de l'écran, converties dans un format moderne et gardées en cache.
+- Mon dossier : les couvertures ne se font plus attendre quand le catalogue tarde à répondre, et l'ISBN s'affiche aussi pour un document dont la copie du catalogue n'en a pas.
+- Le site demande aux moteurs de recherche de ne pas le parcourir pour l'instant, le temps d'obtenir l'accord de la Ville.
+
+## 0.8.0
+
+### Nouveautés
+
+- Nouvelle page « Confidentialité », accessible depuis le pied de page : ce que le site fait (et ne fait pas) de vos renseignements, les deux cookies de « Mon dossier », et qui détient vos données.
+
+## 0.7.1
+
+### Correctifs
+
+- La pastille « Démo » peut rester affichée même quand Mon dossier se connecte au vrai portail des bibliothèques.
+
+## 0.7.0
+
+### Nouveautés
+
+- La recherche interroge la base du catalogue : elle porte sur tous les documents, répond dès la première visite, et les auteurs écrits de plusieurs façons (« Greg » et « Michel Greg ») sont réunis.
+- Une faute de frappe ne mène plus à une page vide : sans résultat exact, la recherche propose les titres les plus proches (« harry poter » trouve Harry Potter).
+
+### Correctifs
+
+- Les titres et les auteurs aux lettres particulières (« Guðmundsson », « Vardø », « Hałasa ») se trouvent en tapant leur forme courante (« gudmundsson », « vardo »).
+- Plus de livres sont rattachés à leur série : les tomes notés « [2] », « : 3 », « tome 4 » ou « ! 15 » dans le catalogue sont maintenant reconnus, et des tomes qui étaient confondus en une seule œuvre sont séparés.
+
 ## 0.6.1
 
 ### Correctifs

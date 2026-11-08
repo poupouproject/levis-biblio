@@ -24,6 +24,7 @@ import {
 import { branchName } from '@/lib/levis/config';
 import type { LevisClient } from '@/lib/levis/client';
 import { LevisError } from '@/lib/levis/errors';
+import { readyCovers } from './covers';
 import { addDays, formatDate, renewalRefusedMessage, todayIso } from './format';
 
 /**
@@ -37,6 +38,18 @@ import { addDays, formatDate, renewalRefusedMessage, todayIso } from './format';
  */
 export function isDemoMode(): boolean {
   return process.env.LEVIS_DEMO === '1';
+}
+
+/**
+ * Pastille « Démo » de l'en-tête (`LEVIS_BANNIERE_DEMO=1`). Indépendante de `LEVIS_DEMO` : on
+ * peut essayer le vrai Mon dossier tout en gardant la pastille, tant que les données du
+ * catalogue restent fictives ou partielles. Le mode démonstration l'affiche aussi.
+ *
+ * La pastille autorise aussi le dossier fictif : choix assumé, un site marqué « Démo » peut se
+ * laisser essayer sans carte. Il est alors proposé en option, sous le vrai formulaire de connexion.
+ */
+export function isDemoBadgeVisible(): boolean {
+  return isDemoMode() || process.env.LEVIS_BANNIERE_DEMO === '1';
 }
 
 export const DEMO_FIRST_NAME = 'Camille';
@@ -334,7 +347,7 @@ function demoCheckouts(state: DemoState): CheckoutsResult {
       total: items.length,
       overdue: items.filter((c) => c.dueDate !== null && c.dueDate < today).length,
     },
-    covers: Promise.resolve(covers),
+    covers: readyCovers(covers),
   };
 }
 
@@ -372,7 +385,7 @@ function demoHolds(state: DemoState): HoldsResult {
   return {
     holds: items,
     summary: { total: items.length, ready: items.filter((h) => h.status === 'ready').length },
-    covers: Promise.resolve(covers),
+    covers: readyCovers(covers),
   };
 }
 

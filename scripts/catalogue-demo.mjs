@@ -40,7 +40,8 @@ const queries = {
   curated: `select ${COLUMNS} from ${FROM}
     where e.auteur_brut ~* $1 or e.titre_brut ~* $2`,
   // 4. Notices enrichies (résumé, sujets)
-  enriched: `select ${COLUMNS} from ${FROM} where o.id is not null`,
+  // (toutes les éditions ont une œuvre : on retient celles qui ont un résumé ou des sujets)
+  enriched: `select ${COLUMNS} from ${FROM} where o.resume is not null or o.sujets is not null`,
   // 5. Variété : un échantillon stable du reste du catalogue
   sample: `select ${COLUMNS} from ${FROM}
     where e.image_couverture is not null order by md5(e.isbn) limit 2500`,

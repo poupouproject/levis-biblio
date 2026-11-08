@@ -8,16 +8,21 @@ import {
   plausibleYear,
   tokenize,
 } from '@/lib/catalog/normalize';
-import { Catalog, EMPTY_QUERY } from '@/lib/catalog/engine';
+import { Catalog, EMPTY_QUERY, groupKey } from '@/lib/catalog/engine';
 import { parseSearchParams, searchHref } from '@/lib/catalog/query';
 import { simulateAvailability } from '@/lib/catalog/availability';
-import type { RawEdition } from '@/lib/catalog/types';
+import type { RawEdition, SearchField } from '@/lib/catalog/types';
 
 const NOW = new Date('2026-10-20T12:00:00Z');
 
 describe('normalisation des notices', () => {
   it('replie accents, ligatures et ponctuation', () => {
     expect(fold('Cœur de Lévis : ROMAN!')).toBe('coeur de levis roman');
+    // Comme unaccent dans Postgres (public.replier)
+    expect(fold('Einar Már Guðmundsson')).toBe('einar mar gudmundsson');
+    expect(fold('Les sorcières de Vardø, Hałasa, Straße')).toBe(
+      'les sorcieres de vardo halasa strasse',
+    );
     expect(tokenize('Le cœur de la forêt')).toEqual(['coeur', 'foret']);
   });
 
@@ -27,6 +32,7 @@ describe('normalisation des notices', () => {
       subtitle: null,
       series: 'One Piece',
       volume: 25,
+      omnibus: null,
     });
     expect(parseTitle('Shaman King. 23')).toMatchObject({
       title: 'Shaman King, tome 23',
@@ -38,6 +44,104 @@ describe('normalisation des notices', () => {
       series: 'Op-center',
       volume: 5,
     });
+  });
+
+  it('garde une intégrale dans sa série, à part du tome de même numéro', () => {
+    expect(parseTitle('Sorcière. Intégrale 5')).toMatchObject({
+      title: 'Sorcière, intégrale 5',
+      series: 'Sorcière',
+      volume: null,
+      omnibus: 5,
+    });
+    expect(parseTitle('La balade de Yaya : intégrale 1')).toMatchObject({
+      series: 'La balade de Yaya',
+      omnibus: 1,
+    });
+    // L'intégrale 5 et le tome 5 du même auteur restent deux œuvres
+    const omnibus = groupKey(parseTitle('Sorcière. Intégrale 5'), 'tiernan');
+    const tome = groupKey(parseTitle('Sorcière. 5, L’éveil'), 'tiernan');
+    expect(omnibus.key).toBe('s:sorciere|integrale 5|tiernan');
+    expect(tome.key).toBe('s:sorciere|5|tiernan');
+    // Et l'intégrale passe après les tomes dans la série
+    const catalog = new Catalog(
+      [
+        { title: 'Sorcière. Intégrale 5', isbn: null, titleId: '3' },
+        { title: 'Sorcière. 5, L’éveil', isbn: null, titleId: '2' },
+        { title: 'Sorcière. 1, Le début', isbn: null, titleId: '1' },
+      ].map((r) => ({
+        ...r,
+        author: 'Tiernan, Cate',
+        publisher: null,
+        year: 2010,
+        format: 'Livres',
+        pages: null,
+        cover: null,
+        summary: null,
+        subjects: null,
+      })),
+      NOW,
+    );
+    expect(catalog.getSeries('sorciere')?.works.map((w) => w.title)).toEqual([
+      'Le début',
+      'L’éveil',
+      'Sorcière, intégrale 5',
+    ]);
+  });
+
+  it('détecte les autres écritures du tome', () => {
+    expect(parseTitle('Les maîtres de Rome. [3], Le favori des dieux')).toMatchObject({
+      title: 'Le favori des dieux',
+      series: 'Les maîtres de Rome',
+      volume: 3,
+    });
+    expect(parseTitle('Abarat. [1]')).toMatchObject({ series: 'Abarat', volume: 1 });
+    expect(parseTitle('À découvert [1]')).toMatchObject({ series: 'À découvert', volume: 1 });
+    // La mention de genre ne fait pas partie du nom de la série
+    expect(parseTitle('Et si c’était ça, le bonheur? : roman. [1]')).toMatchObject({
+      series: 'Et si c’était ça, le bonheur?',
+      volume: 1,
+    });
+    expect(parseTitle('Belem. [1]. Le temps des naufrageurs')).toMatchObject({
+      title: 'Le temps des naufrageurs',
+      series: 'Belem',
+      volume: 1,
+    });
+    expect(parseTitle('Mon oeuvre à moi : 7')).toMatchObject({
+      title: 'Mon oeuvre à moi, tome 7',
+      series: 'Mon oeuvre à moi',
+      volume: 7,
+    });
+    expect(parseTitle('Les contes du Korrigan : 2 : les mille visages du diable')).toMatchObject({
+      title: 'Les mille visages du diable',
+      series: 'Les contes du Korrigan',
+      volume: 2,
+    });
+    expect(parseTitle('Louisette la taupe : [2] : sardine express')).toMatchObject({
+      series: 'Louisette la taupe',
+      volume: 2,
+    });
+    expect(parseTitle('Histoires drôles : tome 49')).toMatchObject({
+      series: 'Histoires drôles',
+      volume: 49,
+    });
+    expect(parseTitle('Le Québec en chansons volume 1')).toMatchObject({
+      series: 'Le Québec en chansons',
+      volume: 1,
+    });
+    expect(parseTitle('Switch girl!! 15')).toMatchObject({ series: 'Switch girl!!', volume: 15 });
+  });
+
+  it('ne prend pas un nombre du titre pour un tome', () => {
+    for (const title of [
+      'Salades : 500 recettes variées et savoureuses pour toute l’année',
+      'Formule 1 : le livre d’or 2001',
+      'Ephemeris : 1000 ans d’histoire au jour le jour',
+      'Jeux & activités pour votre enfant : 3 ans',
+      'Fahrenheit 451',
+      'Les 4 saisons',
+    ]) {
+      expect(parseTitle(title)).toMatchObject({ series: null, volume: null });
+    }
   });
 
   it('retire la mention de genre et sépare le sous-titre', () => {
@@ -135,6 +239,33 @@ describe('moteur de recherche', () => {
     expect(catalog.getWork('201')?.cover).toBe('https://x/3.jpg');
   });
 
+  it('retrouve l’ISBN et la couverture de la notice exacte par title_id', () => {
+    expect(catalog.editionCovers(['101', '103', '999'])).toEqual({
+      '101': { isbn: '9782723434621', cover: 'https://x/1.jpg' },
+      // L'édition 103 n'a pas de couverture : pas celle de son œuvre (102)
+      '103': { isbn: null, cover: null },
+    });
+  });
+
+  it('choisit, entre éditions d’un même title_id, la même que Postgres', () => {
+    const shared = new Catalog(
+      [
+        row('Sans rien', null, { titleId: '1' }),
+        row('Avec ISBN', null, { titleId: '1', isbn: '111' }),
+        row('Avec couverture', null, { titleId: '1', cover: 'https://x/a.jpg' }),
+        row('ISBN seul', null, { titleId: '2', isbn: '222' }),
+        row('Couverture et ISBN', null, { titleId: '2', isbn: '333', cover: 'https://x/b.jpg' }),
+        row('Couverture seule', null, { titleId: '2', cover: 'https://x/c.jpg' }),
+      ],
+      NOW,
+    );
+    // Couverture d'abord, puis ISBN (order by image_couverture is null, isbn nulls last)
+    expect(shared.editionCovers(['1', '2'])).toEqual({
+      '1': { isbn: null, cover: 'https://x/a.jpg' },
+      '2': { isbn: '333', cover: 'https://x/b.jpg' },
+    });
+  });
+
   it('place les tomes de la série exacte en premier, dans l’ordre', () => {
     const r = catalog.search({ ...EMPTY_QUERY, q: 'one piece' });
     expect(r.works.map((w) => w.id)).toEqual(['101', '102', '104']);
@@ -169,6 +300,31 @@ describe('moteur de recherche', () => {
     expect(catalog.suggest('o')).toEqual([]);
   });
 
+  it('cherche dans un seul champ : titre, auteur, série ou ISBN', () => {
+    const ids = (q: string, field: SearchField): string[] =>
+      catalog.search({ ...EMPTY_QUERY, q, field }).works.map((w) => w.id);
+    // « Clark » est un auteur, pas un titre
+    expect(ids('clark', 'auteur')).toEqual(['201']);
+    expect(ids('clark', 'titre')).toEqual([]);
+    // Le sous-titre fait partie du titre ; la série, non
+    expect(ids('romance dawn', 'titre')).toEqual(['101']);
+    expect(ids('one piece', 'titre')).toEqual(['104']);
+    expect(ids('one piece', 'serie').sort()).toEqual(['101', '102', '104']);
+    expect(ids('oda', 'serie')).toEqual([]);
+    // ISBN complet seulement, sous ses formes 10 et 13 chiffres
+    expect(ids('2-7234-3462-1', 'isbn')).toEqual(['101']);
+    expect(ids('one', 'isbn')).toEqual([]);
+    // Sans texte, le champ est ignoré : on parcourt tout
+    expect(catalog.search({ ...EMPTY_QUERY, field: 'serie' }).total).toBe(5);
+  });
+
+  it('n’affiche les séries en tête que pour « Tout » et « Série »', () => {
+    expect(catalog.search({ ...EMPTY_QUERY, q: 'one piece', field: 'serie' }).series).not.toEqual(
+      [],
+    );
+    expect(catalog.search({ ...EMPTY_QUERY, q: 'one piece', field: 'titre' }).series).toEqual([]);
+  });
+
   it('donne la série complète et les étagères de l’accueil', () => {
     expect(catalog.getSeries('one-piece')?.works.map((w) => w.series?.volume)).toEqual([1, 2]);
     expect(catalog.newest().map((w) => w.id)).toEqual(['201']);
@@ -196,6 +352,14 @@ describe('recherche ↔ URL', () => {
       limit: 240,
     });
     expect(parseSearchParams({ succursale: '<script>' }).branch).toBeNull();
+    expect(parseSearchParams({ q: 'oda', champ: 'auteur' }).field).toBe('auteur');
+    expect(parseSearchParams({ champ: 'sujet' }).field).toBe('tout');
+  });
+
+  it('garde le champ dans le lien, sauf « Tout »', () => {
+    expect(searchHref({ q: 'oda', field: 'auteur' })).toBe('/recherche?q=oda&champ=auteur');
+    expect(searchHref({ field: 'serie' })).toBe('/recherche?champ=serie');
+    expect(searchHref({ q: 'oda', field: 'tout' })).toBe('/recherche?q=oda');
   });
 
   it('écrit un lien sans les valeurs par défaut', () => {

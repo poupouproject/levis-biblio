@@ -5,15 +5,15 @@
 
 ## 1. Fonctionnalités
 
-| Section | Route | Lecture | Actions |
-|---|---|---|---|
-| Connexion | `/compte/connexion` | — | Ouvrir une session (carte ou identifiant + NIP) |
-| Sommaire | `/compte` | Alertes (retards, réservations prêtes), compteurs, prochains retours | — |
-| Emprunts | `/compte/emprunts` | Titre, auteur, cote, couverture, date de retour, renouvellements, alertes | Renouveler un ou plusieurs documents |
-| Réservations | `/compte/reservations` | Statut, lieu de retrait, rang dans la file, échéance, couverture | Annuler, suspendre (dates), réactiver, changer de succursale |
-| Historique | `/compte/historique` | Emprunts passés groupés par année, filtre local | Lien vers le catalogue |
-| Amendes | `/compte/amendes` | Montant dû, détail, amendes accumulées, total payé | Paiement : renvoi au portail officiel |
-| Profil | `/compte/profil` | Coordonnées (lecture seule) | Succursale par défaut, langue, historique on/off ; NIP : renvoi au portail |
+| Section      | Route                  | Lecture                                                                   | Actions                                                                    |
+| ------------ | ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Connexion    | `/compte/connexion`    | —                                                                         | Ouvrir une session (carte ou identifiant + NIP)                            |
+| Sommaire     | `/compte`              | Alertes (retards, réservations prêtes), compteurs, prochains retours      | —                                                                          |
+| Emprunts     | `/compte/emprunts`     | Titre, auteur, cote, couverture, date de retour, renouvellements, alertes | Renouveler un ou plusieurs documents                                       |
+| Réservations | `/compte/reservations` | Statut, lieu de retrait, rang dans la file, échéance, couverture          | Annuler, suspendre (dates), réactiver, changer de succursale               |
+| Historique   | `/compte/historique`   | Emprunts passés groupés par année, filtre local                           | Lien vers le catalogue                                                     |
+| Amendes      | `/compte/amendes`      | Montant dû, détail, amendes accumulées, total payé                        | Paiement : renvoi au portail officiel                                      |
+| Profil       | `/compte/profil`       | Coordonnées (lecture seule)                                               | Succursale par défaut, langue, historique on/off ; NIP : renvoi au portail |
 
 Hors de portée, volontairement : paiement en ligne, changement de NIP, placer une nouvelle réservation (part d'une fiche du catalogue, protégée par Cloudflare).
 
@@ -33,7 +33,7 @@ Navigateur ── Server Action renewAction(codes-barres) ──▶ portail → 
 - **Lectures** : Server Components + `withAccount()` (`src/lib/account/dal.ts`). Session expirée côté portail → `/compte/expiree`, qui supprime le cookie périmé (une page ne peut pas le faire) puis renvoie à la connexion ; sinon, boucle de redirections.
 - **Écritures** : Server Actions (`src/app/compte/actions.ts`), protégées par la vérification d'origine intégrée de Next. Toutes les entrées sont revalidées côté serveur (formats de clés, codes de succursale, dates).
 - **Menu de compte** : `GET /compte/session` ne renvoie que le prénom, pour l'en-tête ; le reste du site reste statique.
-- **Couvertures et ISBN en streaming** : le portail met 2 à 5 s à les fournir (l'ISBN n'existe que dans l'adresse de la couverture). Les listes s'affichent en ~0,4 s ; couvertures et ISBN arrivent ensuite (`use()` + `Suspense`, `StreamedCover`, `StreamedIsbn`) et restent en mémoire dans l'onglet (`coverCache.ts`).
+- **Couvertures et ISBN en deux temps** (`src/lib/account/covers.ts`) : d'abord le catalogue, par le `title_id` de chaque emprunt ou réservation (table `editions`, quelques millisecondes) ; le portail n'est appelé que pour les documents absents du catalogue ou sans couverture (nouveautés), une seule fois, et met 2 à 15 s (l'ISBN n'existe que dans l'adresse de la couverture). Les listes s'affichent en ~0,3 s ; `known` (catalogue) puis `late` (portail) arrivent ensuite (`use()` + `Suspense`, `StreamedCover`, `StreamedIsbn`) et restent en mémoire dans l'onglet (`coverCache.ts`). Un document connu du catalogue n'attend jamais le portail, et un portail trop lent ne fait perdre que les couvertures qu'il devait fournir.
 - **Squelettes** : `<SkeletonScope>` affiche le vrai composant en squelette pendant le chargement.
 - Tout le code qui touche la session importe `server-only`.
 
@@ -68,6 +68,7 @@ src/types/account.ts           types du domaine
 Base : `https://levi.ent.sirsidynix.net/client/fr_CA/accueil`. Seuls les chemins `search/account…` et `search/patronlogin…` sont utilisés ; aucun n'est protégé par Cloudflare. Les chemins de recherche, de fiche et de disponibilité (protégés) ne sont **jamais** appelés.
 
 **Mécanismes communs**
+
 - `sdcsrf` : jeton de session, renvoyé dans le corps et dans l'en-tête `sdcsrf` des requêtes AJAX.
 - `t:formdata` : état opaque d'un formulaire ; toujours relire le formulaire juste avant de le soumettre.
 - Zones AJAX : `POST {composant}?` avec `t:zoneid=…`, en-têtes `X-Requested-With: XMLHttpRequest`, `X-Prototype-Version: 1.7`. Réponse JSON `{ content, zones, inits }` ; `inits[].evalScript` et `inits[].linkZone` portent les URL d'événements et les zones liées aux formulaires.
@@ -78,26 +79,26 @@ Base : `https://levi.ent.sirsidynix.net/client/fr_CA/accueil`. Seuls les chemins
 
 **Lectures**
 
-| Donnée | Composant | `t:zoneid` | Temps |
-|---|---|---|---|
-| Emprunts | `account.accountnonmobile.checkouts.librarycheckoutsaccordion` | `libraryCheckoutsAccordion` | ~90 ms |
-| Réservations | `account.accountnonmobile.holds.libraryholdsaccordion` | `libraryHoldsAccordion` | ~80 ms |
-| Historique | `account.accountnonmobile.checkouts.checkouthistoryajax` | `checkoutHistoryAjax` | ~100 ms |
-| Amendes | `account.accountnonmobile.fines.paymentserviceajax` | `paymentServiceAjax` | ~70 ms |
-| Couvertures emprunts | `…checkouts.any:loadcheckoutsextras/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:` | — | 2,5–3 s |
-| Couvertures réservations | `…holds.any:loadholdsextras/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:` | — | ~5 s |
-| Profil, préférences | page `search/account` | — | ~700 ms |
+| Donnée                   | Composant                                                                   | `t:zoneid`                  | Temps   |
+| ------------------------ | --------------------------------------------------------------------------- | --------------------------- | ------- |
+| Emprunts                 | `account.accountnonmobile.checkouts.librarycheckoutsaccordion`              | `libraryCheckoutsAccordion` | ~90 ms  |
+| Réservations             | `account.accountnonmobile.holds.libraryholdsaccordion`                      | `libraryHoldsAccordion`     | ~80 ms  |
+| Historique               | `account.accountnonmobile.checkouts.checkouthistoryajax`                    | `checkoutHistoryAjax`       | ~100 ms |
+| Amendes                  | `account.accountnonmobile.fines.paymentserviceajax`                         | `paymentServiceAjax`        | ~70 ms  |
+| Couvertures emprunts     | `…checkouts.any:loadcheckoutsextras/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:` | —                           | 2,5–3 s |
+| Couvertures réservations | `…holds.any:loadholdsextras/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:`         | —                           | ~5 s    |
+| Profil, préférences      | page `search/account`                                                       | —                           | ~700 ms |
 
 Couvertures : `{ array: [{ identifier, image, itemID? }] }`, `identifier` = code-barres (emprunts) ou numéro de réservation. `image` = `…/btlffile/{ISBN}/cover`.
 
 **Actions**
 
-| Action | Mécanisme |
-|---|---|
-| Renouveler | Formulaire de la zone emprunts ; cases nommées par position (`checkbox`, `checkbox_0`…) associées au code-barres sur une liste fraîchement chargée ; `t:submit` + `t:zoneid` (zone liée). |
-| Annuler / suspendre / réactiver | Formulaire `HoldsSelectionForm_*` : `myHolds_holdslistnonmobile_action` = `DELETE` / `SUSPEND` / `CANCEL_SUSPEND`, `…_ids` = clés `"<réservation>\|null"` (table fournie par `new HoldsList(…)`), `…_startDate` / `…_endDate` en `yyyy/m/d`. |
-| Changer de succursale | 1) `POST …:editpickuplibraries/…/<clé encodée>` (`t:zoneid=placeHoldZone`) → formulaire ; 2) `POST …placeholdnonmobile:holditems/true/<ids>/<succursales>/<cotes>/<messages>/null` (listes séparées par `\|\|\|`, encodées Tapestry) → `{ reload, messages: { id: html } }`. |
-| Préférences | Formulaire classique `#preferencesForm` (`defaultLanguage`, `defaultTab`, `pickupLibrary`, `showCheckoutHistory`, `updatePrefs`). |
+| Action                          | Mécanisme                                                                                                                                                                                                                                                                    |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Renouveler                      | Formulaire de la zone emprunts ; cases nommées par position (`checkbox`, `checkbox_0`…) associées au code-barres sur une liste fraîchement chargée ; `t:submit` + `t:zoneid` (zone liée).                                                                                    |
+| Annuler / suspendre / réactiver | Formulaire `HoldsSelectionForm_*` : `myHolds_holdslistnonmobile_action` = `DELETE` / `SUSPEND` / `CANCEL_SUSPEND`, `…_ids` = clés `"<réservation>\|null"` (table fournie par `new HoldsList(…)`), `…_startDate` / `…_endDate` en `yyyy/m/d`.                                 |
+| Changer de succursale           | 1) `POST …:editpickuplibraries/…/<clé encodée>` (`t:zoneid=placeHoldZone`) → formulaire ; 2) `POST …placeholdnonmobile:holditems/true/<ids>/<succursales>/<cotes>/<messages>/null` (listes séparées par `\|\|\|`, encodées Tapestry) → `{ reload, messages: { id: html } }`. |
+| Préférences                     | Formulaire classique `#preferencesForm` (`defaultLanguage`, `defaultTab`, `pickupLibrary`, `showCheckoutHistory`, `updatePrefs`).                                                                                                                                            |
 
 Après chaque action, la liste est relue et le résultat de chaque document est déduit de l'état réel (date de retour, présence, statut, succursale) plutôt que du texte du portail.
 
@@ -118,12 +119,13 @@ Après chaque action, la liste est relue et le résultat de chaque document est 
 
 ## 5. Configuration
 
-| Variable | Rôle |
-|---|---|
-| `LEVIS_SESSION_SECRET` | Obligatoire. Clé du cookie scellé (voir `.env.example`). |
-| `LEVIS_USER_AGENT` | Optionnel. Remplace le User-Agent envoyé au portail. |
-| `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`. |
-| `LEVIS_DEMO` | Optionnel. `1` : mode démonstration (voir ci-dessous). |
+| Variable                                    | Rôle                                                                                                                                                                             |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LEVIS_SESSION_SECRET`                      | Obligatoire. Clé du cookie scellé (voir `.env.example`).                                                                                                                         |
+| `LEVIS_USER_AGENT`                          | Optionnel. Remplace le User-Agent envoyé au portail.                                                                                                                             |
+| `MON_COMPTE_LEVIS`, `MON_COMPTE_LEVIS_PASS` | Développement seulement : compte pour `npm run test:live`.                                                                                                                       |
+| `LEVIS_DEMO`                                | Optionnel. `1` : mode démonstration (voir ci-dessous).                                                                                                                           |
+| `LEVIS_BANNIERE_DEMO`                       | Optionnel. `1` : pastille « Démo » dans l'en-tête, sans activer le mode démonstration de Mon dossier. La connexion propose aussi le dossier fictif, en option (voir ci-dessous). |
 
 ### Mode démonstration (`LEVIS_DEMO=1`)
 
@@ -135,6 +137,8 @@ Le portail de la Ville refuse les requêtes venant de Vercel : en production, Mo
 - Les couvertures sont servies depuis `public/maquette/couvertures/` : rien ne vient du portail.
 - Un bandeau « Démonstration : dossier fictif » s'affiche en haut de chaque page du dossier.
 
+Avec la seule pastille (`LEVIS_BANNIERE_DEMO=1`, sans `LEVIS_DEMO`), la page de connexion garde le vrai formulaire (carte et NIP) et propose en dessous « Explorer le dossier de démonstration ». Ce bouton ouvre le même dossier fictif, sans requête au portail ; seule une vraie session déjà ouverte dans un autre onglet est d'abord fermée. Le cookie ne porte jamais les deux sessions à la fois : ouvrir l'une efface l'autre. Sans aucune des deux variables, l'option n'est pas affichée et la route de connexion la refuse avec un message dédié, sans tenter de vraie connexion.
+
 ## 6. Tests
 
 - `npm run test:unit` : parseurs, utilitaires Tapestry, formats, limite de tentatives (fixtures synthétiques).
@@ -142,15 +146,15 @@ Le portail de la Ville refuse les requêtes venant de Vercel : en production, Mo
 
 ## 7. À valider
 
-| Point | Comment |
-|---|---|
+| Point                                                                                   | Comment                                              |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | Renouvellement réel (succès, refus pour réservation d'un autre usager, limite atteinte) | Renouveler un document admissible depuis l'interface |
-| Suspendre puis réactiver une réservation | Suspendre quelques jours, puis réactiver |
-| Changer de succursale | Changer, vérifier, remettre la succursale d'origine |
-| Annuler une réservation | Sur une réservation dont on n'a plus besoin |
-| Statuts rares (en transit, prête, suspendue) et leur libellé exact | Observer au fil du temps ; ajuster `holdStatusFrom` |
-| Durée de session du portail | Laisser la session inactive et observer l'expiration |
-| Session et adresses IP variables de Vercel | Premier déploiement |
+| Suspendre puis réactiver une réservation                                                | Suspendre quelques jours, puis réactiver             |
+| Changer de succursale                                                                   | Changer, vérifier, remettre la succursale d'origine  |
+| Annuler une réservation                                                                 | Sur une réservation dont on n'a plus besoin          |
+| Statuts rares (en transit, prête, suspendue) et leur libellé exact                      | Observer au fil du temps ; ajuster `holdStatusFrom`  |
+| Durée de session du portail                                                             | Laisser la session inactive et observer l'expiration |
+| Session et adresses IP variables de Vercel                                              | Premier déploiement                                  |
 
 ## 8. Pour la Ville
 

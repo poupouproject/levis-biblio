@@ -44,11 +44,13 @@ export default async function WorkPage({ params }: { params: Params }): Promise<
   if (!work) notFound();
   const { catalog } = await getCatalog();
   const availability = simulateAvailability(work.id);
-  const series = work.series ? catalog.getSeries(work.series.slug) : null;
+  const [series, related] = await Promise.all([
+    work.series ? catalog.getSeries(work.series.slug) : null,
+    catalog.related(work),
+  ]);
   const index = series ? series.works.findIndex((w) => w.id === work.id) : -1;
   const previous = series && index > 0 ? series.works[index - 1] : undefined;
   const next = series && index >= 0 ? series.works[index + 1] : undefined;
-  const related = catalog.related(work);
   const summaryIsbns = work.editions
     .map((e) => e.isbn)
     .filter((i): i is string => isbnForms(i).length > 0);
