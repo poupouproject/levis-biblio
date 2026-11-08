@@ -11,12 +11,21 @@ import {
   type PointerEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { FlaskConical, Pause, Play, X } from 'lucide-react';
+import { FlaskConical, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
 import type { YearRecap } from '@/lib/account/recap';
+import {
+  MUSIC_VOLUME,
+  RECAP_MUSIC,
+  musicVolume,
+  readSoundPreference,
+  writeSoundPreference,
+} from '@/lib/account/recap-sound';
 import {
   AuthorSlide,
   FinalSlide,
+  GlimpseBackdrop,
   IntroSlide,
+  type GlimpseCover,
   MonthsSlide,
   PaceSlide,
   ProfileSlide,
@@ -38,10 +47,14 @@ interface YearStoryProps {
   /** Années qui ont des emprunts, pour passer de l'une à l'autre. */
   years: number[];
   series: SeriesExtras | null;
+  /** Documents de l'année, pour le fond flou de l'écran d'ouverture. */
+  glimpse: GlimpseCover[];
 }
 
 /** Durée d'un écran avant de passer au suivant. */
 const SLIDE_MS = 6500;
+/** Passage d'un volume à l'autre (écran de partage). */
+const FADE_MS = 1200;
 /** Appui plus long : met le récit en pause tant que le doigt reste posé. */
 const HOLD_MS = 250;
 /** Glisser vers le bas de plus de 90 px : fermer. */
@@ -52,7 +65,18 @@ interface Slide {
   /** Annoncé au lecteur d'écran à chaque changement. */
   label: string;
   background: string;
+  /** Fond plein cadre, sous l'en-tête et le contenu. */
+  backdrop?: (() => JSX.Element | null) | undefined;
   render: () => JSX.Element;
+}
+
+/** Stockage du navigateur ; refusé (navigation privée, réglages) : aucun. */
+function browserStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function subscribeMedia(callback: () => void): () => void {
@@ -92,13 +116,40 @@ function usePageHidden(): boolean {
  * progression. Toucher à droite ou à gauche, appui long pour suspendre, glisser vers le bas pour
  * fermer ; au clavier, flèches, Espace et Échap. Le bouton pause reste toujours visible.
  */
-export function YearStory({ recap, firstName, demo, years, series }: YearStoryProps): JSX.Element {
+export function YearStory({
+  recap,
+  firstName,
+  demo,
+  years,
+  series,
+  glimpse,
+}: YearStoryProps): JSX.Element {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [held, setHeld] = useState(false);
+  // Musique : décidée au geste « C'est parti », d'après le choix retenu dans le navigateur
+  const [sound, setSound] = useState(false);
+  const audio = useRef<HTMLAudioElement>(null);
   const reduced = useReducedMotion();
   const hidden = usePageHidden();
+
+  /**
+   * Lever de rideau. La musique ne peut partir que dans le geste lui-même : arriver sur la page
+   * par un lien ne suffit pas (code QR, lien ouvert depuis une autre application, Safari).
+   */
+  const start = useCallback(() => {
+    const on = readSoundPreference(browserStorage());
+    setSound(on);
+    setPaused(false);
+    setIndex(1);
+    const element = audio.current;
+    if (on && element) {
+      element.currentTime = 0;
+      element.volume = MUSIC_VOLUME;
+      void element.play().catch(() => undefined);
+    }
+  }, []);
 
   const slides = useMemo((): Slide[] => {
     const list: Slide[] = [
@@ -106,7 +157,8 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
         id: 'intro',
         label: `Votre année ${String(recap.year)} à la bibliothèque`,
         background: 'from-[#3d2c5e] to-[#5b2333]',
-        render: () => <IntroSlide recap={recap} firstName={firstName} />,
+        backdrop: () => <GlimpseBackdrop glimpse={glimpse} />,
+        render: () => <IntroSlide recap={recap} firstName={firstName} onStart={start} />,
       },
       {
         id: 'total',
@@ -180,13 +232,16 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
       ),
     });
     return list;
-  }, [recap, firstName, demo, years, series]);
+  }, [recap, firstName, demo, years, series, glimpse, start]);
 
   const last = slides.length - 1;
   const slide = slides[Math.min(index, last)] ?? slides[0];
   const halted = paused || held || hidden;
-  // Pas d'avance automatique sur le dernier écran (partage), ni si les animations sont réduites
-  const autoplay = !reduced && index < last;
+  // Pas d'avance automatique sur l'écran d'ouverture (le rideau attend le geste), ni sur le
+  // dernier (partage), ni si les animations sont réduites
+  const autoplay = !reduced && index > 0 && index < last;
+  const playing = sound && index > 0 && !halted;
+  const volume = musicVolume(index, last);
 
   const go = useCallback(
     (delta: number) => {
@@ -194,15 +249,68 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
     },
     [last],
   );
+  /** Avancer ; depuis l'écran d'ouverture, c'est lever le rideau. */
+  const next = useCallback(() => {
+    if (index === 0) start();
+    else go(1);
+  }, [index, start, go]);
   const close = useCallback(() => {
     router.push('/compte');
   }, [router]);
+
+  const toggleSound = (): void => {
+    const on = !sound;
+    setSound(on);
+    writeSoundPreference(browserStorage(), on);
+    const element = audio.current;
+    // Dans le geste, pour Safari ; l'effet ci-dessous s'occupe ensuite de la pause
+    if (on && element && !halted) {
+      element.volume = volume;
+      void element.play().catch(() => undefined);
+    }
+  };
+
+  // La musique suit le récit : pause, appui long, onglet caché, retour au rideau
+  useEffect(() => {
+    const element = audio.current;
+    if (!element) return;
+    if (!playing) element.pause();
+    else if (element.paused) void element.play().catch(() => undefined);
+  }, [playing]);
+
+  // Fondu vers le volume de l'écran (plus bas sur l'écran de partage). Sans effet sur iPhone,
+  // où le volume ne se règle pas par la page.
+  useEffect(() => {
+    const element = audio.current;
+    if (!element || volume === 0) return;
+    const from = element.volume;
+    const begin = performance.now();
+    let frame = 0;
+    const step = (now: number): void => {
+      const progress = Math.min(1, (now - begin) / FADE_MS);
+      element.volume = from + (volume - from) * progress;
+      if (progress < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [volume]);
+
+  // Musique coupée par l'usager : rien à précharger
+  useEffect(() => {
+    const element = audio.current;
+    if (element && readSoundPreference(browserStorage())) element.preload = 'auto';
+    return () => {
+      element?.pause();
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       const onControl = Boolean(target?.closest('a, button, input, label, select, textarea'));
-      if (event.key === 'ArrowRight') go(1);
+      if (event.key === 'ArrowRight') next();
       else if (event.key === 'ArrowLeft') go(-1);
       else if (event.key === 'Escape') close();
       else if (event.key === ' ' && !onControl) {
@@ -214,7 +322,7 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [go, close]);
+  }, [next, go, close]);
 
   // Toucher : un appui bref navigue, un appui long suspend, un glissé vers le bas ferme.
   const press = useRef<{ y: number; held: boolean; timer: number } | null>(null);
@@ -246,7 +354,8 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
       skipClick.current = false;
       return;
     }
-    go(delta);
+    if (delta > 0) next();
+    else go(delta);
   };
 
   const tapZone =
@@ -264,6 +373,13 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
       <div
         className={`relative flex h-full w-full max-w-md flex-col overflow-hidden bg-linear-to-br ${slide?.background ?? ''}`}
       >
+        {/* Fichier chargé seulement si la musique n'a pas été coupée ; jamais lancé sans geste */}
+        <audio ref={audio} src={RECAP_MUSIC} preload="none" loop />
+        {slide?.backdrop && (
+          <div key={`fond-${slide.id}`} className="absolute inset-0 z-0">
+            {slide.backdrop()}
+          </div>
+        )}
         <div className="relative z-30 flex flex-col gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div className="flex gap-1" aria-hidden>
             {slides.map((s, i) => (
@@ -297,6 +413,17 @@ export function YearStory({ recap, firstName, demo, years, series }: YearStoryPr
               )}
             </p>
             <div className="flex items-center gap-1">
+              {index > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleSound}
+                  aria-pressed={!sound}
+                  aria-label={sound ? 'Couper la musique' : 'Remettre la musique'}
+                  className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                >
+                  {sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </button>
+              )}
               {autoplay && (
                 <button
                   type="button"

@@ -170,6 +170,36 @@ html.dark {
   }
 }
 
+/* Couvertures floues de l'écran d'ouverture : elles apparaissent et se précisent un peu. */
+@keyframes recap-unblur {
+  from {
+    opacity: 0;
+    filter: blur(28px);
+    transform: scale(1.15);
+  }
+}
+
+/* Dérive lente du fond, en continu ; l'indice du geste qui pousse vers la droite. */
+.recap-drift {
+  animation: recap-drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes recap-drift {
+  to {
+    transform: translateY(-12%);
+  }
+}
+
+.recap-nudge {
+  animation: recap-nudge 1.4s ease-in-out infinite;
+}
+
+@keyframes recap-nudge {
+  50% {
+    transform: translateX(0.4rem);
+  }
+}
+
 [data-recap][data-paused] * {
   animation-play-state: paused !important;
 }

@@ -2,7 +2,7 @@
 
 import type { CSSProperties, JSX, ReactNode } from 'react';
 import Link from 'next/link';
-import { RotateCcw } from 'lucide-react';
+import { ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
 import {
   LOAN_DAYS,
   MONTHS,
@@ -57,26 +57,106 @@ function Centered({ children }: { children: ReactNode }): JSX.Element {
   return <div className="flex flex-1 flex-col justify-center gap-5">{children}</div>;
 }
 
+/** Un document de l'année pour le fond flou ; sans image, une couverture typographique. */
+export interface GlimpseCover {
+  title: string;
+  author: string | null;
+  cover: string | null;
+}
+
+/** Assez de couvertures pour couvrir l'écran incliné ; on répète celles de l'année au besoin. */
+const BACKDROP_TILES = 20;
+
+/**
+ * Avant-goût de l'écran d'ouverture : les couvertures de l'année, floues, qui se précisent un
+ * peu sans jamais devenir lisibles. On devine ses livres ; le récit les dévoilera.
+ */
+export function GlimpseBackdrop({ glimpse }: { glimpse: GlimpseCover[] }): JSX.Element | null {
+  if (glimpse.length === 0) return null;
+  const tiles = Array.from({ length: BACKDROP_TILES }, (_, i) => ({
+    key: String(i),
+    book: glimpse[i % glimpse.length] ?? glimpse[0],
+  }));
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="absolute -inset-1/4 -rotate-12 opacity-55 blur-[10px]"
+        style={enter('recap-unblur', 0, 4500)}
+      >
+        <div className="recap-drift grid grid-cols-4 gap-3">
+          {tiles.map(({ key, book }) => (
+            <Cover
+              key={key}
+              src={book?.cover ?? null}
+              title={book?.title ?? ''}
+              author={book?.author}
+              sizes="120px"
+            />
+          ))}
+        </div>
+      </div>
+      {/* Voile pour que le texte reste lisible sur n'importe quelle couverture */}
+      <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/75" />
+    </div>
+  );
+}
+
+/**
+ * Écran d'ouverture, comme un rideau : quelques phrases qui montent une à une, l'année en grand,
+ * puis « C'est parti ». Pas d'avance automatique : le récit (et la musique) part au geste.
+ */
 export function IntroSlide({
   recap,
   firstName,
+  onStart,
 }: {
   recap: YearRecap;
   firstName: string;
+  onStart: () => void;
 }): JSX.Element {
+  const line = 'text-2xl leading-snug font-bold text-white/90';
+  const discoveries = recap.topSeries ? 'des séries entamées' : 'des découvertes';
   return (
     <Centered>
       <Kicker>LévisBiblio présente</Kicker>
+      <div className="flex flex-col gap-3">
+        <p className="text-5xl font-black tracking-tight" style={enter('recap-rise', 300, 800)}>
+          {firstName ? `${firstName}.` : 'Bonjour.'}
+        </p>
+        <p className={line} style={enter('recap-rise', 1100, 800)}>
+          {recap.year} a été toute une année.
+        </p>
+        <p className={line} style={enter('recap-rise', 2000, 800)}>
+          Des pages tournées, {discoveries}, des retours à la dernière minute…
+        </p>
+        <p className="text-2xl leading-snug font-extrabold" style={enter('recap-rise', 2900, 800)}>
+          On la redécouvre ensemble&nbsp;?
+        </p>
+      </div>
       <h1
-        className="text-5xl leading-[1.05] font-black tracking-tight"
-        style={enter('recap-pop', 200, 900)}
+        className="text-[5.5rem] leading-none font-black tracking-tight text-[#f0c987]"
+        style={enter('recap-pop', 3600, 900)}
       >
-        {firstName ? `${firstName}, voici` : 'Voici'} votre année{' '}
-        <span className="text-[#f0c987]">{recap.year}</span> à la bibliothèque
+        {recap.year}
+        <span className="sr-only"> : votre année à la bibliothèque</span>
       </h1>
-      <p className="text-lg text-white/85" style={enter('recap-rise', 900)}>
-        Touchez à droite pour continuer.
-      </p>
+      <button
+        type="button"
+        onClick={onStart}
+        className="pointer-events-auto inline-flex items-center gap-2 self-start rounded-full bg-[#f0c987] px-7 py-3.5 text-lg font-extrabold text-[#2f2f2f] shadow-lg hover:bg-[#fde2b8] focus-visible:ring-4 focus-visible:ring-white focus-visible:outline-none"
+        style={enter('recap-pop', 4400, 700)}
+      >
+        <Sparkles className="h-5 w-5" aria-hidden />
+        C’est parti
+      </button>
+      {/* Indice du geste, sans texte : la suite est à droite */}
+      <div
+        aria-hidden
+        className="absolute top-1/2 right-1 -translate-y-1/2 text-white/60"
+        style={enter('recap-rise', 4800, 600)}
+      >
+        <ChevronRight className="recap-nudge h-8 w-8" />
+      </div>
     </Centered>
   );
 }

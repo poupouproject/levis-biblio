@@ -41,6 +41,17 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   flèches, Espace et Échap au clavier ; bouton pause toujours visible ; onglet caché = pause.
   Animations CSS (`globals.css`) : supprimées, avec l'avance automatique, si l'usager réduit les
   animations ; le lecteur d'écran annonce chaque écran et lit les valeurs finales.
+- **Écran d'ouverture** : un rideau, sans avance automatique. Phrases qui montent une à une,
+  l'année en grand, puis « C'est parti » (toucher à droite ou flèche : même effet). En fond, les
+  derniers documents de l'année (`glimpse`, 12 au plus), floutés : couverture du catalogue
+  (`editionCovers`) pour les emprunts en cours, couverture typographique pour l'historique.
+- **Musique** (`public/Pages_of_the_Year.mp3`, `src/lib/account/recap-sound.ts`) : lancée
+  seulement dans le geste « C'est parti ». Arriver sur la page par un clic ne suffit pas : un
+  code QR ou un lien ouvert depuis une autre application arrive sans geste, et Safari exige que
+  `play()` soit appelé dans le geste lui-même. Elle suit les pauses (bouton, appui long, onglet
+  caché), baisse sur l'écran de partage, s'arrête au retour au rideau. Bouton pour la couper,
+  toujours visible (WCAG 1.4.2) ; le choix est retenu dans `localStorage`, et le fichier n'est
+  pas préchargé si elle est coupée. Le fondu de volume est sans effet sur iPhone.
 - **Profil de lecture** (`readerProfile`) : un nom épicène, le premier trait marquant de l'année
   (« Marathon de séries », « Lecture éclair », « Exploration tous azimuts », « Rat de
   bibliothèque », sinon « Belle découverte »), avec sa raison ; écran du récit et ruban de l'image.

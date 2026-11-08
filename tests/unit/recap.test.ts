@@ -7,6 +7,7 @@ import {
   daysText,
   defaultRecapYear,
   estimatedStart,
+  GLIMPSE_SIZE,
   isRecapOpen,
   readerProfile,
   recapSeasonYear,
@@ -109,8 +110,31 @@ describe('récapitulatif de l’année', () => {
     });
   });
 
+  it('avant-goût : derniers documents différents de l’année, ID du titre si en cours', () => {
+    const encours = { ...checkout('Le petit prince', '2026-07-22'), titleId: 'ent://SD_ILS/0/42' };
+    const glimpse = buildYearRecap(HISTORY, [encours], 2026).glimpse;
+    // Le même titre, rendu en avril puis emprunté de nouveau en juillet : une seule couverture
+    expect(glimpse.map((g) => g.title)).toEqual([
+      'Le petit prince',
+      'Alice au pays des merveilles',
+      'One Piece. 4, Attaque au clair de lune',
+      'One Piece. 2, Luffy versus la bande à Baggy!!',
+      'One Piece. 1, À l’aube d’une grande aventure',
+    ]);
+    expect(glimpse[0]?.titleId).toBe('ent://SD_ILS/0/42');
+    expect(glimpse[1]?.titleId).toBeNull();
+  });
+
+  it('avant-goût : au plus douze documents', () => {
+    const many = Array.from({ length: 20 }, (_, i) =>
+      entry(`Livre ${String(i)}`, null, `2026-05-${String(i + 10)}`, '2026-06-30'),
+    );
+    expect(buildYearRecap(many, [], 2026).glimpse).toHaveLength(GLIMPSE_SIZE);
+  });
+
   it('année sans emprunt : tout est vide', () => {
     const recap = buildYearRecap(HISTORY, [], 2024);
+    expect(recap.glimpse).toEqual([]);
     expect(recap.total).toBe(0);
     expect(recap.topMonth).toBeNull();
     expect(recap.pace).toBeNull();

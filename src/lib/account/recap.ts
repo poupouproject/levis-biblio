@@ -69,6 +69,18 @@ interface Loan {
   author: string | null;
   start: string;
   returned: string | null;
+  /** ID du titre dans le catalogue : seulement pour un emprunt en cours. */
+  titleId: string | null;
+}
+
+/** Nombre de couvertures du fond flou de l'écran d'ouverture. */
+export const GLIMPSE_SIZE = 12;
+
+/** Un document de l'année, pour l'avant-goût flou de l'écran d'ouverture. */
+export interface RecapGlimpse {
+  title: string;
+  author: string | null;
+  titleId: string | null;
 }
 
 export interface RecapBook {
@@ -103,6 +115,8 @@ export interface YearRecap {
   streak: number;
   /** Nombre de plumes (auteurs) différentes. */
   authors: number;
+  /** Derniers documents différents de l'année, du plus récent au plus ancien. */
+  glimpse: RecapGlimpse[];
 }
 
 export type ReaderProfileKind = 'serie' | 'eclair' | 'exploration' | 'regularite' | 'debut';
@@ -135,14 +149,36 @@ function loansOf(history: HistoryEntry[], checkouts: Checkout[]): Loan[] {
   const loans: Loan[] = [];
   for (const e of history) {
     if (e.checkedOut) {
-      loans.push({ title: e.title, author: e.author, start: e.checkedOut, returned: e.returned });
+      loans.push({
+        title: e.title,
+        author: e.author,
+        start: e.checkedOut,
+        returned: e.returned,
+        titleId: null,
+      });
     }
   }
   for (const c of checkouts) {
     const start = estimatedStart(c);
-    if (start) loans.push({ title: c.title, author: c.author, start, returned: null });
+    if (start) {
+      loans.push({ title: c.title, author: c.author, start, returned: null, titleId: c.titleId });
+    }
   }
   return loans;
+}
+
+/** Derniers documents différents (un même titre emprunté deux fois ne compte qu'une fois). */
+function glimpseOf(loans: Loan[]): RecapGlimpse[] {
+  const seen = new Set<string>();
+  const glimpse: RecapGlimpse[] = [];
+  for (const loan of [...loans].sort((a, b) => b.start.localeCompare(a.start))) {
+    const key = fold(loan.title);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    glimpse.push({ title: loan.title, author: loan.author, titleId: loan.titleId });
+    if (glimpse.length === GLIMPSE_SIZE) break;
+  }
+  return glimpse;
 }
 
 const yearOf = (iso: string): number => Number.parseInt(iso.slice(0, 4), 10);
@@ -359,5 +395,6 @@ export function buildYearRecap(
         return a ? [fold(a.display)] : [];
       }),
     ).size,
+    glimpse: glimpseOf(loans),
   };
 }

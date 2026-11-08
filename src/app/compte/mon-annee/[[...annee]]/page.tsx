@@ -7,14 +7,18 @@ import { getYearLoans } from '@/lib/levis/account';
 import { requireAccount, withAccount } from '@/lib/account/dal';
 import { todayIso } from '@/lib/account/format';
 import {
+  bookTitle,
   buildYearRecap,
   defaultRecapYear,
   isRecapOpen,
   recapYears,
+  type RecapGlimpse,
   type RecapSeries,
 } from '@/lib/account/recap';
 import { returnPath } from '@/lib/account/return-path';
 import { getCatalog } from '@/lib/catalog/source';
+import type { EditionCover } from '@/lib/catalog/types';
+import type { GlimpseCover } from '@/components/recap/RecapSlides';
 import { YearStory, type SeriesExtras } from '@/components/recap/YearStory';
 
 export const metadata: Metadata = {
@@ -60,15 +64,42 @@ export default async function YearPage({
 
   if (recap.total === 0) return <NoRecap year={year} years={years} />;
 
+  const [series, glimpse] = await Promise.all([
+    recap.topSeries ? seriesExtras(recap.topSeries) : null,
+    glimpseCovers(recap.glimpse),
+  ]);
   return (
     <YearStory
       recap={recap}
       firstName={firstName}
       demo={demo}
       years={years}
-      series={recap.topSeries ? await seriesExtras(recap.topSeries) : null}
+      series={series}
+      glimpse={glimpse}
     />
   );
+}
+
+/**
+ * Couvertures du fond flou de l'écran d'ouverture. Seuls les emprunts en cours ont un ID de
+ * titre ; les autres (historique) prennent une couverture typographique, floue elle aussi.
+ */
+async function glimpseCovers(glimpse: RecapGlimpse[]): Promise<GlimpseCover[]> {
+  const ids = glimpse.flatMap((g) => (g.titleId ? [g.titleId] : []));
+  let covers: Record<string, EditionCover> = {};
+  if (ids.length > 0) {
+    try {
+      const { catalog } = await getCatalog();
+      covers = await catalog.editionCovers(ids);
+    } catch {
+      // Simple décor : sans le catalogue, les couvertures typographiques suffisent
+    }
+  }
+  return glimpse.map((g) => ({
+    title: bookTitle(g.title),
+    author: g.author,
+    cover: g.titleId ? (covers[g.titleId]?.cover ?? null) : null,
+  }));
 }
 
 /** Couvertures des tomes empruntés et premier tome manquant, d'après le catalogue. */
