@@ -23,6 +23,12 @@ Un écran par statistique, à la manière des bilans de fin d'année : total et 
 l'année précédente, mois le plus occupé, plume (auteur) de l'année, série de l'année et prochain
 tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
 
+- **Saison**, comme les bilans de fin d'année : l'année en cours n'ouvre que le **15 novembre** ;
+  avant, `/compte/mon-annee/2026` invite à revenir à la fin de l'année (sans lire le dossier) et
+  l'image de partage répond 404. Les années passées restent toujours accessibles. Sans année
+  précise, `/compte/mon-annee` ouvre en janvier l'année qui vient de finir. Le bouton du sommaire
+  n'apparaît que du 15 novembre au 31 janvier (`isRecapOpen`, `defaultRecapYear`,
+  `recapSeasonYear`).
 - **Calcul** (`src/lib/account/recap.ts`, pur et testé) à chaque visite, à partir de
   `getYearLoans` : l'historique (documents **rendus** seulement, sans ID ni ISBN) et les emprunts
   en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).

@@ -13,6 +13,7 @@ import {
 import { getOverview, type CheckoutsResult, type HoldsResult } from '@/lib/levis/account';
 import { requireAccount, withAccount } from '@/lib/account/dal';
 import { daysUntil, formatDate, plural, relativeDue, todayIso } from '@/lib/account/format';
+import { recapSeasonYear } from '@/lib/account/recap';
 import {
   NO_COVERS,
   PLACEHOLDER_FINES,
@@ -63,12 +64,16 @@ export default async function OverviewPage(): Promise<JSX.Element> {
   );
 }
 
-/** Bouton du récapitulatif de l'année, à la manière des bilans de fin d'année. */
-function YearRecapButton(): JSX.Element {
-  const year = todayIso().slice(0, 4);
+/**
+ * Bouton du récapitulatif de l'année, à la manière des bilans de fin d'année : seulement du
+ * 15 novembre au 31 janvier (en janvier, l'année qui vient de finir).
+ */
+function YearRecapButton(): JSX.Element | null {
+  const year = recapSeasonYear(todayIso());
+  if (year === null) return null;
   return (
     <Link
-      href="/compte/mon-annee"
+      href={`/compte/mon-annee/${String(year)}`}
       className="group flex items-center gap-4 rounded-2xl bg-linear-to-br from-[#3d2c5e] to-[#5b2333] p-4 text-white shadow-md transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#d4a853] focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none dark:focus-visible:ring-offset-[#0f0f0f]"
     >
       <span className="rounded-xl bg-white/15 p-2.5">

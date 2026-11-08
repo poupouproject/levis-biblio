@@ -5,7 +5,10 @@ import {
   buildYearRecap,
   comparisonText,
   daysText,
+  defaultRecapYear,
   estimatedStart,
+  isRecapOpen,
+  recapSeasonYear,
   recapYears,
   volumeRanges,
 } from '@/lib/account/recap';
@@ -156,5 +159,30 @@ describe('récapitulatif : textes', () => {
     expect(daysText(0)).toBe('le jour même');
     expect(daysText(1)).toBe('en 1 jour');
     expect(daysText(9)).toBe('en 9 jours');
+  });
+});
+
+describe('récapitulatif : saison, comme les bilans de fin d’année', () => {
+  it('l’année en cours ouvre le 15 novembre ; les années passées, toujours', () => {
+    expect(isRecapOpen(2026, '2026-11-14')).toBe(false);
+    expect(isRecapOpen(2026, '2026-11-15')).toBe(true);
+    expect(isRecapOpen(2026, '2026-12-31')).toBe(true);
+    expect(isRecapOpen(2025, '2026-06-01')).toBe(true);
+    expect(isRecapOpen(2027, '2026-12-01')).toBe(false);
+  });
+
+  it('sans année précise : en janvier, celle qui vient de finir', () => {
+    expect(defaultRecapYear('2027-01-20')).toBe(2026);
+    expect(defaultRecapYear('2026-02-01')).toBe(2026);
+    expect(defaultRecapYear('2026-11-20')).toBe(2026);
+  });
+
+  it('bouton du sommaire : du 15 novembre au 31 janvier seulement', () => {
+    expect(recapSeasonYear('2026-11-14')).toBeNull();
+    expect(recapSeasonYear('2026-11-15')).toBe(2026);
+    expect(recapSeasonYear('2026-12-31')).toBe(2026);
+    expect(recapSeasonYear('2027-01-31')).toBe(2026);
+    expect(recapSeasonYear('2027-02-01')).toBeNull();
+    expect(recapSeasonYear('2026-07-01')).toBeNull();
   });
 });

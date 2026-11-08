@@ -1,7 +1,7 @@
 import { getYearLoans } from '@/lib/levis/account';
 import { withAccount } from '@/lib/account/dal';
 import { todayIso } from '@/lib/account/format';
-import { buildYearRecap } from '@/lib/account/recap';
+import { buildYearRecap, isRecapOpen } from '@/lib/account/recap';
 import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { shareImage } from '@/lib/account/share-image';
 
@@ -11,9 +11,10 @@ import { shareImage } from '@/lib/account/share-image';
  */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const current = Number.parseInt(todayIso().slice(0, 4), 10);
   const year = Number.parseInt(url.searchParams.get('annee') ?? '', 10);
-  if (!(year >= 2000 && year <= current)) return new Response(null, { status: 400 });
+  if (!(year >= 2000)) return new Response(null, { status: 400 });
+  // L'année en cours n'ouvre que le 15 novembre ; une année future, jamais
+  if (!isRecapOpen(year, todayIso())) return new Response(null, { status: 404 });
 
   const session = await getAccountSession();
   if (!isSignedIn(session)) return new Response(null, { status: 401 });

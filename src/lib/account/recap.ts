@@ -7,6 +7,31 @@ import { addDays, daysUntil } from './format';
 /** Durée d'un prêt (et d'un renouvellement) aux bibliothèques de Lévis. */
 export const LOAN_DAYS = 21;
 
+/**
+ * Comme les bilans de fin d'année : le récapitulatif de l'année en cours ouvre le 15 novembre
+ * (`MM-JJ`). Les années passées restent toujours accessibles.
+ */
+export const RECAP_OPENS = '11-15';
+
+const yearOfIso = (iso: string): number => Number.parseInt(iso.slice(0, 4), 10);
+
+export function isRecapOpen(year: number, today: string): boolean {
+  const current = yearOfIso(today);
+  return year < current || (year === current && today.slice(5) >= RECAP_OPENS);
+}
+
+/** Année ouverte sans précision (`/compte/mon-annee`) : en janvier, celle qui vient de finir. */
+export function defaultRecapYear(today: string): number {
+  const current = yearOfIso(today);
+  return today.slice(5, 7) === '01' ? current - 1 : current;
+}
+
+/** Année du bouton sur le sommaire, du 15 novembre au 31 janvier ; nulle le reste de l'année. */
+export function recapSeasonYear(today: string): number | null {
+  const year = defaultRecapYear(today);
+  return year !== yearOfIso(today) || isRecapOpen(year, today) ? year : null;
+}
+
 export const MONTHS = [
   'janvier',
   'février',
