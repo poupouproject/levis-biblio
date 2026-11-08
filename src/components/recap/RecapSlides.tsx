@@ -7,8 +7,10 @@ import {
   LOAN_DAYS,
   MONTHS,
   MONTHS_SHORT,
+  PERIOD_MONTHS,
   comparisonText,
   daysText,
+  periodText,
   readerProfile,
   volumeRanges,
   type RecapSeries,
@@ -164,11 +166,14 @@ export function IntroSlide({
 export function TotalSlide({ recap }: { recap: YearRecap }): JSX.Element {
   return (
     <Centered>
-      <Kicker>En {recap.year}, vous avez emprunté</Kicker>
+      <Kicker>Cette année, vous avez emprunté</Kicker>
       <p className="flex flex-col" style={enter('recap-pop', 100, 900)}>
         <CountUp value={recap.total} className="text-[7rem] leading-none font-black" />
         <span className="text-3xl font-extrabold">
           {recap.total > 1 ? 'documents' : 'document'}
+        </span>
+        <span className="mt-2 text-sm font-semibold text-white/75">
+          {capitalize(periodText(recap.year))}
         </span>
       </p>
       <p className="text-xl font-semibold text-[#b8f2e6]" style={enter('recap-rise', 1800)}>
@@ -198,28 +203,36 @@ export function MonthsSlide({ recap }: { recap: YearRecap }): JSX.Element {
         </div>
       )}
       <div className="flex h-44 gap-1.5" aria-hidden>
-        {recap.months.map((count, month) => (
-          <div key={MONTHS[month]} className="flex flex-1 flex-col items-center gap-1.5">
-            <div className="flex w-full flex-1 items-end">
-              <div
-                className={`w-full origin-bottom rounded-t-md ${
-                  month === top?.month ? 'bg-[#f0c987]' : 'bg-white/40'
-                }`}
-                style={{
-                  height: `${String(Math.max(4, (count / max) * 100))}%`,
-                  ...enter('recap-grow', 100 + month * 90, 600),
-                }}
-              />
+        {recap.months.map((count, position) => {
+          const month = PERIOD_MONTHS[position] ?? 0;
+          return (
+            <div key={MONTHS[month]} className="flex flex-1 flex-col items-center gap-1.5">
+              <div className="flex w-full flex-1 items-end">
+                <div
+                  className={`w-full origin-bottom rounded-t-md ${
+                    month === top?.month ? 'bg-[#f0c987]' : 'bg-white/40'
+                  }`}
+                  style={{
+                    height: `${String(Math.max(4, (count / max) * 100))}%`,
+                    ...enter('recap-grow', 100 + position * 90, 600),
+                  }}
+                />
+              </div>
+              <span className="text-[0.65rem] font-semibold text-white/75 uppercase">
+                {MONTHS[month]?.charAt(0)}
+              </span>
             </div>
-            <span className="text-[0.65rem] font-semibold text-white/75 uppercase">
-              {MONTHS[month]?.charAt(0)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <p className="sr-only">
-        Mois par mois :{' '}
-        {recap.months.map((count, month) => `${MONTHS[month] ?? ''} ${String(count)}`).join(', ')}.
+        Mois par mois, {periodText(recap.year)} :{' '}
+        {recap.months
+          .map(
+            (count, position) => `${MONTHS[PERIOD_MONTHS[position] ?? 0] ?? ''} ${String(count)}`,
+          )
+          .join(', ')}
+        .
       </p>
     </Centered>
   );
@@ -381,17 +394,20 @@ export function StreakSlide({ recap }: { recap: YearRecap }): JSX.Element {
         avec au moins un emprunt chaque mois.
       </p>
       <div className="grid grid-cols-6 gap-3" aria-hidden>
-        {recap.months.map((count, month) => (
-          <div key={MONTHS[month]} className="flex flex-col items-center gap-1">
-            <div
-              className={`h-9 w-9 rounded-full ${count > 0 ? 'bg-[#e9d8a6]' : 'bg-white/15'}`}
-              style={count > 0 ? enter('recap-light', 300 + month * 110, 500) : undefined}
-            />
-            <span className="text-[0.65rem] font-semibold text-white/75 uppercase">
-              {MONTHS_SHORT[month]}
-            </span>
-          </div>
-        ))}
+        {recap.months.map((count, position) => {
+          const month = PERIOD_MONTHS[position] ?? 0;
+          return (
+            <div key={MONTHS[month]} className="flex flex-col items-center gap-1">
+              <div
+                className={`h-9 w-9 rounded-full ${count > 0 ? 'bg-[#e9d8a6]' : 'bg-white/15'}`}
+                style={count > 0 ? enter('recap-light', 300 + position * 110, 500) : undefined}
+              />
+              <span className="text-[0.65rem] font-semibold text-white/75 uppercase">
+                {MONTHS_SHORT[month]}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </Centered>
   );
@@ -418,9 +434,12 @@ export function FinalSlide({ recap, demo, years, onReplay }: FinalSlideProps): J
 
   return (
     <div className="flex flex-col gap-5 pt-6">
-      <h2 className="text-3xl font-black" style={enter('recap-rise')}>
-        Votre année {recap.year} en bref
-      </h2>
+      <div style={enter('recap-rise')}>
+        <h2 className="text-3xl font-black">Votre année {recap.year} en bref</h2>
+        <p className="mt-1 text-sm font-semibold text-white/75">
+          {capitalize(periodText(recap.year))}
+        </p>
+      </div>
       <dl className="grid grid-cols-2 gap-3">
         {facts.map((f, i) => (
           <div

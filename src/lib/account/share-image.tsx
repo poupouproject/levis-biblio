@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { QrCode } from '@/components/recap/QrCode';
-import { MONTHS, comparisonText, readerProfile, type YearRecap } from './recap';
+import { MONTHS, comparisonText, periodText, readerProfile, type YearRecap } from './recap';
 
 /** Format story (9:16) : Instagram, Facebook, WhatsApp. */
 const WIDTH = 1080;
@@ -108,7 +108,10 @@ export function shareImage(recap: YearRecap, { titles, demo, link }: ShareImageO
           letterSpacing: -2,
         }}
       >
-        {recap.total > 1 ? 'documents empruntés' : 'document emprunté'} en {recap.year}
+        {recap.total > 1 ? 'documents empruntés' : 'document emprunté'}
+      </div>
+      <div style={{ display: 'flex', flexShrink: 0, marginTop: 18, fontSize: 34, fontWeight: 700 }}>
+        {capitalize(periodText(recap.year))}
       </div>
       {/* Deux espaces souples : l'espace libre se répartit au lieu de s'entasser en bas */}
       <div style={{ display: 'flex', flexGrow: 1, minHeight: 64 }} />

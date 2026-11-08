@@ -9,7 +9,10 @@ import {
   estimatedStart,
   GLIMPSE_SIZE,
   isRecapOpen,
+  PERIOD_MONTHS,
+  periodText,
   readerProfile,
+  recapYearOf,
   recapSeasonYear,
   recapYears,
   volumeRanges,
@@ -40,11 +43,11 @@ const HISTORY: HistoryEntry[] = [
   entry('One Piece. 4, Attaque au clair de lune', ODA, '2026-03-15', '2026-04-01'),
   entry('Le petit prince', 'Saint-Exupéry, Antoine de, 1900-1944', '2026-04-10', '2026-04-10'),
   entry('Alice au pays des merveilles', 'Carroll, Lewis, 1832-1898', '2026-06-01', '2026-06-29'),
-  entry('Le Petit Nicolas', 'Goscinny, René, 1926-1977', '2025-11-20', '2025-12-04'),
+  entry('Le Petit Nicolas', 'Goscinny, René, 1926-1977', '2025-10-20', '2025-12-04'),
 ];
 
 describe('récapitulatif de l’année', () => {
-  it('compte l’année civile, emprunts en cours compris', () => {
+  it('compte du 1er novembre au 31 octobre, emprunts en cours compris', () => {
     const recap = buildYearRecap(
       HISTORY,
       [checkout('One Piece. 5, Pour qui sonne le glas', '2026-07-22')],
@@ -52,7 +55,19 @@ describe('récapitulatif de l’année', () => {
     );
     expect(recap.total).toBe(6);
     expect(recap.inProgress).toBe(1);
-    expect(recap.since).toBe('2025-11-20');
+    expect(recap.since).toBe('2025-10-20');
+  });
+
+  it('novembre et décembre comptent pour l’année suivante', () => {
+    expect(recapYearOf('2025-10-31')).toBe(2025);
+    expect(recapYearOf('2025-11-01')).toBe(2026);
+    expect(recapYearOf('2025-12-31')).toBe(2026);
+    expect(recapYearOf('2026-01-01')).toBe(2026);
+    expect(recapYearOf('2026-10-31')).toBe(2026);
+    const late = [entry('Le Petit Nicolas', null, '2025-12-10', '2025-12-20')];
+    expect(buildYearRecap(late, [], 2026).total).toBe(1);
+    expect(buildYearRecap(late, [], 2025).total).toBe(0);
+    expect(periodText(2026)).toBe('du 1er novembre 2025 au 31 octobre 2026');
   });
 
   it('estime la date d’emprunt d’un document en cours : échéance moins prêt et renouvellements', () => {
@@ -61,10 +76,13 @@ describe('récapitulatif de l’année', () => {
     expect(estimatedStart({ dueDate: null, renewals: 0 })).toBeNull();
   });
 
-  it('un emprunt en cours commencé l’an dernier compte pour l’an dernier', () => {
-    const recap = buildYearRecap([], [checkout('One Piece. 9', '2026-01-10', 1)], 2026);
-    expect(recap.total).toBe(0);
-    expect(buildYearRecap([], [checkout('One Piece. 9', '2026-01-10', 1)], 2025).total).toBe(1);
+  it('un emprunt en cours compte pour l’année de sa date d’emprunt estimée', () => {
+    // Échéance du 20 novembre : emprunté le 30 octobre, donc dans l'année qui finit
+    const october = [checkout('One Piece. 9', '2025-11-20')];
+    expect(buildYearRecap([], october, 2025).total).toBe(1);
+    expect(buildYearRecap([], october, 2026).total).toBe(0);
+    // Échéance du 25 novembre : emprunté le 4 novembre, donc dans l'année suivante
+    expect(buildYearRecap([], [checkout('One Piece. 9', '2025-11-25')], 2026).total).toBe(1);
   });
 
   it('compare avec l’année précédente seulement si l’historique la couvre', () => {
@@ -72,11 +90,23 @@ describe('récapitulatif de l’année', () => {
     expect(buildYearRecap(HISTORY, [], 2025).previousTotal).toBeNull();
   });
 
-  it('mois par mois, mois le plus occupé et plus longue suite de mois', () => {
+  it('mois par mois de novembre à octobre, mois le plus occupé et plus longue suite', () => {
     const recap = buildYearRecap(HISTORY, [], 2026);
-    expect(recap.months).toEqual([0, 0, 3, 1, 0, 1, 0, 0, 0, 0, 0, 0]);
+    expect(PERIOD_MONTHS).toEqual([10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    // nov. déc. janv. févr. mars avr. mai juin…
+    expect(recap.months).toEqual([0, 0, 0, 0, 3, 1, 0, 1, 0, 0, 0, 0]);
+    // Mois du calendrier : mars
     expect(recap.topMonth).toEqual({ month: 2, count: 3 });
     expect(recap.streak).toBe(2);
+  });
+
+  it('la régularité passe d’une année civile à l’autre', () => {
+    const winter = [
+      entry('a', null, '2025-11-05', '2025-11-20'),
+      entry('b', null, '2025-12-05', '2025-12-20'),
+      entry('c', null, '2026-01-05', '2026-01-20'),
+    ];
+    expect(buildYearRecap(winter, [], 2026).streak).toBe(3);
   });
 
   it('plume de l’année : au moins deux documents, nom affiché « Prénom Nom »', () => {
@@ -142,8 +172,9 @@ describe('récapitulatif de l’année', () => {
   });
 
   it('années disponibles, de la plus récente à la plus ancienne', () => {
-    expect(recapYears(HISTORY, [checkout('x', '2027-01-15')])).toEqual([2026, 2025]);
-    expect(recapYears(HISTORY, [checkout('x', '2027-02-15')])).toEqual([2027, 2026, 2025]);
+    // Emprunté le 31 octobre, puis le 1er novembre
+    expect(recapYears(HISTORY, [checkout('x', '2026-11-21')])).toEqual([2026, 2025]);
+    expect(recapYears(HISTORY, [checkout('x', '2026-11-22')])).toEqual([2027, 2026, 2025]);
   });
 });
 

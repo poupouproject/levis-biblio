@@ -30,6 +30,12 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   précise, `/compte/mon-annee` ouvre en janvier l'année qui vient de finir. Le bouton du sommaire
   n'apparaît que du 15 novembre au 31 janvier (`isRecapOpen`, `defaultRecapYear`,
   `recapSeasonYear`).
+- **Période** : l'année « 2026 » va du 1er novembre 2025 au 31 octobre 2026 (`recapYearOf`,
+  `PERIOD_MONTHS`, `periodText`), comme Spotify qui s'arrête fin octobre. À l'ouverture, le
+  15 novembre, plus aucun emprunt n'y entre : un bilan partagé ne bouge plus (seul le rythme,
+  qui ne compte que les documents rendus, peut encore changer un peu). Chaque emprunt compte une
+  fois, dans une seule année, sans trou. La période est écrite sur l'écran du total, l'écran de
+  partage et l'image.
 - **Calcul** (`src/lib/account/recap.ts`, pur et testé) à chaque visite, à partir de
   `getYearLoans` : l'historique (documents **rendus** seulement, sans ID ni ISBN) et les emprunts
   en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).

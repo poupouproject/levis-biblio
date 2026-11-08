@@ -47,6 +47,28 @@ export const MONTHS = [
   'décembre',
 ] as const;
 
+/**
+ * L'année du récapitulatif va du 1er novembre au 31 octobre : « 2026 » couvre du 1er novembre
+ * 2025 au 31 octobre 2026. Au 15 novembre, plus aucun emprunt n'y entre : un bilan partagé ne
+ * bouge plus. Et chaque emprunt compte une fois, dans une seule année, sans trou.
+ */
+const PERIOD_FIRST_MONTH = 10;
+
+/** Mois du calendrier (0 = janvier) de chaque mois de la période, dans l'ordre. */
+export const PERIOD_MONTHS = Array.from({ length: 12 }, (_, i) => (PERIOD_FIRST_MONTH + i) % 12);
+
+const monthOfIso = (iso: string): number => Number.parseInt(iso.slice(5, 7), 10) - 1;
+
+/** Année du récapitulatif d'une date : novembre et décembre comptent pour l'année suivante. */
+export function recapYearOf(iso: string): number {
+  return yearOfIso(iso) + (monthOfIso(iso) >= PERIOD_FIRST_MONTH ? 1 : 0);
+}
+
+/** « du 1er novembre 2025 au 31 octobre 2026 » */
+export function periodText(year: number): string {
+  return `du 1er novembre ${String(year - 1)} au 31 octobre ${String(year)}`;
+}
+
 /** Abréviations sans ambiguïté (juin, juil.), pour les petits graphiques. */
 export const MONTHS_SHORT = [
   'janv.',
@@ -104,8 +126,9 @@ export interface YearRecap {
   inProgress: number;
   /** Total de l'année précédente ; nul si l'historique ne la couvre pas. */
   previousTotal: number | null;
-  /** Nombre d'emprunts par mois, de janvier à décembre. */
+  /** Nombre d'emprunts par mois, de novembre à octobre (mois du calendrier : `PERIOD_MONTHS`). */
   months: number[];
+  /** `month` : mois du calendrier (0 = janvier). */
   topMonth: { month: number; count: number } | null;
   topAuthor: { name: string; count: number } | null;
   topSeries: RecapSeries | null;
@@ -181,11 +204,9 @@ function glimpseOf(loans: Loan[]): RecapGlimpse[] {
   return glimpse;
 }
 
-const yearOf = (iso: string): number => Number.parseInt(iso.slice(0, 4), 10);
-
 /** Années qui ont au moins un emprunt, de la plus récente à la plus ancienne. */
 export function recapYears(history: HistoryEntry[], checkouts: Checkout[]): number[] {
-  const years = new Set(loansOf(history, checkouts).map((l) => yearOf(l.start)));
+  const years = new Set(loansOf(history, checkouts).map((l) => recapYearOf(l.start)));
   return [...years].sort((a, b) => b - a);
 }
 
@@ -346,27 +367,31 @@ export function readerProfile(recap: YearRecap, titles: boolean): ReaderProfile 
   };
 }
 
-/** Bilan d'une année civile. Les emprunts en cours y comptent, à leur date d'emprunt estimée. */
+/**
+ * Bilan d'une année du récapitulatif (1er novembre au 31 octobre). Les emprunts en cours y
+ * comptent, à leur date d'emprunt estimée.
+ */
 export function buildYearRecap(
   history: HistoryEntry[],
   checkouts: Checkout[],
   year: number,
 ): YearRecap {
   const all = loansOf(history, checkouts);
-  const loans = all.filter((l) => yearOf(l.start) === year);
+  const loans = all.filter((l) => recapYearOf(l.start) === year);
   const since =
     history
       .map((e) => e.checkedOut)
       .filter((d): d is string => d !== null)
       .sort()[0] ?? null;
 
-  const months = MONTHS.map(() => 0);
+  const months = PERIOD_MONTHS.map(() => 0);
   for (const loan of loans) {
-    const month = Number.parseInt(loan.start.slice(5, 7), 10) - 1;
-    months[month] = (months[month] ?? 0) + 1;
+    const position = PERIOD_MONTHS.indexOf(monthOfIso(loan.start));
+    months[position] = (months[position] ?? 0) + 1;
   }
   let topMonth: YearRecap['topMonth'] = null;
-  for (const [month, count] of months.entries()) {
+  for (const [position, count] of months.entries()) {
+    const month = PERIOD_MONTHS[position] ?? 0;
     if (count > 0 && (!topMonth || count > topMonth.count)) topMonth = { month, count };
   }
 
@@ -380,8 +405,8 @@ export function buildYearRecap(
     since,
     total: loans.length,
     inProgress: loans.filter((l) => !l.returned).length,
-    previousTotal: all.some((l) => yearOf(l.start) < year)
-      ? all.filter((l) => yearOf(l.start) === year - 1).length
+    previousTotal: all.some((l) => recapYearOf(l.start) < year)
+      ? all.filter((l) => recapYearOf(l.start) === year - 1).length
       : null,
     months,
     topMonth,
