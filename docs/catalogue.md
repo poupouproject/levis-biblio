@@ -88,7 +88,7 @@ Chercher _dans_ les résumés (plein texte, vecteurs) demanderait de les stocker
 | Route                           | Rendu                                                                                                                                                                      |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/`                             | Statique, régénérée toutes les heures : recherche, nouveautés, séries, auteurs d'ici, parcourir par type, succursales ouvertes (heure lue dans le navigateur), Mon dossier |
-| `/recherche`                    | Dynamique ; l'état est dans l'URL (`q`, `auteur`, `format`, `periode`, `dispo`, `succursale`, `tri`, `n`), donc partageable                                                |
+| `/recherche`                    | Dynamique ; l'état est dans l'URL (`q`, `champ` (titre, auteur, série ou ISBN), `auteur`, `format`, `periode`, `dispo`, `succursale`, `tri`, `n`), donc partageable        |
 | `/oeuvre/[id]`                  | Fiche : série et tomes voisins, disponibilité par succursale avec heures, éditions, du même auteur                                                                         |
 | `/serie/[slug]`                 | Tous les tomes, nombre disponible, « commencer par le tome N »                                                                                                             |
 | `/api/catalogue/suggestions?q=` | JSON, en cache public 5 min                                                                                                                                                |

@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Pool, QueryResultRow } from 'pg';
-import { PERIOD_LABELS, interleave } from './engine';
+import { PERIOD_LABELS, interleave, showsSeries } from './engine';
 import { fold, tokenize } from './normalize';
 import {
   BASE_ORDER,
@@ -140,10 +140,12 @@ export class PostgresCatalog implements CatalogStore {
     const { isbn, tokens } = parseText(query.q);
     const [exact, series] = await Promise.all([
       this.runSearch('exact', true, query, authorIds),
-      isbn || tokens.length === 0 ? Promise.resolve([]) : this.matchSeries(tokens, 3),
+      isbn || tokens.length === 0 || !showsSeries(query.field)
+        ? Promise.resolve([])
+        : this.matchSeries(tokens, 3),
     ]);
     // Seulement si le texte n'a rien trouvé, pas quand ce sont les filtres qui vident la page
-    if (!needsApproximate(query.q, exact.correspondances)) return done(exact, series);
+    if (!needsApproximate(query.q, exact.correspondances, query.field)) return done(exact, series);
     const near = await this.runSearch('approchant', true, query, authorIds);
     return (near.total ?? 0) > 0 ? done(near, series, true) : done(exact, series);
   }
@@ -154,6 +156,7 @@ export class PostgresCatalog implements CatalogStore {
     if (!tsq || fold(q).length < 2) return [];
     const query: SearchQuery = {
       q,
+      field: 'tout',
       formats: [],
       period: null,
       author: null,

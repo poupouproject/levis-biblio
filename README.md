@@ -35,15 +35,15 @@ Chercher un livre dans le catalogue actuel demande de la patience :
 
 La recherche fonctionne sur les notices du catalogue (titres, auteurs, ISBN, couvertures), relevées une fois puis regroupées en œuvres et en séries. Les **disponibilités en temps réel** dépendent d'un accès officiel aux données de la Ville : son catalogue est protégé contre les requêtes automatisées, et LévisBiblio respecte cette protection. Une demande d'accès est en cours (voir la [documentation fonctionnelle](levis-biblio-fonctionnel-v4.docx)). D'ici là, les disponibilités affichées sont simulées.
 
-| Fonctionnalité                                                                                                                                | État                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **Accueil** : nouveautés, séries, auteurs d'ici, parcourir par type, succursales ouvertes                                                     | ✅ Livré                                  |
-| **Recherche dans le catalogue** : suggestions dès la saisie, une fiche par œuvre, filtres (type, année, disponibilité, succursale), tri, ISBN | ✅ Livré ([détails](docs/catalogue.md))   |
-| **Vue par série** : tous les tomes réunis, tome précédent et suivant                                                                          | ✅ Livré (imprimé ; numérique en phase 2) |
-| **Disponibilité par succursale, réservation depuis le catalogue**                                                                             | 🟡 Simulée ; accès officiel requis        |
-| **Mon dossier** : emprunts et renouvellements, réservations (rang, suspension, succursale), historique, amendes, profil                       | ✅ Livré ([détails](docs/mon-compte.md))  |
-| **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel                                                                  | ✅ Livré                                  |
-| **Interface** : squelettes de chargement, mode clair / sombre, accessibilité                                                                  | ✅ Livré                                  |
+| Fonctionnalité                                                                                                                                                                               | État                                      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Accueil** : nouveautés, séries, auteurs d'ici, parcourir par type, succursales ouvertes                                                                                                    | ✅ Livré                                  |
+| **Recherche dans le catalogue** : suggestions dès la saisie, recherche ciblée (titre, auteur, série, ISBN), une fiche par œuvre, filtres (type, année, disponibilité, succursale), tri, ISBN | ✅ Livré ([détails](docs/catalogue.md))   |
+| **Vue par série** : tous les tomes réunis, tome précédent et suivant                                                                                                                         | ✅ Livré (imprimé ; numérique en phase 2) |
+| **Disponibilité par succursale, réservation depuis le catalogue**                                                                                                                            | 🟡 Simulée ; accès officiel requis        |
+| **Mon dossier** : emprunts et renouvellements, réservations (rang, suspension, succursale), historique, amendes, profil                                                                      | ✅ Livré ([détails](docs/mon-compte.md))  |
+| **Succursales** : adresses, heures, « ouvert maintenant », itinéraire, appel                                                                                                                 | ✅ Livré                                  |
+| **Interface** : squelettes de chargement, mode clair / sombre, accessibilité                                                                                                                 | ✅ Livré                                  |
 
 ## 🤝 Principes
 
