@@ -8,6 +8,7 @@ import {
   defaultRecapYear,
   estimatedStart,
   GLIMPSE_SIZE,
+  isCancelledHold,
   isRecapOpen,
   nextInSeries,
   PERIOD_MONTHS,
@@ -43,7 +44,7 @@ const HISTORY: HistoryEntry[] = [
   entry('One Piece. 1, À l’aube d’une grande aventure', ODA, '2026-03-02', '2026-03-05'),
   entry('One Piece. 2, Luffy versus la bande à Baggy!!', ODA, '2026-03-09', '2026-03-20'),
   entry('One Piece. 4, Attaque au clair de lune', ODA, '2026-03-15', '2026-04-01'),
-  entry('Le petit prince', 'Saint-Exupéry, Antoine de, 1900-1944', '2026-04-10', '2026-04-10'),
+  entry('Le petit prince', 'Saint-Exupéry, Antoine de, 1900-1944', '2026-04-10', '2026-04-12'),
   entry('Alice au pays des merveilles', 'Carroll, Lewis, 1832-1898', '2026-06-01', '2026-06-29'),
   entry('Le Petit Nicolas', 'Goscinny, René, 1926-1977', '2025-10-20', '2025-12-04'),
 ];
@@ -168,9 +169,27 @@ describe('récapitulatif de l’année', () => {
     const recap = buildYearRecap(HISTORY, [checkout('Long en cours', '2026-12-01', 3)], 2026);
     expect(recap.pace).toEqual({
       averageDays: 12,
-      fastest: { title: 'Le petit prince', days: 0 },
+      fastest: { title: 'Le petit prince', days: 2 },
       longest: { title: 'Alice au pays des merveilles', days: 28 },
     });
+  });
+
+  it('rendu le jour même : une réservation arrivée annulée, qui ne compte nulle part', () => {
+    const cancelled = entry('One Piece. 9, Larmes', ODA, '2026-05-20', '2026-05-20');
+    expect(isCancelledHold(cancelled)).toBe(true);
+    expect(isCancelledHold(entry('x', null, '2026-05-20', '2026-05-21'))).toBe(false);
+    expect(isCancelledHold({ checkedOut: null, returned: null })).toBe(false);
+
+    const recap = buildYearRecap([...HISTORY, cancelled], [], 2026);
+    const without = buildYearRecap(HISTORY, [], 2026);
+    expect(recap.total).toBe(without.total);
+    expect(recap.months).toEqual(without.months);
+    expect(recap.topSeries?.volumes).toEqual([1, 2, 4]);
+    expect(recap.pace?.fastest.days).toBe(2);
+    expect(recap.glimpse.map((g) => g.title)).not.toContain('One Piece. 9, Larmes');
+    expect(seriesVolumesRead([cancelled], [], 'one-piece')).toEqual([]);
+    // Seule dans l'année : pas de récapitulatif pour cette année
+    expect(recapYears([cancelled], [])).toEqual([]);
   });
 
   it('avant-goût : derniers documents différents de l’année, ID du titre si en cours', () => {

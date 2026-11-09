@@ -41,6 +41,10 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).
   Série et auteur sont tirés du titre et du nom (`parseTitle`, `parseAuthor`) ; les couvertures
   des tomes et le prochain tome viennent du catalogue (`getSeries`). Rien n'est stocké.
+- **Réservation arrivée annulée** (`isCancelledHold`) : un document rendu le jour même de son
+  emprunt est écarté de tout le bilan. Le portail ne permet pas d'annuler une réservation
+  arrivée : il faut l'emprunter puis la rendre aussitôt. L'historique ne donne que la date, sans
+  l'heure : un vrai document rendu le jour même est écarté aussi (cas rare).
 - **Suite de la série** (`nextInSeries`, `seriesVolumesRead`) : le premier tome que la
   bibliothèque possède **après** le plus haut lu de l'année et jamais emprunté (toutes années
   confondues). Un tome sauté n'est pas proposé. Rien après : « Vous êtes à jour » avec le dernier

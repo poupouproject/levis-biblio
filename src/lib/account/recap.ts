@@ -168,10 +168,20 @@ export function estimatedStart(checkout: Pick<Checkout, 'dueDate' | 'renewals'>)
   return checkout.dueDate ? addDays(checkout.dueDate, -(checkout.renewals + 1) * LOAN_DAYS) : null;
 }
 
+/**
+ * Rendu le jour même de l'emprunt : une réservation arrivée qu'on ne voulait plus. Le portail
+ * ne permet pas d'annuler une réservation arrivée ; il faut l'emprunter puis la rendre aussitôt.
+ * Ce n'est pas une lecture : elle ne compte nulle part. L'historique ne donne que la date, sans
+ * l'heure, donc un vrai document rendu le jour même est écarté aussi (cas rare).
+ */
+export function isCancelledHold(entry: Pick<HistoryEntry, 'checkedOut' | 'returned'>): boolean {
+  return entry.checkedOut !== null && entry.returned === entry.checkedOut;
+}
+
 function loansOf(history: HistoryEntry[], checkouts: Checkout[]): Loan[] {
   const loans: Loan[] = [];
   for (const e of history) {
-    if (e.checkedOut) {
+    if (e.checkedOut && !isCancelledHold(e)) {
       loans.push({
         title: e.title,
         author: e.author,
