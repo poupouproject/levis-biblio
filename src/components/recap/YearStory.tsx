@@ -11,7 +11,17 @@ import {
   type PointerEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { FlaskConical, Pause, Play, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FlaskConical,
+  Pause,
+  Play,
+  Smartphone,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
 import type { YearRecap } from '@/lib/account/recap';
 import {
   MUSIC_VOLUME,
@@ -83,12 +93,27 @@ function browserStorage(): Storage | null {
   }
 }
 
-function subscribeMedia(callback: () => void): () => void {
-  const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-  query.addEventListener('change', callback);
-  return () => {
-    query.removeEventListener('change', callback);
-  };
+const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
+/** Téléphone à l'horizontale : trop bas pour un écran de récit (390 px environ). */
+const LANDSCAPE_PHONE = '(orientation: landscape) and (max-height: 500px) and (pointer: coarse)';
+
+/** Requête média suivie en direct ; fausse au rendu serveur. */
+function useMedia(query: string): boolean {
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      const media = window.matchMedia(query);
+      media.addEventListener('change', callback);
+      return () => {
+        media.removeEventListener('change', callback);
+      };
+    },
+    [query],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 }
 
 function subscribeVisibility(callback: () => void): () => void {
@@ -96,15 +121,6 @@ function subscribeVisibility(callback: () => void): () => void {
   return () => {
     document.removeEventListener('visibilitychange', callback);
   };
-}
-
-/** Animations réduites (réglage du système) : ni animation, ni avance automatique. */
-function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeMedia,
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    () => false,
-  );
 }
 
 function usePageHidden(): boolean {
@@ -135,7 +151,10 @@ export function YearStory({
   // Musique : décidée au geste « C'est parti », d'après le choix retenu dans le navigateur
   const [sound, setSound] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
-  const reduced = useReducedMotion();
+  // Animations réduites (réglage du système) : ni animation, ni avance automatique
+  const reduced = useMedia(REDUCED_MOTION);
+  // Téléphone tourné : le récit attend qu'on le remette à la verticale
+  const sideways = useMedia(LANDSCAPE_PHONE);
   const hidden = usePageHidden();
 
   /**
@@ -240,7 +259,7 @@ export function YearStory({
 
   const last = slides.length - 1;
   const slide = slides[Math.min(index, last)] ?? slides[0];
-  const halted = paused || held || hidden;
+  const halted = paused || held || hidden || sideways;
   // Pas d'avance automatique sur l'écran d'ouverture (le rideau attend le geste), ni sur le
   // dernier (partage), ni si les animations sont réduites
   const autoplay = !reduced && index > 0 && index < last;
@@ -372,133 +391,185 @@ export function YearStory({
       role="region"
       aria-roledescription="récit"
       aria-label={`Votre année ${String(recap.year)} à la bibliothèque`}
-      className="fixed inset-0 z-[60] flex justify-center bg-black text-white"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black text-white"
     >
+      {/* Ambiance de chaque côté dès que l'écran dépasse la colonne (tablette, ordinateur) : les
+          couleurs de l'écran, en plus sombre, plutôt que des bandes noires */}
       <div
-        className={`relative flex h-full w-full max-w-md flex-col overflow-hidden bg-linear-to-br ${slide?.background ?? ''}`}
+        key={`ambiance-${slide?.id ?? ''}`}
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 hidden overflow-hidden bg-linear-to-br min-[29rem]:block ${slide?.background ?? ''}`}
+        style={{ animation: 'recap-ambiance 900ms ease-out both' }}
       >
-        {/* Fichier chargé seulement si la musique n'a pas été coupée ; jamais lancé sans geste */}
-        <audio ref={audio} src={RECAP_MUSIC} preload="none" loop />
         {slide?.backdrop && (
-          <div key={`fond-${slide.id}`} className="absolute inset-0 z-0">
-            {slide.backdrop()}
-          </div>
+          <div className="absolute inset-0 scale-110 blur-xl">{slide.backdrop()}</div>
         )}
-        <div className="relative z-30 flex flex-col gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <div className="flex gap-1" aria-hidden>
-            {slides.map((s, i) => (
-              <div key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/30">
-                {i < index && <div className="h-full bg-white" />}
-                {i === index && (
-                  <div
-                    key={`${s.id}-${String(index)}`}
-                    className="h-full origin-left bg-white"
-                    style={
-                      autoplay
-                        ? { animation: `recap-progress ${String(SLIDE_MS)}ms linear both` }
-                        : {}
-                    }
-                    onAnimationEnd={() => {
-                      if (autoplay) go(1);
-                    }}
-                  />
+        <div className="absolute inset-0 bg-radial from-black/10 via-black/45 to-black/80" />
+      </div>
+
+      <div className="cadre:aspect-[9/16] cadre:h-[min(calc(100dvh-4rem),56rem)] cadre:w-auto cadre:max-w-[calc(100vw-12rem)] relative h-full w-full max-w-md">
+        {/* Flèches au bord de la carte, pour la souris */}
+        {index > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              go(-1);
+            }}
+            aria-label="Écran précédent"
+            className="cadre:flex absolute top-1/2 -left-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-6 w-6" aria-hidden />
+          </button>
+        )}
+        {index < last && (
+          <button
+            type="button"
+            onClick={next}
+            aria-label={index === 0 ? 'Commencer le récit' : 'Écran suivant'}
+            className="cadre:flex absolute top-1/2 -right-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+          >
+            <ChevronRight className="h-6 w-6" aria-hidden />
+          </button>
+        )}
+        <div
+          className={`cadre:rounded-[2rem] cadre:shadow-[0_30px_120px_rgba(0,0,0,0.65)] cadre:ring-1 cadre:ring-white/15 relative flex h-full w-full flex-col overflow-hidden bg-linear-to-br ${slide?.background ?? ''}`}
+        >
+          {/* Fichier chargé seulement si la musique n'a pas été coupée ; jamais lancé sans geste */}
+          <audio ref={audio} src={RECAP_MUSIC} preload="none" loop />
+          {slide?.backdrop && (
+            <div key={`fond-${slide.id}`} className="absolute inset-0 z-0">
+              {slide.backdrop()}
+            </div>
+          )}
+          <div className="relative z-30 flex flex-col gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <div className="flex gap-1" aria-hidden>
+              {slides.map((s, i) => (
+                <div key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/30">
+                  {i < index && <div className="h-full bg-white" />}
+                  {i === index && (
+                    <div
+                      key={`${s.id}-${String(index)}`}
+                      className="h-full origin-left bg-white"
+                      style={
+                        autoplay
+                          ? { animation: `recap-progress ${String(SLIDE_MS)}ms linear both` }
+                          : {}
+                      }
+                      onAnimationEnd={() => {
+                        if (autoplay) go(1);
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-white/85 uppercase">
+                LévisBiblio · {recap.year}
+                {demo && (
+                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case">
+                    <FlaskConical className="h-3 w-3" aria-hidden />
+                    Dossier fictif
+                  </span>
                 )}
+              </p>
+              <div className="flex items-center gap-1">
+                {index > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleSound}
+                    aria-pressed={!sound}
+                    aria-label={sound ? 'Couper la musique' : 'Remettre la musique'}
+                    className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                  >
+                    {sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                  </button>
+                )}
+                {autoplay && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaused((p) => !p);
+                    }}
+                    aria-pressed={paused}
+                    aria-label={paused ? 'Reprendre le récit' : 'Mettre le récit en pause'}
+                    className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                  >
+                    {paused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Fermer le récapitulatif"
+                  className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-white/85 uppercase">
-              LévisBiblio · {recap.year}
-              {demo && (
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 normal-case">
-                  <FlaskConical className="h-3 w-3" aria-hidden />
-                  Dossier fictif
-                </span>
-              )}
-            </p>
-            <div className="flex items-center gap-1">
-              {index > 0 && (
-                <button
-                  type="button"
-                  onClick={toggleSound}
-                  aria-pressed={!sound}
-                  aria-label={sound ? 'Couper la musique' : 'Remettre la musique'}
-                  className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-                >
-                  {sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-                </button>
-              )}
-              {autoplay && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaused((p) => !p);
-                  }}
-                  aria-pressed={paused}
-                  aria-label={paused ? 'Reprendre le récit' : 'Mettre le récit en pause'}
-                  className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-                >
-                  {paused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Fermer le récapitulatif"
-                className="rounded-full p-2 hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
           </div>
-        </div>
 
-        {index < last && (
+          {index < last && (
+            <div
+              className="absolute inset-0 z-10 flex"
+              onPointerDown={onPointerDown}
+              onPointerUp={endPress}
+              onPointerCancel={() => {
+                endPress(null);
+              }}
+              onContextMenu={(event) => {
+                event.preventDefault();
+              }}
+            >
+              <button
+                type="button"
+                aria-label="Écran précédent"
+                className={`w-1/3 ${tapZone}`}
+                onClick={() => {
+                  onTap(-1);
+                }}
+              />
+              <button
+                type="button"
+                aria-label="Écran suivant"
+                className={`w-2/3 ${tapZone}`}
+                onClick={() => {
+                  onTap(1);
+                }}
+              />
+            </div>
+          )}
+
           <div
-            className="absolute inset-0 z-10 flex"
-            onPointerDown={onPointerDown}
-            onPointerUp={endPress}
-            onPointerCancel={() => {
-              endPress(null);
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault();
-            }}
+            key={slide?.id}
+            className={`relative z-20 flex min-h-0 flex-1 flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
+              index < last ? 'pointer-events-none' : 'overflow-y-auto'
+            }`}
           >
-            <button
-              type="button"
-              aria-label="Écran précédent"
-              className={`w-1/3 ${tapZone}`}
-              onClick={() => {
-                onTap(-1);
-              }}
-            />
-            <button
-              type="button"
-              aria-label="Écran suivant"
-              className={`w-2/3 ${tapZone}`}
-              onClick={() => {
-                onTap(1);
-              }}
-            />
+            {slide?.render()}
           </div>
-        )}
 
-        <div
-          key={slide?.id}
-          className={`relative z-20 flex min-h-0 flex-1 flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ${
-            index < last ? 'pointer-events-none' : 'overflow-y-auto'
-          }`}
-        >
-          {slide?.render()}
+          <p className="sr-only" aria-live="polite">
+            {`Écran ${String(index + 1)} sur ${String(slides.length)} : ${slide?.label ?? ''}${
+              paused ? ', en pause' : ''
+            }`}
+          </p>
         </div>
-
-        <p className="sr-only" aria-live="polite">
-          {`Écran ${String(index + 1)} sur ${String(slides.length)} : ${slide?.label ?? ''}${
-            paused ? ', en pause' : ''
-          }`}
-        </p>
       </div>
+
+      {sideways && (
+        <div
+          role="status"
+          className="absolute inset-0 z-[70] flex flex-col items-center justify-center gap-3 bg-black/85 p-6 text-center backdrop-blur"
+        >
+          <Smartphone className="recap-turn h-12 w-12 text-[#f0c987]" aria-hidden />
+          <p className="text-xl font-bold">Tournez votre téléphone</p>
+          <p className="max-w-sm text-sm text-white/80">
+            Votre année se raconte à la verticale. Le récit reprend dès que vous le redressez.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

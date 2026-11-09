@@ -7,6 +7,10 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Écran assez large et assez haut : le récapitulatif devient une carte au format story, posée
+   sur un fond d'ambiance, plutôt qu'une colonne entre deux bandes noires. */
+@custom-variant cadre (@media (min-width: 640px) and (min-height: 640px));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -193,6 +197,13 @@ html.dark {
 /* Écran d'ouverture : couvertures qui arrivent, halos, lettres, phrases qui se précisent,
    rouleaux de l'année, étincelles, reflet et respiration du bouton. Sans animation, l'état de
    repos de chaque élément suffit (étincelles, éclair et reflet invisibles). */
+/* Fond d'ambiance du grand écran : il change en fondu avec l'écran. */
+@keyframes recap-ambiance {
+  from {
+    opacity: 0.35;
+  }
+}
+
 @keyframes recap-tile {
   from {
     opacity: 0;
@@ -292,6 +303,22 @@ html.dark {
   }
 }
 
+/* Téléphone tourné : l'icône montre le geste, de l'horizontale à la verticale. */
+.recap-turn {
+  animation: recap-turn 2.2s ease-in-out infinite;
+}
+
+@keyframes recap-turn {
+  0%,
+  20% {
+    transform: rotate(-90deg);
+  }
+  55%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
 .recap-nudge {
   animation: recap-nudge 1.4s ease-in-out infinite;
 }
@@ -302,7 +329,8 @@ html.dark {
   }
 }
 
-[data-recap][data-paused] * {
+/* Récit suspendu : tout s'arrête, sauf l'icône qui invite à redresser le téléphone. */
+[data-recap][data-paused] *:not(.recap-turn) {
   animation-play-state: paused !important;
 }
 
