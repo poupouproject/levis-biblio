@@ -18,54 +18,98 @@ function useOrigin(): string {
   );
 }
 
-function download(file: File): void {
-  const url = URL.createObjectURL(file);
+/** Enregistre l'image ; son adresse `blob:` reste valable : c'est le cache qui la libère. */
+function download(preview: SharePreview): void {
   const link = document.createElement('a');
-  link.href = url;
-  link.download = file.name;
+  link.href = preview.url;
+  link.download = preview.file.name;
   link.click();
-  URL.revokeObjectURL(url);
 }
 
-interface Preview {
-  /** Année et choix « plume et série » de l'image. */
-  key: string;
+export interface SharePreview {
   file: File;
+  /** Adresse `blob:` de l'image, pour l'aperçu et l'enregistrement. */
   url: string;
+}
+
+/**
+ * Images déjà produites pendant la visite, par année et choix « plume et série ». Chaque image
+ * demande au serveur deux lectures du portail : basculer la case, revoir le récit ou revenir au
+ * partage ne les refait pas. Gardées en mémoire dans l'onglet, libérées en quittant le récit.
+ */
+export class SharePreviews {
+  private readonly items = new Map<string, SharePreview>();
+
+  get(key: string): SharePreview | undefined {
+    return this.items.get(key);
+  }
+
+  set(key: string, preview: SharePreview): void {
+    this.items.set(key, preview);
+  }
+
+  clear(): void {
+    for (const preview of this.items.values()) URL.revokeObjectURL(preview.url);
+    this.items.clear();
+  }
 }
 
 /**
  * Partage du bilan : l'image exacte qui sera envoyée, en aperçu, puis le menu de partage du
  * téléphone (ou l'enregistrement à défaut). Produite à la demande, jamais stockée : elle vit
- * en mémoire dans l'onglet le temps de l'écran. Par défaut, elle ne montre que des chiffres ;
+ * en mémoire dans l'onglet le temps du récit. Par défaut, elle ne montre que des chiffres ;
  * l'auteur et la série seulement si l'usager le choisit.
  */
-export function ShareRecap({ year, demo }: { year: number; demo: boolean }): JSX.Element {
+export function ShareRecap({
+  year,
+  demo,
+  previews,
+}: {
+  year: number;
+  demo: boolean;
+  previews: SharePreviews;
+}): JSX.Element {
   const origin = useOrigin();
   const [withTitles, setWithTitles] = useState(false);
-  const [preview, setPreview] = useState<Preview | null>(null);
+  // Dernière image reçue : reste affichée, atténuée, pendant que la suivante se prépare
+  const [last, setLast] = useState<SharePreview | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
   const link = `${origin}${SHARE_PATH}`;
   const text = `Mon année ${String(year)} à la bibliothèque. Et la vôtre? ${link}`;
   const key = `${String(year)}-${withTitles ? 'titres' : 'chiffres'}`;
-  const ready = preview?.key === key;
-  const loading = !ready && failed !== key;
+  const current = previews.get(key);
+  const preview = current ?? last;
+  const ready = current !== undefined;
+  const loading = !ready && failed !== key && !expired;
+  const reconnect = `/compte/connexion?raison=expiree&suite=${encodeURIComponent(
+    `/compte/mon-annee/${String(year)}`,
+  )}`;
 
   // L'image est préparée dès l'arrivée sur l'écran : l'aperçu montre ce qui partira, et le
   // partage se fait dans le geste même (Safari refuse un partage lancé après un long chargement)
   useEffect(() => {
+    if (previews.get(key)) return;
     let cancelled = false;
     const params = new URLSearchParams({ annee: String(year) });
     if (withTitles) params.set('titres', '1');
     fetch(`/compte/mon-annee/partage?${params.toString()}`, { cache: 'no-store' })
       .then(async (response) => {
-        if (!response.ok) throw new Error(String(response.status));
+        // Session expirée côté Ville : le serveur a supprimé le cookie
+        if (response.status === 401) {
+          if (!cancelled) setExpired(true);
+          return;
+        }
+        const type = response.headers.get('content-type') ?? '';
+        if (!response.ok || !type.startsWith('image/png')) throw new Error(String(response.status));
         const blob = await response.blob();
-        if (cancelled) return;
         const file = new File([blob], `mon-annee-${String(year)}.png`, { type: 'image/png' });
-        setPreview({ key, file, url: URL.createObjectURL(file) });
+        const entry = { file, url: URL.createObjectURL(file) };
+        // Gardée même si l'usager a déjà rebasculé la case : elle servira s'il y revient
+        previews.set(key, entry);
+        if (!cancelled) setLast(entry);
       })
       .catch(() => {
         if (!cancelled) setFailed(key);
@@ -73,25 +117,17 @@ export function ShareRecap({ year, demo }: { year: number; demo: boolean }): JSX
     return () => {
       cancelled = true;
     };
-  }, [key, year, withTitles, attempt]);
-
-  // L'image remplacée (ou quittée) est libérée
-  useEffect(
-    () => () => {
-      if (preview) URL.revokeObjectURL(preview.url);
-    },
-    [preview],
-  );
+  }, [previews, key, year, withTitles, attempt]);
 
   const share = async (): Promise<void> => {
-    if (!ready) return;
+    if (!current) return;
     setStatus(null);
-    const data: ShareData = { files: [preview.file], title: `Mon année ${String(year)}`, text };
+    const data: ShareData = { files: [current.file], title: `Mon année ${String(year)}`, text };
     try {
       if ('canShare' in navigator && navigator.canShare(data)) {
         await navigator.share(data);
       } else {
-        download(preview.file);
+        download(current);
         setStatus('Image enregistrée : ajoutez-la à votre story ou envoyez-la à vos amis.');
       }
     } catch (error) {
@@ -136,7 +172,18 @@ export function ShareRecap({ year, demo }: { year: number; demo: boolean }): JSX
               aria-hidden
             />
           )}
-          {failed === key && (
+          {expired && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-4 text-center text-sm">
+              <p>Votre session a expiré.</p>
+              <a
+                href={reconnect}
+                className="rounded-lg bg-[#f0c987] px-3 py-1.5 font-bold text-[#2f2f2f] hover:bg-[#fde2b8] focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              >
+                Me reconnecter
+              </a>
+            </div>
+          )}
+          {failed === key && !expired && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm">
               <p>Aperçu indisponible.</p>
               <button

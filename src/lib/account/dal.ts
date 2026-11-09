@@ -23,6 +23,31 @@ export async function requireAccount(
   return { firstName: session.firstName ?? '', demo: session.demo !== undefined };
 }
 
+export type AccountRead<T> =
+  { ok: true; value: T } | { ok: false; reason: 'connexion' | 'expiree' };
+
+/**
+ * Comme `withAccount`, mais sans redirection : pour une route qui répond à un `fetch` (une
+ * redirection y mènerait à la page de connexion, en HTML, avec un statut 200). Session expirée :
+ * le cookie est supprimé ici, une route pouvant modifier les cookies.
+ */
+export async function readAccount<T>(
+  read: (client: LevisClient) => Promise<T>,
+): Promise<AccountRead<T>> {
+  const session = await getAccountSession();
+  if (session.demo) return { ok: true, value: await demoRead(read, session.demo) };
+  if (!session.levis) return { ok: false, reason: 'connexion' };
+  try {
+    return { ok: true, value: await read(new LevisClient(session.levis)) };
+  } catch (error) {
+    if (error instanceof SessionExpiredError) {
+      session.destroy();
+      return { ok: false, reason: 'expiree' };
+    }
+    throw error;
+  }
+}
+
 /**
  * Exécute une lecture sur le portail avec la session de l'usager (ou sur le dossier fictif en démo).
  * Session absente → connexion. Session expirée côté Ville → suppression du cookie, puis connexion.

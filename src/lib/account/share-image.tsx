@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { QrCode } from '@/components/recap/QrCode';
-import { MONTHS, comparisonText, periodText, readerProfile, type YearRecap } from './recap';
+import { capitalize } from './format';
+import { periodText, readerProfile, shareFacts, type YearRecap } from './recap';
 
 /** Format story (9:16) : Instagram, Facebook, WhatsApp. */
 const WIDTH = 1080;
@@ -29,22 +30,6 @@ interface ShareImageOptions {
   demo: boolean;
   /** Adresse affichée et encodée dans le code QR (commune à tous). */
   link: string;
-}
-
-const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
-
-/** Faits marquants, une ligne chacun ; titres seulement si l'usager l'a choisi. */
-function facts(recap: YearRecap, titles: boolean): string[] {
-  const list: string[] = [];
-  if (titles && recap.topSeries) list.push(`${recap.topSeries.name}, ma série de l’année`);
-  if (titles && recap.topAuthor) list.push(`${recap.topAuthor.name}, ma plume de l’année`);
-  if (recap.topMonth) {
-    const month = capitalize(MONTHS[recap.topMonth.month] ?? '');
-    list.push(`${month}, mon mois record : ${String(recap.topMonth.count)}`);
-  }
-  if (recap.streak >= 2) list.push(`${String(recap.streak)} mois de suite à la bibliothèque`);
-  if (recap.previousTotal !== null) list.push(comparisonText(recap).replace(/[!.]$/, ''));
-  return list.slice(0, 4);
 }
 
 /**
@@ -145,7 +130,7 @@ export function shareImage(recap: YearRecap, { titles, demo, link }: ShareImageO
           fontWeight: 700,
         }}
       >
-        {facts(recap, titles).map((fact) => (
+        {shareFacts(recap, titles).map((fact) => (
           <div key={fact} style={{ display: 'flex' }}>
             ★ {fact}
           </div>

@@ -16,9 +16,9 @@ import {
   type RecapSeries,
   type YearRecap,
 } from '@/lib/account/recap';
-import { formatDate, plural } from '@/lib/account/format';
+import { capitalize, formatDate, plural } from '@/lib/account/format';
 import { Cover } from '@/components/catalog/Cover';
-import { ShareRecap } from './ShareRecap';
+import { ShareRecap, type SharePreviews } from './ShareRecap';
 import type { SeriesExtras } from './YearStory';
 
 /** Animation d'entrée : l'état final est celui du style, l'image clé ne donne que le départ. */
@@ -27,8 +27,6 @@ function enter(name: string, delayMs = 0, durationMs = 700): CSSProperties {
     animation: `${name} ${String(durationMs)}ms cubic-bezier(0.2, 0.8, 0.2, 1) ${String(delayMs)}ms both`,
   };
 }
-
-const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
 /** Nombre qui compte jusqu'à sa valeur ; le lecteur d'écran lit la valeur finale. */
 function CountUp({ value, className = '' }: { value: number; className?: string }): JSX.Element {
@@ -539,9 +537,16 @@ interface FinalSlideProps {
   demo: boolean;
   years: number[];
   onReplay: () => void;
+  previews: SharePreviews;
 }
 
-export function FinalSlide({ recap, demo, years, onReplay }: FinalSlideProps): JSX.Element {
+export function FinalSlide({
+  recap,
+  demo,
+  years,
+  onReplay,
+  previews,
+}: FinalSlideProps): JSX.Element {
   const facts = [
     { label: 'Documents', value: String(recap.total) },
     recap.topMonth && {
@@ -572,7 +577,7 @@ export function FinalSlide({ recap, demo, years, onReplay }: FinalSlideProps): J
       </dl>
 
       <div style={enter('recap-pop', 150, 700)}>
-        <ShareRecap year={recap.year} demo={demo} />
+        <ShareRecap year={recap.year} demo={demo} previews={previews} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">

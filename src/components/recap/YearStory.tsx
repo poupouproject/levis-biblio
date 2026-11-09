@@ -35,14 +35,15 @@ import {
   FinalSlide,
   GlimpseBackdrop,
   IntroSlide,
-  type GlimpseCover,
   MonthsSlide,
   PaceSlide,
   ProfileSlide,
   SeriesSlide,
   StreakSlide,
   TotalSlide,
+  type GlimpseCover,
 } from './RecapSlides';
+import { SharePreviews } from './ShareRecap';
 
 export interface SeriesExtras {
   /** Derniers tomes empruntés, d'après le catalogue. */
@@ -156,6 +157,14 @@ export function YearStory({
   // Téléphone tourné : le récit attend qu'on le remette à la verticale
   const sideways = useMedia(LANDSCAPE_PHONE);
   const hidden = usePageHidden();
+  // Images de partage déjà produites pendant la visite ; libérées en quittant le récit
+  const [previews] = useState(() => new SharePreviews());
+  useEffect(
+    () => () => {
+      previews.clear();
+    },
+    [previews],
+  );
 
   /**
    * Lever de rideau. La musique ne peut partir que dans le geste lui-même : arriver sur la page
@@ -251,11 +260,12 @@ export function YearStory({
           onReplay={() => {
             setIndex(0);
           }}
+          previews={previews}
         />
       ),
     });
     return list;
-  }, [recap, firstName, demo, years, series, glimpse, start]);
+  }, [recap, firstName, demo, years, series, glimpse, start, previews]);
 
   const last = slides.length - 1;
   const slide = slides[Math.min(index, last)] ?? slides[0];
@@ -336,7 +346,9 @@ export function YearStory({
       if (event.key === 'ArrowRight') next();
       else if (event.key === 'ArrowLeft') go(-1);
       else if (event.key === 'Escape') close();
-      else if (event.key === ' ' && !onControl) {
+      // Espace ne suspend que là où le bouton pause existe (avance automatique) ; ailleurs,
+      // il garde son rôle : faire défiler l'écran de partage
+      else if (event.key === ' ' && !onControl && autoplay) {
         event.preventDefault();
         setPaused((p) => !p);
       }
@@ -345,7 +357,7 @@ export function YearStory({
     return () => {
       window.removeEventListener('keydown', onKey);
     };
-  }, [next, go, close]);
+  }, [next, go, close, autoplay]);
 
   // Toucher : un appui bref navigue, un appui long suspend, un glissé vers le bas ferme.
   const press = useRef<{ y: number; held: boolean; timer: number } | null>(null);
@@ -515,6 +527,12 @@ export function YearStory({
               className="absolute inset-0 z-10 flex"
               onPointerDown={onPointerDown}
               onPointerUp={endPress}
+              // Bouton relâché hors de la carte (souris) : pointerup n'arrive jamais ici. On
+              // reprend le récit, sans avaler le clic suivant (aucun clic ne suit ce relâché)
+              onPointerLeave={() => {
+                endPress(null);
+                skipClick.current = false;
+              }}
               onPointerCancel={() => {
                 endPress(null);
               }}

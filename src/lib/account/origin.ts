@@ -1,6 +1,27 @@
 import 'server-only';
 
 /**
+ * Première valeur d'un en-tête transféré : chaque proxy peut ajouter la sienne
+ * (`levisbiblio.ca, interne:3000`, `https,http`). Vide ou absent : null.
+ */
+export function firstForwarded(value: string | null): string | null {
+  const first = value?.split(',')[0]?.trim();
+  return first === undefined || first === '' ? null : first;
+}
+
+/** Adresse du site vue par le navigateur (derrière Vercel ou un proxy), sans barre finale. */
+export function publicOrigin(request: Request): string {
+  const url = new URL(request.url);
+  const host =
+    firstForwarded(request.headers.get('x-forwarded-host')) ??
+    request.headers.get('host') ??
+    url.host;
+  const protocol =
+    firstForwarded(request.headers.get('x-forwarded-proto')) ?? url.protocol.replace(':', '');
+  return `${protocol}://${host}`;
+}
+
+/**
  * Vérifie qu'un envoi de formulaire vient bien de notre site (protection CSRF d'appoint ;
  * la protection principale est le cookie de session `SameSite=Strict`).
  *
@@ -19,7 +40,7 @@ export function isSameOrigin(request: Request, route: string): boolean {
   const site = request.headers.get('sec-fetch-site');
   const origin = request.headers.get('origin');
   const host =
-    request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ?? request.headers.get('host');
+    firstForwarded(request.headers.get('x-forwarded-host')) ?? request.headers.get('host');
 
   let allowed: boolean;
   if (site) {

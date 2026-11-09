@@ -19,7 +19,7 @@ import {
 } from '@/lib/account/recap';
 import { returnPath } from '@/lib/account/return-path';
 import { getCatalog } from '@/lib/catalog/source';
-import type { EditionCover } from '@/lib/catalog/types';
+import type { EditionCover, SeriesWithWorks } from '@/lib/catalog/types';
 import type { GlimpseCover } from '@/components/recap/RecapSlides';
 import { YearStory, type SeriesExtras } from '@/components/recap/YearStory';
 
@@ -110,8 +110,14 @@ async function glimpseCovers(glimpse: RecapGlimpse[]): Promise<GlimpseCover[]> {
  * le plus haut lu (pas un tome sauté), ou « à jour » si la bibliothèque n'a rien après.
  */
 async function seriesExtras(series: RecapSeries, readEver: number[]): Promise<SeriesExtras | null> {
-  const { catalog } = await getCatalog();
-  const found = await catalog.getSeries(series.slug);
+  let found: SeriesWithWorks | null;
+  try {
+    const { catalog } = await getCatalog();
+    found = await catalog.getSeries(series.slug);
+  } catch {
+    // Simple décor : sans le catalogue, l'écran de la série s'affiche sans couvertures
+    return null;
+  }
   if (!found) return null;
   const byVolume = new Map(
     found.works.flatMap((w) =>

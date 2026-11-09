@@ -1,6 +1,7 @@
 import { getYearLoans } from '@/lib/levis/account';
-import { withAccount } from '@/lib/account/dal';
+import { readAccount } from '@/lib/account/dal';
 import { todayIso } from '@/lib/account/format';
+import { publicOrigin } from '@/lib/account/origin';
 import { buildYearRecap, isRecapOpen } from '@/lib/account/recap';
 import { getAccountSession, isSignedIn } from '@/lib/account/session';
 import { shareImage } from '@/lib/account/share-image';
@@ -8,6 +9,8 @@ import { shareImage } from '@/lib/account/share-image';
 /**
  * Image du récapitulatif à partager (`?annee=2026`, `&titres=1` pour la plume et la série).
  * Calculée à la demande, jamais stockée ; sous /compte : aucun cache partagé (next.config.ts).
+ * Demandée par `fetch` : sans session, ou session expirée, un 401 plutôt qu'une redirection
+ * (qui finirait sur la page de connexion, en HTML, enregistrée comme image).
  */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -18,14 +21,13 @@ export async function GET(request: Request): Promise<Response> {
 
   const session = await getAccountSession();
   if (!isSignedIn(session)) return new Response(null, { status: 401 });
-  const { history, checkouts } = await withAccount(getYearLoans);
+  const loans = await readAccount(getYearLoans);
+  if (!loans.ok) return new Response(null, { status: 401 });
+  const { history, checkouts } = loans.value;
 
-  // Hôte vu par le navigateur (derrière Vercel ou un proxy), pas celui du serveur
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? url.host;
-  const protocol = request.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '');
   return shareImage(buildYearRecap(history, checkouts, year), {
     titles: url.searchParams.get('titres') === '1',
     demo: session.demo !== undefined,
-    link: `${protocol}://${host}/mon-annee`,
+    link: `${publicOrigin(request)}/mon-annee`,
   });
 }

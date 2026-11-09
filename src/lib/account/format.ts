@@ -2,6 +2,9 @@
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Majuscule initiale : « mars » → « Mars ». */
+export const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
 /** Date du jour à Lévis, au format ISO `AAAA-MM-JJ`. */
 export function todayIso(now = new Date()): string {
   return now.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });

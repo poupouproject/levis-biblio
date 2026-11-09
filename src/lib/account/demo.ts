@@ -358,7 +358,8 @@ function baseHistory(today: string): HistoryEntry[] {
     item('Les Légendaires. 2, Le gardien', 'Sobral, Patrick, 1968-', 500, 479),
     item('Les Légendaires. 1, La pierre de Jovénia', 'Sobral, Patrick, 1968-', 520, 499),
     item('Journal d’un dégonflé. 1, Carnet de bord de Greg Heffley', 'Kinney, Jeff', 560, 539),
-    item('Le Petit Nicolas', 'Goscinny, René, 1926-1977', 600, 590),
+    // Assez loin pour que l'historique couvre toute l'année précédente : la comparaison s'affiche
+    item('Le Petit Nicolas', 'Goscinny, René, 1926-1977', 800, 790),
   ].sort((a, b) => (b.checkedOut ?? '').localeCompare(a.checkedOut ?? ''));
 }
 

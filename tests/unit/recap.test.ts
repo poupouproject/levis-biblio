@@ -12,7 +12,10 @@ import {
   isRecapOpen,
   nextInSeries,
   PERIOD_MONTHS,
+  periodStart,
   periodText,
+  SHARE_FACTS,
+  shareFacts,
   readerProfile,
   recapYearOf,
   recapSeasonYear,
@@ -46,7 +49,8 @@ const HISTORY: HistoryEntry[] = [
   entry('One Piece. 4, Attaque au clair de lune', ODA, '2026-03-15', '2026-04-01'),
   entry('Le petit prince', 'Saint-Exupéry, Antoine de, 1900-1944', '2026-04-10', '2026-04-12'),
   entry('Alice au pays des merveilles', 'Carroll, Lewis, 1832-1898', '2026-06-01', '2026-06-29'),
-  entry('Le Petit Nicolas', 'Goscinny, René, 1926-1977', '2025-10-20', '2025-12-04'),
+  // Le premier jour de l'année 2025 du récapitulatif : l'historique couvre toute l'année 2025
+  entry('Le Petit Nicolas', 'Goscinny, René, 1926-1977', '2024-11-01', '2024-11-20'),
 ];
 
 describe('récapitulatif de l’année', () => {
@@ -58,7 +62,7 @@ describe('récapitulatif de l’année', () => {
     );
     expect(recap.total).toBe(6);
     expect(recap.inProgress).toBe(1);
-    expect(recap.since).toBe('2025-10-20');
+    expect(recap.since).toBe('2024-11-01');
   });
 
   it('novembre et décembre comptent pour l’année suivante', () => {
@@ -89,8 +93,26 @@ describe('récapitulatif de l’année', () => {
   });
 
   it('compare avec l’année précédente seulement si l’historique la couvre', () => {
+    expect(periodStart(2025)).toBe('2024-11-01');
     expect(buildYearRecap(HISTORY, [], 2026).previousTotal).toBe(1);
     expect(buildYearRecap(HISTORY, [], 2025).previousTotal).toBeNull();
+  });
+
+  it('historique commencé en cours d’année précédente : pas de comparaison trompeuse', () => {
+    // Historique activé en septembre 2025 : 2025 n'a que deux mois, comparer serait trompeur
+    const partial = [
+      entry('a', null, '2025-09-05', '2025-09-20'),
+      entry('b', null, '2025-10-05', '2025-10-20'),
+      ...Array.from({ length: 30 }, (_, i) =>
+        entry(
+          `Livre ${String(i)}`,
+          null,
+          `2026-03-${String((i % 28) + 1).padStart(2, '0')}`,
+          '2026-04-30',
+        ),
+      ),
+    ];
+    expect(buildYearRecap(partial, [], 2026).previousTotal).toBeNull();
   });
 
   it('mois par mois de novembre à octobre, mois le plus occupé et plus longue suite', () => {
@@ -261,6 +283,27 @@ describe('récapitulatif : textes', () => {
     expect(comparisonText({ year: 2026, total: 20, previousTotal: null })).toContain(
       'première année',
     );
+  });
+
+  it('image à partager : ni série ni plume sans le consentement de l’usager', () => {
+    const recap = buildYearRecap(HISTORY, [], 2026);
+    const numbers = shareFacts(recap, false);
+    expect(numbers.join(' ')).not.toContain('One Piece');
+    expect(numbers.join(' ')).not.toContain('Oda');
+    expect(numbers).toEqual([
+      'Mars, mon mois record : 3',
+      '2 mois de suite à la bibliothèque',
+      '5 fois plus qu’en 2025',
+    ]);
+  });
+
+  it('image à partager : série et plume en tête si l’usager les montre, quatre faits au plus', () => {
+    const facts = shareFacts(buildYearRecap(HISTORY, [], 2026), true);
+    expect(facts).toHaveLength(SHARE_FACTS);
+    expect(facts.slice(0, 2)).toEqual([
+      'One Piece, ma série de l’année',
+      'Eiichirô Oda, ma plume de l’année',
+    ]);
   });
 
   it('durées', () => {

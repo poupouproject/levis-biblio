@@ -41,6 +41,12 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).
   Série et auteur sont tirés du titre et du nom (`parseTitle`, `parseAuthor`) ; les couvertures
   des tomes et le prochain tome viennent du catalogue (`getSeries`). Rien n'est stocké.
+- **Comparaison avec l'année précédente** : seulement si l'historique couvre toute cette année
+  (`since` au plus tard le `periodStart` de l'année − 1) ; sinon « Votre première année dans
+  l'historique ».
+- **Pannes** : `error.tsx` du récapitulatif (`PortalUnavailable`, comme Mon dossier ; `retry`
+  relit le portail). Le catalogue n'est que décor (série, avant-goût) : son absence ne fait
+  jamais tomber la page.
 - **Réservation arrivée annulée** (`isCancelledHold`) : un document rendu le jour même de son
   emprunt est écarté de tout le bilan. Le portail ne permet pas d'annuler une réservation
   arrivée : il faut l'emprunter puis la rendre aussitôt. L'historique ne donne que la date, sans
@@ -74,7 +80,12 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Le dernier écran la charge dès
   l'arrivée et l'affiche en aperçu (adresse `blob:` en mémoire, libérée en quittant) ; le partage
   envoie ce même fichier, dans le geste (Safari refuse un partage après un long chargement).
-  Chiffres seulement, sauf si
+  Chaque variante (avec ou sans titres) n'est produite qu'une fois par visite (`SharePreviews`,
+  dans `YearStory`) : chaque image coûte deux lectures du portail. Route lue par `fetch` :
+  `readAccount` (sans redirection) et 401 si la session manque ou a expiré, jamais la page de
+  connexion en HTML ; le client vérifie aussi `content-type: image/png`. Adresse du lien :
+  `publicOrigin` (première valeur des en-têtes `x-forwarded-*`). Faits de l'image :
+  `shareFacts` (testé). Chiffres seulement, sauf si
   l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20). Style
   affiche : total géant, ruban du profil, faits marquants. Police Inter (OFL) réduite aux
   caractères latins (`assets/polices/`, ~50 Ko par graisse), lue avec `fs` et incluse au

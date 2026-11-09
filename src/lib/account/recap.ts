@@ -2,7 +2,7 @@
 // l'historique (documents rendus) et des emprunts en cours. Rien n'est conservé. Fonctions pures.
 import type { Checkout, HistoryEntry } from '@/types';
 import { fold, parseAuthor, parseTitle, slugify } from '@/lib/catalog/normalize';
-import { addDays, daysUntil } from './format';
+import { addDays, capitalize, daysUntil } from './format';
 
 /** Durée d'un prêt (et d'un renouvellement) aux bibliothèques de Lévis. */
 export const LOAN_DAYS = 21;
@@ -62,6 +62,11 @@ const monthOfIso = (iso: string): number => Number.parseInt(iso.slice(5, 7), 10)
 /** Année du récapitulatif d'une date : novembre et décembre comptent pour l'année suivante. */
 export function recapYearOf(iso: string): number {
   return yearOfIso(iso) + (monthOfIso(iso) >= PERIOD_FIRST_MONTH ? 1 : 0);
+}
+
+/** Premier jour de l'année du récapitulatif : `2026` → `2025-11-01`. */
+export function periodStart(year: number): string {
+  return `${String(year - 1)}-11-01`;
 }
 
 /** « du 1er novembre 2025 au 31 octobre 2026 » */
@@ -361,6 +366,26 @@ export function comparisonText(recap: Pick<YearRecap, 'year' | 'total' | 'previo
   return `${String(diff)} de plus qu’en ${previous}!`;
 }
 
+/** Nombre de faits marquants sur l'image à partager. */
+export const SHARE_FACTS = 4;
+
+/**
+ * Faits marquants de l'image à partager, une ligne chacun. La série et la plume (des titres
+ * et des noms) seulement si l'usager l'a choisi ; sinon, des chiffres et un mois.
+ */
+export function shareFacts(recap: YearRecap, titles: boolean): string[] {
+  const list: string[] = [];
+  if (titles && recap.topSeries) list.push(`${recap.topSeries.name}, ma série de l’année`);
+  if (titles && recap.topAuthor) list.push(`${recap.topAuthor.name}, ma plume de l’année`);
+  if (recap.topMonth) {
+    const month = capitalize(MONTHS[recap.topMonth.month] ?? '');
+    list.push(`${month}, mon mois record : ${String(recap.topMonth.count)}`);
+  }
+  if (recap.streak >= 2) list.push(`${String(recap.streak)} mois de suite à la bibliothèque`);
+  if (recap.previousTotal !== null) list.push(comparisonText(recap).replace(/[!.]$/, ''));
+  return list.slice(0, SHARE_FACTS);
+}
+
 /** « le jour même », « en 1 jour », « en 12 jours ». */
 export function daysText(days: number): string {
   if (days === 0) return 'le jour même';
@@ -450,9 +475,12 @@ export function buildYearRecap(
     since,
     total: loans.length,
     inProgress: loans.filter((l) => !l.returned).length,
-    previousTotal: all.some((l) => recapYearOf(l.start) < year)
-      ? all.filter((l) => recapYearOf(l.start) === year - 1).length
-      : null,
+    // Seulement si l'historique couvre toute l'année précédente : commencé en septembre, il
+    // ferait croire à « 10 fois plus qu'en 2025 » avec deux mois de 2025
+    previousTotal:
+      since !== null && since <= periodStart(year - 1)
+        ? all.filter((l) => recapYearOf(l.start) === year - 1).length
+        : null,
     months,
     topMonth,
     topAuthor: author?.[0] && author[1] >= 2 ? { name: author[0].display, count: author[1] } : null,
