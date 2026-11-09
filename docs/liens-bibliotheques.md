@@ -11,23 +11,33 @@ accessible et la répartition retenue.
   (`https://levis.ca/fr/sitemaps-1-sitemap.xml`). Le `robots.txt` de levis.ca n'interdit que
   `/cpresources/`, `/vendor/`, `/.env` et `/cache/`.
 - **Portail SirsiDynix** : la page d'accueil n'est pas lue (seuls les chemins de Mon dossier le
-  sont, voir le skill `portail-levis`). Les liens qui n'existent que sur le portail sont relevés à
-  la main.
+  sont, voir le skill `portail-levis`). Ses liens ont été retrouvés dans les pages Bibliothèques
+  de levis.ca, qui y renvoient (relevé du 2026-11-09).
 
 ## 2. Liens disponibles
 
-| Lien du portail                         | Cible                                                                                       | État          |
-| --------------------------------------- | ------------------------------------------------------------------------------------------- | ------------- |
-| Livres, revues et ressources numériques | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/ressources-numeriques`             | Trouvé        |
-| Abonnement et règlements                | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/abonnement-modalites-et-services`  | Trouvé        |
-| Portail des bibliothèques               | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques`                                   | Trouvé        |
-| Programmation                           | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/programmes`                        | Trouvé        |
-| Calendrier des activités                | `https://levis.ca/fr/calendrier-des-evenements?types=a-la-bibliotheque`                     | Trouvé        |
-| Nous joindre                            | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/foire-aux-questions-bibliotheques` | À confirmer   |
-| Suggestion d'achat                      | —                                                                                           | URL à relever |
-| Prêt entre bibliothèques                | —                                                                                           | URL à relever |
-| S'inscrire                              | —                                                                                           | URL à relever |
-| Facebook « Bibliothèques de Lévis »     | —                                                                                           | URL à relever |
+| Lien du portail                         | Cible                                                                                       | État        |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- | ----------- |
+| Livres, revues et ressources numériques | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/ressources-numeriques`             | Trouvé      |
+| Abonnement et règlements                | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/abonnement-modalites-et-services`  | Trouvé      |
+| Portail des bibliothèques               | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques`                                   | Trouvé      |
+| Programmation                           | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/programmes`                        | Trouvé      |
+| Calendrier des activités                | `https://levis.ca/fr/calendrier-des-evenements?types=a-la-bibliotheque`                     | Trouvé      |
+| Nous joindre                            | `https://levis.ca/fr/loisirs-et-communaute/bibliotheques/foire-aux-questions-bibliotheques` | À confirmer |
+| Suggestion d'achat                      | `https://levis.ca/fr/formulaires/suggestion-dachat`                                         | Trouvé      |
+| Prêt entre bibliothèques                | Section de la page Abonnement (ci-dessus), puis le Catalogue des bibliothèques du Québec    | Trouvé      |
+| S'inscrire (aux activités)              | `https://inscriptionsbibliotheques.ville.levis.qc.ca/fr/inscriptions-aux-activites`         | Trouvé      |
+| Facebook « Bibliothèques de Lévis »     | `https://www.facebook.com/bibliothequesdelevis/`                                            | Trouvé      |
+
+**Prêt entre bibliothèques** : la page Abonnement explique le service (jusqu'à trois demandes à la
+fois, certains documents exclus) et mène au Catalogue des bibliothèques du Québec (WorldCat) :
+`https://bibliothequevilledelevis.account.worldcat.org/account` pour un compte existant,
+`https://bibliothequevilledelevis.authn.worldcat.org/login/manageduser-ui/cmnd/useraction/createuser`
+pour en créer un. Mieux vaut renvoyer vers la page Abonnement, qui donne les conditions, que
+directement vers WorldCat.
+
+**S'inscrire** : sur le portail, le bouton sous « Calendrier » mène aux inscriptions aux activités,
+pas à l'abonnement à la bibliothèque.
 
 Autres pages utiles de levis.ca : `…/bibliotheques/horaires-des-bibliotheques`,
 `…/bibliotheques/decouvrir-les-bibliotheques`, `…/bibliotheques/salles-dexposition`, et les fiches
