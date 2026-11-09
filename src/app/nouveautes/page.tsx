@@ -35,12 +35,12 @@ export default function NouveautesPage(): JSX.Element {
           </p>
           <p>
             Pour l’instant, il n’y a pas de formulaire dans l’application. Pour signaler un bogue ou
-            suggérer une amélioration, ouvrez une demande vous-même :
+            suggérer une amélioration, ou poser une question, ouvrez une discussion vous-même :
           </p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>
-              <a href={`${REPO_URL}/issues/new`} className={LIEN}>
-                Ouvrez une nouvelle demande (issue)
+              <a href={`${REPO_URL}/discussions/new?category=general`} className={LIEN}>
+                Ouvrez une nouvelle discussion
               </a>{' '}
               sur GitHub. Un compte GitHub gratuit est nécessaire.
             </li>
@@ -50,12 +50,12 @@ export default function NouveautesPage(): JSX.Element {
             </li>
             <li>
               N’y écrivez <strong>jamais</strong> votre numéro de carte, votre NIP ni des
-              renseignements personnels : la demande est publique.
+              renseignements personnels : la discussion est publique.
             </li>
           </ol>
           <p>
-            <a href={`${REPO_URL}/issues`} className={LIEN}>
-              Voir les demandes déjà ouvertes
+            <a href={`${REPO_URL}/discussions`} className={LIEN}>
+              Voir les discussions déjà ouvertes
             </a>{' '}
             avant d’en créer une : la vôtre s’y trouve peut-être déjà.
           </p>
