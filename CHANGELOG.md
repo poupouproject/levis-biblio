@@ -1,5 +1,21 @@
 # levis-biblio
 
+## 0.12.0
+
+Mise en production : 2026-11-08
+
+### Nouveautés
+
+- Une musique accompagne le récapitulatif. Elle démarre seulement quand vous touchez « C’est parti », suit les pauses du récit, baisse sur l’écran de partage et se coupe d’un bouton toujours visible ; le navigateur retient votre choix.
+- Partagez votre année : une image façon affiche, au format story, que vous voyez en aperçu avant de l’envoyer à vos amis. Elle ne montre que des chiffres, à moins de choisir d’y ajouter votre plume et votre série. Un lien et un code QR permettent à chacun de découvrir sa propre année.
+- Nouveau récapitulatif « Votre année à la bibliothèque » dans Mon dossier, à faire défiler comme une story. Il s’ouvre sur une mise en scène animée (vos couvertures de l’année, votre prénom, l’année qui tourne comme une machine à sous), puis présente un écran par statistique : documents empruntés et comparaison avec l’année précédente, mois le plus occupé, plume et série de l’année avec le prochain tome à emprunter, rythme, régularité et votre profil de lecture. L’année va du 1er novembre au 31 octobre : le récapitulatif ouvre le 15 novembre et ses chiffres ne bougent plus ensuite. Il s’affiche aussi bien sur téléphone que sur tablette et ordinateur, et s’essaie avec le dossier de démonstration.
+- Le numéro de version de l’application s’affiche dans le pied de page, et une nouvelle page « Nouveautés » (accessible aussi en touchant la pastille « Bêta ») présente les changements de chaque version avec sa date de mise en production. Elle explique aussi comment signaler un problème ou suggérer une idée sur GitHub.
+
+### Correctifs
+
+- Après la connexion, ou une session expirée, vous revenez sur le récapitulatif de l’année si c’est lui que vous vouliez ouvrir, au lieu du sommaire.
+- Mon dossier : quand le portail des bibliothèques ne répond pas, le bouton « Réessayer » relit vraiment le portail, au lieu de réafficher le même message.
+
 ## 0.11.0
 
 Mise en production : 2026-11-07
