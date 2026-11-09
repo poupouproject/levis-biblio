@@ -2,6 +2,8 @@
 
 ## 0.11.0
 
+Mise en production : 2026-11-04
+
 ### Nouveautés
 
 - Recherche ciblée : des puces « Tout · Titre · Auteur · Série · ISBN » limitent la recherche à un champ, sur la page de résultats et dans la recherche flottante. Le choix reste dans le lien, et une recherche sans résultat propose de chercher partout.
@@ -17,6 +19,8 @@
 
 ## 0.10.0
 
+Mise en production : 2026-11-02
+
 ### Nouveautés
 
 - Quand la pastille « Démo » est affichée sans le mode démonstration, la page de connexion propose aussi d'explorer un dossier fictif, sous le formulaire habituel : on peut essayer Mon dossier sans carte, sans que rien ne soit envoyé aux bibliothèques.
@@ -28,6 +32,8 @@
 - Se connecter avec sa carte après avoir ouvert le dossier de démonstration affiche bien son vrai dossier, et un renouvellement ne peut plus être annoncé réussi sans être envoyé à la bibliothèque. Ouvrir le dossier de démonstration ferme aussi une vraie session restée ouverte dans un autre onglet.
 
 ## 0.9.0
+
+Mise en production : 2026-10-29
 
 ### Nouveautés
 
@@ -45,17 +51,23 @@
 
 ## 0.8.0
 
+Mise en production : 2026-10-29
+
 ### Nouveautés
 
 - Nouvelle page « Confidentialité », accessible depuis le pied de page : ce que le site fait (et ne fait pas) de vos renseignements, les deux cookies de « Mon dossier », et qui détient vos données.
 
 ## 0.7.1
 
+Mise en production : 2026-10-29
+
 ### Correctifs
 
 - La pastille « Démo » peut rester affichée même quand Mon dossier se connecte au vrai portail des bibliothèques.
 
 ## 0.7.0
+
+Mise en production : 2026-10-27
 
 ### Nouveautés
 
@@ -69,12 +81,16 @@
 
 ## 0.6.1
 
+Mise en production : 2026-10-24
+
 ### Correctifs
 
 - Notifications : le thème sombre vient du CSS. La notification du mode démonstration s’affiche bien au premier chargement, et sombre dès ce moment.
 - Notification du mode démonstration : message reformulé, plus positif sur la démarche avec la Ville de Lévis.
 
 ## 0.6.0
+
+Mise en production : 2026-10-23
 
 ### Nouveautés
 
@@ -87,6 +103,8 @@
 - Sur téléphone et tablette, le clavier ne cache plus les suggestions de recherche : le champ remonte sous l’en-tête et la liste s’ajuste à la partie visible de l’écran.
 
 ## 0.5.0
+
+Mise en production : 2026-10-23
 
 ### Nouveautés
 
@@ -102,6 +120,8 @@
 
 ## 0.4.0
 
+Mise en production : 2026-10-23
+
 ### Nouveautés
 
 - Fiche d'une œuvre : le résumé du livre s'affiche quand Google Livres en a un, avec un lien vers sa fiche Google Livres.
@@ -113,17 +133,23 @@
 
 ## 0.3.0
 
+Mise en production : 2026-10-22
+
 ### Nouveautés
 
 - Mon dossier : le résultat des actions s'affiche en notifications (10 secondes, avec une barre de temps restant, en pause au survol). Pour un résultat mixte, une notification pour les documents renouvelés et une pour les refus, avec leur motif et la date de retour. Renouveler un emprunt ou modifier une réservation n'affiche plus « session expirée » à tort.
 
 ## 0.2.0
 
+Mise en production : 2026-10-21
+
 ### Nouveautés
 
 - Recherche dans le catalogue et nouvelle page d'accueil : suggestions dès la saisie (séries, auteurs, œuvres), éditions regroupées en œuvres, séries réunies tome par tome, filtres par type, année, disponibilité et succursale, fiches d'œuvre et de série. Disponibilités simulées en attendant l'accès officiel.
 
 ## 0.1.1
+
+Mise en production : 2026-10-21
 
 ### Correctifs
 

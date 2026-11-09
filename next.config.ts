@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
   // traçage des fichiers ne les verrait pas seul.
   outputFileTracingIncludes: {
     '/compte/mon-annee/partage': ['./assets/polices/*.ttf'],
+    // Journal des versions, lu avec fs par la page des nouveautés (src/lib/changelog.ts).
+    '/nouveautes': ['./CHANGELOG.md'],
   },
 
   images: {
