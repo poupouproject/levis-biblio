@@ -224,6 +224,41 @@ function mostFrequent<T>(items: T[], key: (item: T) => string | null): [T, numbe
   return best;
 }
 
+/** Tomes d'une série empruntés un jour (historique complet et emprunts en cours). */
+export function seriesVolumesRead(
+  history: HistoryEntry[],
+  checkouts: Checkout[],
+  slug: string,
+): number[] {
+  const volumes = new Set<number>();
+  for (const loan of loansOf(history, checkouts)) {
+    const { series, volume } = parseTitle(loan.title);
+    if (series && volume !== null && slugify(series) === slug) volumes.add(volume);
+  }
+  return [...volumes].sort((a, b) => a - b);
+}
+
+/** Suite d'une série : le tome qui suit le dernier lu, ou « à jour ». */
+export type SeriesNext = { kind: 'suivant'; volume: number } | { kind: 'a-jour'; last: number };
+
+/**
+ * Tome à emprunter ensuite : le premier que la bibliothèque possède **après** le plus haut lu de
+ * l'année et jamais emprunté. Un trou dans la lecture (tome sauté) n'est pas proposé : on suit
+ * la série vers l'avant. Rien après : l'usager est à jour avec ce que la bibliothèque possède.
+ */
+export function nextInSeries(
+  available: number[],
+  readThisYear: number[],
+  readEver: number[],
+): SeriesNext | null {
+  const highest = Math.max(...readThisYear);
+  if (!Number.isFinite(highest)) return null;
+  const read = new Set([...readEver, ...readThisYear]);
+  const next = [...available].sort((a, b) => a - b).find((v) => v > highest && !read.has(v));
+  if (next !== undefined) return { kind: 'suivant', volume: next };
+  return { kind: 'a-jour', last: Math.max(highest, ...readEver) };
+}
+
 function topSeriesOf(loans: Loan[]): RecapSeries | null {
   const bySeries = new Map<string, { name: string; volumes: Set<number> }>();
   for (const loan of loans) {

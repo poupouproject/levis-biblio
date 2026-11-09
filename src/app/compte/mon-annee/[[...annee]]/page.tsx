@@ -11,7 +11,9 @@ import {
   buildYearRecap,
   defaultRecapYear,
   isRecapOpen,
+  nextInSeries,
   recapYears,
+  seriesVolumesRead,
   type RecapGlimpse,
   type RecapSeries,
 } from '@/lib/account/recap';
@@ -64,8 +66,9 @@ export default async function YearPage({
 
   if (recap.total === 0) return <NoRecap year={year} years={years} />;
 
+  const top = recap.topSeries;
   const [series, glimpse] = await Promise.all([
-    recap.topSeries ? seriesExtras(recap.topSeries) : null,
+    top ? seriesExtras(top, seriesVolumesRead(history, checkouts, top.slug)) : null,
     glimpseCovers(recap.glimpse),
   ]);
   return (
@@ -102,8 +105,11 @@ async function glimpseCovers(glimpse: RecapGlimpse[]): Promise<GlimpseCover[]> {
   }));
 }
 
-/** Couvertures des tomes empruntés et premier tome manquant, d'après le catalogue. */
-async function seriesExtras(series: RecapSeries): Promise<SeriesExtras | null> {
+/**
+ * Couvertures des tomes empruntés et suite de la série, d'après le catalogue : le tome qui suit
+ * le plus haut lu (pas un tome sauté), ou « à jour » si la bibliothèque n'a rien après.
+ */
+async function seriesExtras(series: RecapSeries, readEver: number[]): Promise<SeriesExtras | null> {
   const { catalog } = await getCatalog();
   const found = await catalog.getSeries(series.slug);
   if (!found) return null;
@@ -112,22 +118,27 @@ async function seriesExtras(series: RecapSeries): Promise<SeriesExtras | null> {
       w.series?.volume !== null && w.series?.volume !== undefined ? [[w.series.volume, w]] : [],
     ),
   );
-  const read = new Set(series.volumes);
-  const first = series.volumes[0] ?? 1;
-  const nextVolume = [...byVolume.keys()]
-    .filter((v) => v > first && !read.has(v))
-    .sort((a, b) => a - b)[0];
-  const next = nextVolume === undefined ? undefined : byVolume.get(nextVolume);
+  const suite = nextInSeries([...byVolume.keys()], series.volumes, readEver);
+  const work = suite?.kind === 'suivant' ? byVolume.get(suite.volume) : undefined;
+  let next: SeriesExtras['next'] = null;
+  if (suite?.kind === 'suivant' && work) {
+    next = {
+      kind: 'suivant',
+      volume: suite.volume,
+      title: work.title,
+      href: `/oeuvre/${work.id}`,
+      cover: work.cover,
+    };
+  } else if (suite?.kind === 'a-jour') {
+    next = { kind: 'a-jour', last: suite.last };
+  }
   return {
     // Les derniers tomes empruntés, pour la pile de couvertures
     covers: series.volumes.slice(-5).flatMap((v) => {
-      const work = byVolume.get(v);
-      return work ? [{ title: work.title, cover: work.cover }] : [];
+      const w = byVolume.get(v);
+      return w ? [{ title: w.title, cover: w.cover }] : [];
     }),
-    next:
-      next && nextVolume !== undefined
-        ? { volume: nextVolume, title: next.title, href: `/oeuvre/${next.id}`, cover: next.cover }
-        : null,
+    next,
   };
 }
 

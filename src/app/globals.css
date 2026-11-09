@@ -190,6 +190,108 @@ html.dark {
   }
 }
 
+/* Écran d'ouverture : couvertures qui arrivent, halos, lettres, phrases qui se précisent,
+   rouleaux de l'année, étincelles, reflet et respiration du bouton. Sans animation, l'état de
+   repos de chaque élément suffit (étincelles, éclair et reflet invisibles). */
+@keyframes recap-tile {
+  from {
+    opacity: 0;
+    transform: translateY(40%) scale(0.5) rotate(8deg);
+  }
+}
+
+.recap-orb {
+  animation: recap-orb 14s ease-in-out infinite alternate;
+}
+
+@keyframes recap-orb {
+  to {
+    transform: translate(18%, -12%) scale(1.25);
+  }
+}
+
+@keyframes recap-letter {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(0.6em) rotate(-12deg) scale(0.4);
+  }
+  60% {
+    filter: blur(0);
+    transform: translateY(-0.08em) rotate(2deg) scale(1.1);
+  }
+}
+
+@keyframes recap-focus {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    letter-spacing: 0.08em;
+    transform: translateY(0.75rem);
+  }
+}
+
+@keyframes recap-reel {
+  from {
+    transform: translateY(0);
+  }
+}
+
+.recap-flash {
+  opacity: 0;
+}
+
+@keyframes recap-flash {
+  from {
+    opacity: 1;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.recap-spark {
+  opacity: 0;
+  transform: rotate(var(--spark-angle)) translateX(var(--spark-distance)) scale(0.2);
+}
+
+@keyframes recap-spark {
+  from {
+    opacity: 1;
+    transform: rotate(var(--spark-angle)) translateX(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+}
+
+.recap-shine {
+  transform: skewX(-20deg);
+  animation: recap-shine 3.5s ease-in-out 6s infinite;
+}
+
+@keyframes recap-shine {
+  0% {
+    transform: translateX(0) skewX(-20deg);
+  }
+  35%,
+  100% {
+    transform: translateX(500%) skewX(-20deg);
+  }
+}
+
+.recap-breathe {
+  animation: recap-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes recap-breathe {
+  50% {
+    box-shadow: 0 0 36px 6px rgb(240 201 135 / 0.55);
+  }
+}
+
 .recap-nudge {
   animation: recap-nudge 1.4s ease-in-out infinite;
 }

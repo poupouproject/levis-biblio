@@ -2,7 +2,7 @@
 
 import type { CSSProperties, JSX, ReactNode } from 'react';
 import Link from 'next/link';
-import { ChevronRight, RotateCcw, Sparkles } from 'lucide-react';
+import { ChevronRight, RotateCcw, Sparkles, Trophy } from 'lucide-react';
 import {
   LOAN_DAYS,
   MONTHS,
@@ -82,24 +82,119 @@ export function GlimpseBackdrop({ glimpse }: { glimpse: GlimpseCover[] }): JSX.E
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        className="absolute -inset-1/4 -rotate-12 opacity-55 blur-[10px]"
+        className="absolute -inset-1/4 -rotate-12 opacity-60 blur-[7px]"
         style={enter('recap-unblur', 0, 4500)}
       >
         <div className="recap-drift grid grid-cols-4 gap-3">
-          {tiles.map(({ key, book }) => (
-            <Cover
-              key={key}
-              src={book?.cover ?? null}
-              title={book?.title ?? ''}
-              author={book?.author}
-              sizes="120px"
-            />
+          {tiles.map(({ key, book }, i) => (
+            // Les couvertures arrivent une à une, dans un ordre dispersé
+            <div key={key} style={enter('recap-tile', ((i * 7) % BACKDROP_TILES) * 60, 900)}>
+              <Cover
+                src={book?.cover ?? null}
+                title={book?.title ?? ''}
+                author={book?.author}
+                sizes="120px"
+              />
+            </div>
           ))}
         </div>
       </div>
       {/* Voile pour que le texte reste lisible sur n'importe quelle couverture */}
       <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/75" />
+      {/* Halos de lumière qui flottent lentement */}
+      <div className="recap-orb absolute top-[5%] -left-1/3 h-[60%] w-[90%] rounded-full bg-[#f0c987]/25 mix-blend-screen blur-3xl" />
+      <div
+        className="recap-orb absolute -right-1/3 bottom-0 h-[55%] w-[85%] rounded-full bg-[#f2b5d4]/20 mix-blend-screen blur-3xl"
+        style={{ animationDelay: '-7s' }}
+      />
     </div>
+  );
+}
+
+/** Texte qui arrive lettre par lettre ; le lecteur d'écran lit le mot entier. */
+function Letters({ text, delay }: { text: string; delay: number }): JSX.Element {
+  return (
+    <>
+      <span aria-hidden>
+        {Array.from(text).map((letter, i) => (
+          <span
+            // Les lettres ne changent jamais d'ordre : l'indice suffit comme clé
+            key={i}
+            className="inline-block whitespace-pre"
+            style={enter('recap-letter', delay + i * 55, 750)}
+          >
+            {letter}
+          </span>
+        ))}
+      </span>
+      <span className="sr-only">{text}</span>
+    </>
+  );
+}
+
+/**
+ * L'année en rouleaux de machine à sous : chaque chiffre tourne deux fois puis s'arrête, l'un
+ * après l'autre. Sans animation, les chiffres sont simplement à leur place.
+ */
+function YearReels({ year, delay }: { year: number; delay: number }): JSX.Element {
+  return (
+    <span aria-hidden className="inline-flex tabular-nums">
+      {String(year)
+        .split('')
+        .map((digit, i) => {
+          const stop = 20 + Number(digit);
+          return (
+            <span key={i} className="inline-block h-[1em] overflow-hidden">
+              <span
+                className="flex flex-col"
+                style={{
+                  transform: `translateY(${String(-stop)}em)`,
+                  animation: `recap-reel ${String(1100 + i * 150)}ms cubic-bezier(0.2, 0.9, 0.3, 1.04) ${String(delay + i * 100)}ms both`,
+                }}
+              >
+                {Array.from({ length: stop + 1 }, (_, n) => (
+                  <span key={n} className="h-[1em] leading-none">
+                    {n % 10}
+                  </span>
+                ))}
+              </span>
+            </span>
+          );
+        })}
+    </span>
+  );
+}
+
+const SPARK_COLORS = ['#f0c987', '#f2b5d4', '#b8f2e6', '#ffffff'] as const;
+
+/** Gerbe d'étincelles et éclair de lumière, quand le dernier rouleau s'arrête. */
+function Burst({ delay }: { delay: number }): JSX.Element {
+  return (
+    <span aria-hidden className="pointer-events-none absolute top-1/2 left-1/2">
+      <span
+        className="recap-flash absolute -top-32 -left-32 block h-64 w-64 rounded-full bg-radial from-[#f0c987]/80 to-transparent to-70%"
+        style={{ animation: `recap-flash 1200ms ease-out ${String(delay)}ms both` }}
+      />
+      {Array.from({ length: 20 }, (_, i) => {
+        const size = i % 4 === 0 ? 10 : 6;
+        return (
+          <span
+            key={i}
+            className="recap-spark absolute block rounded-full"
+            style={{
+              width: size,
+              height: size,
+              marginTop: -size / 2,
+              marginLeft: -size / 2,
+              backgroundColor: SPARK_COLORS[i % SPARK_COLORS.length],
+              ['--spark-angle' as string]: `${String(i * 18 + (i % 2) * 7)}deg`,
+              ['--spark-distance' as string]: `${String(6 + (i % 3) * 2.5)}rem`,
+              animation: `recap-spark ${String(900 + (i % 3) * 250)}ms cubic-bezier(0.1, 0.7, 0.3, 1) ${String(delay)}ms both`,
+            }}
+          />
+        );
+      })}
+    </span>
   );
 }
 
@@ -118,44 +213,54 @@ export function IntroSlide({
 }): JSX.Element {
   const line = 'text-2xl leading-snug font-bold text-white/90';
   const discoveries = recap.topSeries ? 'des séries entamées' : 'des découvertes';
+  // Le dernier rouleau de l'année s'arrête vers 5,1 s : étincelles, puis le bouton
+  const reels = 3300;
+  const landed = reels + 300 + 1550;
   return (
     <Centered>
-      <Kicker>LévisBiblio présente</Kicker>
+      <Kicker delay={200}>LévisBiblio présente</Kicker>
       <div className="flex flex-col gap-3">
-        <p className="text-5xl font-black tracking-tight" style={enter('recap-rise', 300, 800)}>
-          {firstName ? `${firstName}.` : 'Bonjour.'}
+        <p className="text-5xl font-black tracking-tight">
+          <Letters text={firstName ? `${firstName}.` : 'Bonjour.'} delay={400} />
         </p>
-        <p className={line} style={enter('recap-rise', 1100, 800)}>
+        <p className={line} style={enter('recap-focus', 1300, 900)}>
           {recap.year} a été toute une année.
         </p>
-        <p className={line} style={enter('recap-rise', 2000, 800)}>
+        <p className={line} style={enter('recap-focus', 2000, 900)}>
           Des pages tournées, {discoveries}, des retours à la dernière minute…
         </p>
-        <p className="text-2xl leading-snug font-extrabold" style={enter('recap-rise', 2900, 800)}>
+        <p className="text-2xl leading-snug font-extrabold" style={enter('recap-focus', 2700, 900)}>
           On la redécouvre ensemble&nbsp;?
         </p>
       </div>
       <h1
-        className="text-[5.5rem] leading-none font-black tracking-tight text-[#f0c987]"
-        style={enter('recap-pop', 3600, 900)}
+        className="relative self-start text-[5.5rem] leading-none font-black tracking-tight text-[#f0c987] drop-shadow-[0_0_24px_rgba(240,201,135,0.45)]"
+        style={enter('recap-rise', reels, 500)}
       >
-        {recap.year}
-        <span className="sr-only"> : votre année à la bibliothèque</span>
+        <Burst delay={landed} />
+        <YearReels year={recap.year} delay={reels} />
+        <span className="sr-only">{recap.year} : votre année à la bibliothèque</span>
       </h1>
-      <button
-        type="button"
-        onClick={onStart}
-        className="pointer-events-auto inline-flex items-center gap-2 self-start rounded-full bg-[#f0c987] px-7 py-3.5 text-lg font-extrabold text-[#2f2f2f] shadow-lg hover:bg-[#fde2b8] focus-visible:ring-4 focus-visible:ring-white focus-visible:outline-none"
-        style={enter('recap-pop', 4400, 700)}
-      >
-        <Sparkles className="h-5 w-5" aria-hidden />
-        C’est parti
-      </button>
+      <div className="self-start" style={enter('recap-pop', landed + 300, 700)}>
+        <button
+          type="button"
+          onClick={onStart}
+          className="recap-breathe pointer-events-auto relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-[#f0c987] px-7 py-3.5 text-lg font-extrabold text-[#2f2f2f] shadow-lg hover:bg-[#fde2b8] focus-visible:ring-4 focus-visible:ring-white focus-visible:outline-none"
+        >
+          {/* Reflet qui balaie le bouton de temps en temps */}
+          <span
+            aria-hidden
+            className="recap-shine absolute inset-y-0 -left-1/2 w-1/3 bg-white/60"
+          />
+          <Sparkles className="relative h-5 w-5" aria-hidden />
+          <span className="relative">C’est parti</span>
+        </button>
+      </div>
       {/* Indice du geste, sans texte : la suite est à droite */}
       <div
         aria-hidden
         className="absolute top-1/2 right-1 -translate-y-1/2 text-white/60"
-        style={enter('recap-rise', 4800, 600)}
+        style={enter('recap-rise', landed + 800, 600)}
       >
         <ChevronRight className="recap-nudge h-8 w-8" />
       </div>
@@ -307,7 +412,7 @@ export function SeriesSlide({
           {plural(series.volumes.length, 'tome')} : {volumeRanges(series.volumes)}
         </p>
       </div>
-      {next && (
+      {next?.kind === 'suivant' && (
         <Link
           href={next.href}
           className="pointer-events-auto flex items-center gap-3 self-start rounded-2xl bg-white/15 p-3 pr-5 backdrop-blur hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
@@ -323,6 +428,22 @@ export function SeriesSlide({
             <span className="block text-lg font-bold">Tome {next.volume}</span>
           </span>
         </Link>
+      )}
+      {next?.kind === 'a-jour' && (
+        <p
+          className="flex items-center gap-3 self-start rounded-2xl bg-white/15 p-3 pr-5 backdrop-blur"
+          style={enter('recap-rise', 900 + covers.length * 220)}
+        >
+          <Trophy className="h-8 w-8 flex-shrink-0 text-[#f0c987]" aria-hidden />
+          <span>
+            <span className="block text-xs font-semibold tracking-wide text-white/80 uppercase">
+              Vous êtes à jour
+            </span>
+            <span className="block text-lg font-bold">
+              Tome {next.last} : le dernier à la bibliothèque
+            </span>
+          </span>
+        </p>
       )}
     </Centered>
   );
@@ -440,22 +561,19 @@ export function FinalSlide({ recap, demo, years, onReplay }: FinalSlideProps): J
           {capitalize(periodText(recap.year))}
         </p>
       </div>
-      <dl className="grid grid-cols-2 gap-3">
-        {facts.map((f, i) => (
-          <div
-            key={f.label}
-            className="rounded-2xl bg-white/10 p-3"
-            style={enter('recap-pop', 150 + i * 120, 600)}
-          >
-            <dt className="text-xs font-semibold tracking-wide text-white/75 uppercase">
-              {f.label}
-            </dt>
-            <dd className="mt-1 text-lg leading-tight font-bold break-words">{f.value}</dd>
+      {/* L'aperçu de l'image montre le bilan ; le lecteur d'écran en lit le texte */}
+      <dl className="sr-only">
+        {facts.map((f) => (
+          <div key={f.label}>
+            <dt>{f.label}</dt>
+            <dd>{f.value}</dd>
           </div>
         ))}
       </dl>
 
-      <ShareRecap year={recap.year} demo={demo} />
+      <div style={enter('recap-pop', 150, 700)}>
+        <ShareRecap year={recap.year} demo={demo} />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <button

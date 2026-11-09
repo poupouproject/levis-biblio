@@ -9,12 +9,14 @@ import {
   estimatedStart,
   GLIMPSE_SIZE,
   isRecapOpen,
+  nextInSeries,
   PERIOD_MONTHS,
   periodText,
   readerProfile,
   recapYearOf,
   recapSeasonYear,
   recapYears,
+  seriesVolumesRead,
   volumeRanges,
 } from '@/lib/account/recap';
 
@@ -129,6 +131,37 @@ describe('récapitulatif de l’année', () => {
       ),
     ];
     expect(buildYearRecap(single, [], 2026).topSeries).toBeNull();
+  });
+
+  it('suite de la série : le tome après le plus haut lu, jamais un tome sauté', () => {
+    const available = [1, 2, 3, 4, 5, 6, 7, 8];
+    // Tomes 1, 2 et 4 lus : le 3 est sauté, mais on propose le 5
+    expect(nextInSeries(available, [1, 2, 4], [1, 2, 4])).toEqual({ kind: 'suivant', volume: 5 });
+    // Le 5 déjà lu une autre année : on passe au 6
+    expect(nextInSeries(available, [1, 2, 4], [1, 2, 4, 5])).toEqual({
+      kind: 'suivant',
+      volume: 6,
+    });
+    // La bibliothèque n'a pas le 9 : on propose le 10
+    expect(nextInSeries([7, 8, 10], [7, 8], [7, 8])).toEqual({ kind: 'suivant', volume: 10 });
+  });
+
+  it('fin de la série : à jour avec le dernier tome de la bibliothèque', () => {
+    expect(nextInSeries([1, 2, 3], [2, 3], [1, 2, 3])).toEqual({ kind: 'a-jour', last: 3 });
+    // Au-delà de ce que possède la bibliothèque (tome emprunté ailleurs ou retiré)
+    expect(nextInSeries([1, 2], [3, 4], [3, 4])).toEqual({ kind: 'a-jour', last: 4 });
+    expect(nextInSeries([1, 2], [], [])).toBeNull();
+  });
+
+  it('tomes d’une série empruntés un jour, toutes années confondues', () => {
+    expect(
+      seriesVolumesRead(
+        HISTORY,
+        [checkout('One Piece. 7, Vieille canaille', '2027-03-01')],
+        'one-piece',
+      ),
+    ).toEqual([1, 2, 4, 7]);
+    expect(seriesVolumesRead(HISTORY, [], 'harry-potter')).toEqual([]);
   });
 
   it('rythme : documents rendus seulement, le plus vite et le plus longtemps', () => {

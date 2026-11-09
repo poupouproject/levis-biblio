@@ -37,7 +37,11 @@ import {
 export interface SeriesExtras {
   /** Derniers tomes empruntés, d'après le catalogue. */
   covers: { title: string; cover: string | null }[];
-  next: { volume: number; title: string; href: string; cover: string | null } | null;
+  /** Tome qui suit le plus haut lu ; « à jour » si la bibliothèque n'a rien après. */
+  next:
+    | { kind: 'suivant'; volume: number; title: string; href: string; cover: string | null }
+    | { kind: 'a-jour'; last: number }
+    | null;
 }
 
 interface YearStoryProps {

@@ -41,14 +41,19 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).
   Série et auteur sont tirés du titre et du nom (`parseTitle`, `parseAuthor`) ; les couvertures
   des tomes et le prochain tome viennent du catalogue (`getSeries`). Rien n'est stocké.
+- **Suite de la série** (`nextInSeries`, `seriesVolumesRead`) : le premier tome que la
+  bibliothèque possède **après** le plus haut lu de l'année et jamais emprunté (toutes années
+  confondues). Un tome sauté n'est pas proposé. Rien après : « Vous êtes à jour » avec le dernier
+  tome de la bibliothèque (le catalogue ne dit pas si la série est finie).
 - **Récit** (`src/components/recap/`) : écrit ici plutôt qu'avec `react-insta-stories`, évalué
   et écarté (aucun rôle ARIA, zones de toucher en `<div>`, rien pour les animations réduites).
   Toucher à droite ou à gauche, appui long pour suspendre, glisser vers le bas pour fermer ;
   flèches, Espace et Échap au clavier ; bouton pause toujours visible ; onglet caché = pause.
   Animations CSS (`globals.css`) : supprimées, avec l'avance automatique, si l'usager réduit les
   animations ; le lecteur d'écran annonce chaque écran et lit les valeurs finales.
-- **Écran d'ouverture** : un rideau, sans avance automatique. Phrases qui montent une à une,
-  l'année en grand, puis « C'est parti » (toucher à droite ou flèche : même effet). En fond, les
+- **Écran d'ouverture** : un rideau, sans avance automatique. Prénom lettre par lettre, phrases
+  qui se précisent une à une, l'année en rouleaux de machine à sous puis une gerbe d'étincelles,
+  et « C'est parti » qui respire (toucher à droite ou flèche : même effet). En fond, les
   derniers documents de l'année (`glimpse`, 12 au plus), floutés : couverture du catalogue
   (`editionCovers`) pour les emprunts en cours, couverture typographique pour l'historique.
 - **Musique** (`public/Pages_of_the_Year.mp3`, `src/lib/account/recap-sound.ts`) : lancée
@@ -62,7 +67,10 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
   (« Marathon de séries », « Lecture éclair », « Exploration tous azimuts », « Rat de
   bibliothèque », sinon « Belle découverte »), avec sa raison ; écran du récit et ruban de l'image.
 - **Partage** : `/compte/mon-annee/partage?annee=2026` produit à la demande une image story
-  (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Chiffres seulement, sauf si
+  (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Le dernier écran la charge dès
+  l'arrivée et l'affiche en aperçu (adresse `blob:` en mémoire, libérée en quittant) ; le partage
+  envoie ce même fichier, dans le geste (Safari refuse un partage après un long chargement).
+  Chiffres seulement, sauf si
   l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20). Style
   affiche : total géant, ruban du profil, faits marquants. Police Inter (OFL) réduite aux
   caractères latins (`assets/polices/`, ~50 Ko par graisse), lue avec `fs` et incluse au
