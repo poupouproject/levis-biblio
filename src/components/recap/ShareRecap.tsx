@@ -1,0 +1,262 @@
+'use client';
+
+import { useEffect, useState, useSyncExternalStore, type JSX } from 'react';
+import Image from 'next/image';
+import { Link2, Loader2, Share2 } from 'lucide-react';
+import { QrCode } from './QrCode';
+
+/** Adresse commune à partager : chacun y voit sa propre année, après connexion. */
+export const SHARE_PATH = '/mon-annee';
+
+const noSubscribe = (): (() => void) => () => undefined;
+
+function useOrigin(): string {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => window.location.origin,
+    () => '',
+  );
+}
+
+/** Enregistre l'image ; son adresse `blob:` reste valable : c'est le cache qui la libère. */
+function download(preview: SharePreview): void {
+  const link = document.createElement('a');
+  link.href = preview.url;
+  link.download = preview.file.name;
+  link.click();
+}
+
+export interface SharePreview {
+  file: File;
+  /** Adresse `blob:` de l'image, pour l'aperçu et l'enregistrement. */
+  url: string;
+}
+
+/**
+ * Images déjà produites pendant la visite, par année et choix « plume et série ». Chaque image
+ * demande au serveur deux lectures du portail : basculer la case, revoir le récit ou revenir au
+ * partage ne les refait pas. Gardées en mémoire dans l'onglet, libérées en quittant le récit.
+ */
+export class SharePreviews {
+  private readonly items = new Map<string, SharePreview>();
+
+  get(key: string): SharePreview | undefined {
+    return this.items.get(key);
+  }
+
+  set(key: string, preview: SharePreview): void {
+    this.items.set(key, preview);
+  }
+
+  clear(): void {
+    for (const preview of this.items.values()) URL.revokeObjectURL(preview.url);
+    this.items.clear();
+  }
+}
+
+/**
+ * Partage du bilan : l'image exacte qui sera envoyée, en aperçu, puis le menu de partage du
+ * téléphone (ou l'enregistrement à défaut). Produite à la demande, jamais stockée : elle vit
+ * en mémoire dans l'onglet le temps du récit. Par défaut, elle ne montre que des chiffres ;
+ * l'auteur et la série seulement si l'usager le choisit.
+ */
+export function ShareRecap({
+  year,
+  demo,
+  previews,
+}: {
+  year: number;
+  demo: boolean;
+  previews: SharePreviews;
+}): JSX.Element {
+  const origin = useOrigin();
+  const [withTitles, setWithTitles] = useState(false);
+  // Dernière image reçue : reste affichée, atténuée, pendant que la suivante se prépare
+  const [last, setLast] = useState<SharePreview | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [status, setStatus] = useState<string | null>(null);
+  const link = `${origin}${SHARE_PATH}`;
+  const text = `Mon année ${String(year)} à la bibliothèque. Et la vôtre? ${link}`;
+  const key = `${String(year)}-${withTitles ? 'titres' : 'chiffres'}`;
+  const current = previews.get(key);
+  const preview = current ?? last;
+  const ready = current !== undefined;
+  const loading = !ready && failed !== key && !expired;
+  const reconnect = `/compte/connexion?raison=expiree&suite=${encodeURIComponent(
+    `/compte/mon-annee/${String(year)}`,
+  )}`;
+
+  // L'image est préparée dès l'arrivée sur l'écran : l'aperçu montre ce qui partira, et le
+  // partage se fait dans le geste même (Safari refuse un partage lancé après un long chargement)
+  useEffect(() => {
+    if (previews.get(key)) return;
+    let cancelled = false;
+    const params = new URLSearchParams({ annee: String(year) });
+    if (withTitles) params.set('titres', '1');
+    fetch(`/compte/mon-annee/partage?${params.toString()}`, { cache: 'no-store' })
+      .then(async (response) => {
+        // Session expirée côté Ville : le serveur a supprimé le cookie
+        if (response.status === 401) {
+          if (!cancelled) setExpired(true);
+          return;
+        }
+        const type = response.headers.get('content-type') ?? '';
+        if (!response.ok || !type.startsWith('image/png')) throw new Error(String(response.status));
+        const blob = await response.blob();
+        const file = new File([blob], `mon-annee-${String(year)}.png`, { type: 'image/png' });
+        const entry = { file, url: URL.createObjectURL(file) };
+        // Gardée même si l'usager a déjà rebasculé la case : elle servira s'il y revient
+        previews.set(key, entry);
+        if (!cancelled) setLast(entry);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(key);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [previews, key, year, withTitles, attempt]);
+
+  const share = async (): Promise<void> => {
+    if (!current) return;
+    setStatus(null);
+    const data: ShareData = { files: [current.file], title: `Mon année ${String(year)}`, text };
+    try {
+      if ('canShare' in navigator && navigator.canShare(data)) {
+        await navigator.share(data);
+      } else {
+        download(current);
+        setStatus('Image enregistrée : ajoutez-la à votre story ou envoyez-la à vos amis.');
+      }
+    } catch (error) {
+      // Partage annulé par l'usager : rien à signaler
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setStatus('Le partage n’a pas fonctionné. Réessayez dans un instant.');
+    }
+  };
+
+  const copy = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setStatus('Lien copié.');
+    } catch {
+      setStatus(`Copiez ce lien : ${link}`);
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="partage-titre"
+      className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4"
+    >
+      <h3 id="partage-titre" className="text-lg font-bold">
+        Partagez votre année
+      </h3>
+      <figure className="mx-auto w-full max-w-[14rem]">
+        <div className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-white/10 shadow-2xl ring-1 ring-white/25">
+          {preview && (
+            <Image
+              src={preview.url}
+              alt="Aperçu de l’image à partager"
+              fill
+              unoptimized
+              sizes="14rem"
+              className={`object-cover transition-opacity duration-300 ${ready ? '' : 'opacity-40'}`}
+            />
+          )}
+          {loading && (
+            <Loader2
+              className="absolute top-1/2 left-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 animate-spin"
+              aria-hidden
+            />
+          )}
+          {expired && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-4 text-center text-sm">
+              <p>Votre session a expiré.</p>
+              <a
+                href={reconnect}
+                className="rounded-lg bg-[#f0c987] px-3 py-1.5 font-bold text-[#2f2f2f] hover:bg-[#fde2b8] focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              >
+                Me reconnecter
+              </a>
+            </div>
+          )}
+          {failed === key && !expired && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm">
+              <p>Aperçu indisponible.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFailed(null);
+                  setAttempt((n) => n + 1);
+                }}
+                className="rounded-lg border border-white/40 px-3 py-1.5 font-semibold hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
+        </div>
+        <figcaption className="mt-2 text-center text-xs text-white/75">
+          {loading ? 'Préparation de votre image…' : 'L’image qui sera envoyée'}
+        </figcaption>
+      </figure>
+      <label className="flex items-start gap-2 text-sm leading-snug">
+        <input
+          type="checkbox"
+          checked={withTitles}
+          onChange={(event) => {
+            setWithTitles(event.target.checked);
+          }}
+          className="mt-0.5 h-4 w-4 accent-[#f0c987]"
+        />
+        <span>
+          Montrer ma plume et ma série de l’année sur l’image
+          <span className="block text-xs text-white/70">
+            Sinon, l’image ne montre que des chiffres.
+          </span>
+        </span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void share()}
+          aria-disabled={!ready}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#f0c987] px-4 py-2.5 font-bold text-[#2f2f2f] hover:bg-[#fde2b8] focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none aria-disabled:opacity-70"
+        >
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+          ) : (
+            <Share2 className="h-5 w-5" aria-hidden />
+          )}
+          Partager mon année
+        </button>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-4 py-2.5 font-semibold hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+        >
+          <Link2 className="h-5 w-5" aria-hidden />
+          Copier le lien
+        </button>
+      </div>
+      <p role="status" className="min-h-[1.25rem] text-sm text-[#fde2b8]">
+        {status}
+      </p>
+      {origin && (
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-white p-2">
+            <QrCode value={link} size={88} title={`Code QR vers ${link}`} />
+          </div>
+          <p className="text-xs leading-relaxed text-white/80">
+            Vos amis scannent ce code ou ouvrent le lien : chacun y découvre <strong>sa</strong>{' '}
+            propre année, après s’être connecté. Le lien ne contient aucune de vos données.
+            {demo && ' En démonstration, ils voient le dossier fictif.'}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}

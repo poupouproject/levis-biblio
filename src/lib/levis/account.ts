@@ -468,3 +468,17 @@ export async function getOverview(
   ]);
   return { checkouts, holds, fines };
 }
+
+export interface YearLoans {
+  history: HistoryEntry[];
+  checkouts: Checkout[];
+}
+
+/**
+ * Récapitulatif de l'année : l'historique ne contient que les documents rendus, les emprunts en
+ * cours s'y ajoutent. Sans les couvertures, inutiles ici.
+ */
+export async function getYearLoans(client: LevisClient): Promise<YearLoans> {
+  const [history, { checkouts }] = await Promise.all([getHistory(client), loadCheckouts(client)]);
+  return { history, checkouts: checkouts.map(publicCheckout) };
+}

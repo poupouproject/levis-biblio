@@ -10,6 +10,8 @@ const inputClass =
 interface LoginFormProps {
   error: string | null;
   defaultCard: string;
+  /** Page où revenir après la connexion (déjà validée par la page). */
+  suite?: string | null | undefined;
 }
 
 /**
@@ -17,7 +19,7 @@ interface LoginFormProps {
  * c'est ce parcours que les gestionnaires de mots de passe reconnaissent pour proposer
  * d'enregistrer l'identifiant. Fonctionne aussi sans JavaScript.
  */
-export function LoginForm({ error, defaultCard }: LoginFormProps): JSX.Element {
+export function LoginForm({ error, defaultCard, suite }: LoginFormProps): JSX.Element {
   const [showPin, setShowPin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,6 +37,7 @@ export function LoginForm({ error, defaultCard }: LoginFormProps): JSX.Element {
       }}
       className="flex flex-col gap-4"
     >
+      {suite && <input type="hidden" name="suite" value={suite} />}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="card" className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
           Numéro de carte

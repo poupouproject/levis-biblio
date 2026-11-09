@@ -1,4 +1,5 @@
 import type { ActionItemResult } from '@/types';
+import { capitalize } from './format';
 
 export interface Noun {
   one: string;
@@ -9,8 +10,6 @@ export interface Noun {
 export const DOCUMENT: Noun = { one: 'document', many: 'documents', feminine: false };
 export const RESERVATION: Noun = { one: 'réservation', many: 'réservations', feminine: true };
 export const PICKUP: Noun = { one: 'lieu de retrait', many: 'lieux de retrait', feminine: false };
-
-const capitalize = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Message global et titres des notifications d'un résultat d'action. */
 export function describe(

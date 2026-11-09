@@ -44,6 +44,12 @@ describe('dates', () => {
     expect(formatDate(null)).toBe('');
   });
 
+  it('écrit le premier jour du mois « 1er »', () => {
+    expect(formatDate('2026-11-01', 'long', TODAY)).toBe('1er novembre 2026');
+    expect(formatDate('2026-10-01', 'short', TODAY)).toBe('1er oct.');
+    expect(formatDate('2026-10-11', 'long', TODAY)).toBe('11 octobre 2026');
+  });
+
   it('additionne des jours, y compris en changeant de mois', () => {
     expect(addDays('2026-10-25', 14)).toBe('2026-11-08');
   });

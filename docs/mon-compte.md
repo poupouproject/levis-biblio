@@ -13,7 +13,90 @@
 | Réservations | `/compte/reservations` | Statut, lieu de retrait, rang dans la file, échéance, couverture          | Annuler, suspendre (dates), réactiver, changer de succursale               |
 | Historique   | `/compte/historique`   | Emprunts passés groupés par année, filtre local                           | Lien vers le catalogue                                                     |
 | Amendes      | `/compte/amendes`      | Montant dû, détail, amendes accumulées, total payé                        | Paiement : renvoi au portail officiel                                      |
+| Mon année    | `/compte/mon-annee`    | Récapitulatif de l'année en mode story (voir ci-dessous)                  | Partager une image ; lien et code QR `/mon-annee`                          |
 | Profil       | `/compte/profil`       | Coordonnées (lecture seule)                                               | Succursale par défaut, langue, historique on/off ; NIP : renvoi au portail |
+
+### Récapitulatif « Votre année à la bibliothèque »
+
+`/compte/mon-annee` (année en cours) ou `/compte/mon-annee/2025`, ouvert par le bouton du sommaire.
+Un écran par statistique, à la manière des bilans de fin d'année : total et comparaison avec
+l'année précédente, mois le plus occupé, plume (auteur) de l'année, série de l'année et prochain
+tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
+
+- **Saison**, comme les bilans de fin d'année : l'année en cours n'ouvre que le **15 novembre** ;
+  avant, `/compte/mon-annee/2026` invite à revenir à la fin de l'année (après la connexion, comme
+  tout le dossier, mais sans lire le portail) et
+  l'image de partage répond 404. Les années passées restent toujours accessibles. Sans année
+  précise, `/compte/mon-annee` ouvre en janvier l'année qui vient de finir. Le bouton du sommaire
+  n'apparaît que du 15 novembre au 31 janvier (`isRecapOpen`, `defaultRecapYear`,
+  `recapSeasonYear`).
+- **Période** : l'année « 2026 » va du 1er novembre 2025 au 31 octobre 2026 (`recapYearOf`,
+  `PERIOD_MONTHS`, `periodText`), comme Spotify qui s'arrête fin octobre. À l'ouverture, le
+  15 novembre, plus aucun emprunt n'y entre : un bilan partagé ne bouge plus (seul le rythme,
+  qui ne compte que les documents rendus, peut encore changer un peu). Chaque emprunt compte une
+  fois, dans une seule année, sans trou. La période est écrite sur l'écran du total, l'écran de
+  partage et l'image.
+- **Calcul** (`src/lib/account/recap.ts`, pur et testé) à chaque visite, à partir de
+  `getYearLoans` : l'historique (documents **rendus** seulement, sans ID ni ISBN) et les emprunts
+  en cours, dont la date d'emprunt est estimée (échéance − (renouvellements + 1) × 21 jours).
+  Série et auteur sont tirés du titre et du nom (`parseTitle`, `parseAuthor`) ; les couvertures
+  des tomes et le prochain tome viennent du catalogue (`getSeries`). Rien n'est stocké.
+- **Comparaison avec l'année précédente** : seulement si l'historique couvre toute cette année
+  (`since` au plus tard le `periodStart` de l'année − 1) ; sinon « Votre première année dans
+  l'historique ».
+- **Pannes** : `error.tsx` du récapitulatif (`PortalUnavailable`, comme Mon dossier ; `retry`
+  relit le portail). Le catalogue n'est que décor (série, avant-goût) : son absence ne fait
+  jamais tomber la page.
+- **Réservation arrivée annulée** (`isCancelledHold`) : un document rendu le jour même de son
+  emprunt est écarté de tout le bilan. Le portail ne permet pas d'annuler une réservation
+  arrivée : il faut l'emprunter puis la rendre aussitôt. L'historique ne donne que la date, sans
+  l'heure : un vrai document rendu le jour même est écarté aussi (cas rare).
+- **Suite de la série** (`nextInSeries`, `seriesVolumesRead`) : le premier tome que la
+  bibliothèque possède **après** le plus haut lu de l'année et jamais emprunté (toutes années
+  confondues). Un tome sauté n'est pas proposé. Rien après : « Vous êtes à jour » avec le dernier
+  tome de la bibliothèque (le catalogue ne dit pas si la série est finie).
+- **Récit** (`src/components/recap/`) : écrit ici plutôt qu'avec `react-insta-stories`, évalué
+  et écarté (aucun rôle ARIA, zones de toucher en `<div>`, rien pour les animations réduites).
+  Toucher à droite ou à gauche, appui long pour suspendre, glisser vers le bas pour fermer ;
+  flèches, Espace et Échap au clavier ; bouton pause toujours visible ; onglet caché = pause.
+  Animations CSS (`globals.css`) : supprimées, avec l'avance automatique, si l'usager réduit les
+  animations ; le lecteur d'écran annonce chaque écran et lit les valeurs finales.
+- **Écran d'ouverture** : un rideau, sans avance automatique. Prénom lettre par lettre, phrases
+  qui se précisent une à une, l'année en rouleaux de machine à sous puis une gerbe d'étincelles,
+  et « C'est parti » qui respire (toucher à droite ou flèche : même effet). En fond, les
+  derniers documents de l'année (`glimpse`, 12 au plus), floutés : couverture du catalogue
+  (`editionCovers`) pour les emprunts en cours, couverture typographique pour l'historique.
+- **Musique** (`public/Pages_of_the_Year.mp3`, `src/lib/account/recap-sound.ts`) : lancée
+  seulement dans le geste « C'est parti ». Arriver sur la page par un clic ne suffit pas : un
+  code QR ou un lien ouvert depuis une autre application arrive sans geste, et Safari exige que
+  `play()` soit appelé dans le geste lui-même. Elle suit les pauses (bouton, appui long, onglet
+  caché), baisse sur l'écran de partage, s'arrête au retour au rideau. Bouton pour la couper,
+  toujours visible (WCAG 1.4.2) ; le choix est retenu dans `localStorage`, et le fichier n'est
+  pas préchargé si elle est coupée. Le fondu de volume est sans effet sur iPhone.
+- **Profil de lecture** (`readerProfile`) : un nom épicène, le premier trait marquant de l'année
+  (« Marathon de séries », « Lecture éclair », « Exploration tous azimuts », « Rat de
+  bibliothèque », sinon « Belle découverte »), avec sa raison ; écran du récit et ruban de l'image.
+- **Partage** : `/compte/mon-annee/partage?annee=2026` produit à la demande une image story
+  (`next/og`), jamais stockée, `no-store` comme tout `/compte`. Le dernier écran la charge dès
+  l'arrivée et l'affiche en aperçu (adresse `blob:` en mémoire, libérée en quittant) ; le partage
+  envoie ce même fichier, dans le geste (Safari refuse un partage après un long chargement).
+  Chaque variante (avec ou sans titres) n'est produite qu'une fois par visite (`SharePreviews`,
+  dans `YearStory`) : chaque image coûte deux lectures du portail. Route lue par `fetch` :
+  `readAccount` (sans redirection) et 401 si la session manque ou a expiré, jamais la page de
+  connexion en HTML ; le client vérifie aussi `content-type: image/png`. Adresse du lien :
+  `publicOrigin` (première valeur des en-têtes `x-forwarded-*`). Faits de l'image :
+  `shareFacts` (testé). Chiffres seulement, sauf si
+  l'usager coche « plume et série » (`&titres=1`) ; aucune couverture du portail (#20). Style
+  affiche : total géant, ruban du profil, faits marquants. Police Inter (OFL) réduite aux
+  caractères latins (`assets/polices/`, ~50 Ko par graisse), lue avec `fs` et incluse au
+  déploiement par `outputFileTracingIncludes` (`next.config.ts`).
+- **Lien et code QR** : `/mon-annee`, le même pour tout le monde, sans aucune donnée ; chacun y
+  voit sa propre année. Page d'accueil publique plutôt que redirection : le cookie
+  `SameSite=Strict` n'accompagne pas un lien ouvert depuis une autre application ; le bouton
+  « Voir mon année » navigue depuis le site, donc avec le cookie. Aperçu de lien générique
+  (`opengraph-image.tsx`). Code QR : `uqr` (`QrCode.tsx`, sans hook, aussi dans l'image).
+- **Retour après la connexion** : `?suite=` sur la connexion et après une session expirée,
+  limité aux pages du récapitulatif (`return-path.ts`) : jamais de redirection vers un autre site.
 
 Hors de portée, volontairement : paiement en ligne, changement de NIP, placer une nouvelle réservation (part d'une fiche du catalogue, protégée par Cloudflare).
 
@@ -52,7 +135,10 @@ src/lib/levis/                 Accès au portail (serveur seulement)
 src/lib/account/
   session.ts                   cookie scellé
   login.ts                     validation, limite de tentatives, ouverture de session
-  dal.ts                       requireAccount, withAccount
+  dal.ts                       requireAccount, withAccount (avec la page où revenir)
+  return-path.ts               pages permises après la connexion (`?suite=`)
+  recap.ts                     récapitulatif de l'année (calcul pur)
+  share-image.tsx              image du récapitulatif à partager (next/og)
   demo.ts                      mode démonstration : dossier fictif et actions simulées
   rate-limit.ts                limite des tentatives de connexion
   origin.ts                    contrôle d'origine des formulaires (Sec-Fetch-Site, repli Origin)
@@ -60,6 +146,7 @@ src/lib/account/
   format.ts                    dates relatives, échéances (partagé client/serveur)
 src/app/compte/                pages, actions, chargement, erreurs
 src/components/account/        composants UI
+src/components/recap/          récapitulatif en mode story, partage, code QR
 src/types/account.ts           types du domaine
 ```
 

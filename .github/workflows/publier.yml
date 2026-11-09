@@ -42,11 +42,13 @@ jobs:
             exit 0
           fi
 
-          # La section « ## X.Y.Z » du journal, jusqu'à la suivante.
+          # La section « ## X.Y.Z » du journal, jusqu'à la suivante, sans sa ligne « Mise en
+          # production : » (la release a sa propre date).
           touch CHANGELOG.md
           awk -v v="$version" '
             $0 == "## " v { on = 1; next }
             on && /^## / { exit }
+            on && /^Mise en production : / { next }
             on { print }
           ' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "Version $version." > notes.md

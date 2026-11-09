@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { isSameOrigin } from '@/lib/account/origin';
+import { firstForwarded, isSameOrigin, publicOrigin } from '@/lib/account/origin';
 
 const post = (headers: Record<string, string>): Request =>
   new Request('http://localhost:3000/compte/connexion/ouvrir', { method: 'POST', headers });
@@ -67,5 +67,32 @@ describe('isSameOrigin', () => {
     it('accepte l’absence d’Origin (très vieux navigateurs ; le cookie SameSite protège)', () => {
       expect(isSameOrigin(post({ host: 'a.ca' }), 't')).toBe(true);
     });
+  });
+});
+
+describe('adresse publique derrière un proxy', () => {
+  const get = (headers: Record<string, string>): Request =>
+    new Request('http://localhost:3000/compte/mon-annee/partage', { headers });
+
+  it('première valeur d’un en-tête transféré, chaque proxy ajoutant la sienne', () => {
+    expect(firstForwarded('levisbiblio.ca, interne:3000')).toBe('levisbiblio.ca');
+    expect(firstForwarded('https,http')).toBe('https');
+    expect(firstForwarded('')).toBeNull();
+    expect(firstForwarded(null)).toBeNull();
+  });
+
+  it('hôte et protocole vus par le navigateur, jamais une liste', () => {
+    expect(
+      publicOrigin(
+        get({
+          'x-forwarded-host': 'levisbiblio.ca, interne:3000',
+          'x-forwarded-proto': 'https,http',
+        }),
+      ),
+    ).toBe('https://levisbiblio.ca');
+  });
+
+  it('sans proxy : l’hôte de la requête', () => {
+    expect(publicOrigin(get({ host: '192.168.22.135:3000' }))).toBe('http://192.168.22.135:3000');
   });
 });

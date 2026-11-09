@@ -1,6 +1,24 @@
 # levis-biblio
 
+## 0.12.0
+
+Mise en production : 2026-11-08
+
+### Nouveautés
+
+- Une musique accompagne le récapitulatif. Elle démarre seulement quand vous touchez « C’est parti », suit les pauses du récit, baisse sur l’écran de partage et se coupe d’un bouton toujours visible ; le navigateur retient votre choix.
+- Partagez votre année : une image façon affiche, au format story, que vous voyez en aperçu avant de l’envoyer à vos amis. Elle ne montre que des chiffres, à moins de choisir d’y ajouter votre plume et votre série. Un lien et un code QR permettent à chacun de découvrir sa propre année.
+- Nouveau récapitulatif « Votre année à la bibliothèque » dans Mon dossier, à faire défiler comme une story. Il s’ouvre sur une mise en scène animée (vos couvertures de l’année, votre prénom, l’année qui tourne comme une machine à sous), puis présente un écran par statistique : documents empruntés et comparaison avec l’année précédente, mois le plus occupé, plume et série de l’année avec le prochain tome à emprunter, rythme, régularité et votre profil de lecture. L’année va du 1er novembre au 31 octobre : le récapitulatif ouvre le 15 novembre et ses chiffres ne bougent plus ensuite. Il s’affiche aussi bien sur téléphone que sur tablette et ordinateur, et s’essaie avec le dossier de démonstration.
+- Le numéro de version de l’application s’affiche dans le pied de page, et une nouvelle page « Nouveautés » (accessible aussi en touchant la pastille « Bêta ») présente les changements de chaque version avec sa date de mise en production. Elle explique aussi comment signaler un problème ou suggérer une idée sur GitHub.
+
+### Correctifs
+
+- Après la connexion, ou une session expirée, vous revenez sur le récapitulatif de l’année si c’est lui que vous vouliez ouvrir, au lieu du sommaire.
+- Mon dossier : quand le portail des bibliothèques ne répond pas, le bouton « Réessayer » relit vraiment le portail, au lieu de réafficher le même message.
+
 ## 0.11.0
+
+Mise en production : 2026-11-07
 
 ### Nouveautés
 
@@ -17,6 +35,8 @@
 
 ## 0.10.0
 
+Mise en production : 2026-11-01
+
 ### Nouveautés
 
 - Quand la pastille « Démo » est affichée sans le mode démonstration, la page de connexion propose aussi d'explorer un dossier fictif, sous le formulaire habituel : on peut essayer Mon dossier sans carte, sans que rien ne soit envoyé aux bibliothèques.
@@ -28,6 +48,8 @@
 - Se connecter avec sa carte après avoir ouvert le dossier de démonstration affiche bien son vrai dossier, et un renouvellement ne peut plus être annoncé réussi sans être envoyé à la bibliothèque. Ouvrir le dossier de démonstration ferme aussi une vraie session restée ouverte dans un autre onglet.
 
 ## 0.9.0
+
+Mise en production : 2026-10-29
 
 ### Nouveautés
 
@@ -45,17 +67,23 @@
 
 ## 0.8.0
 
+Mise en production : 2026-10-29
+
 ### Nouveautés
 
 - Nouvelle page « Confidentialité », accessible depuis le pied de page : ce que le site fait (et ne fait pas) de vos renseignements, les deux cookies de « Mon dossier », et qui détient vos données.
 
 ## 0.7.1
 
+Mise en production : 2026-10-28
+
 ### Correctifs
 
 - La pastille « Démo » peut rester affichée même quand Mon dossier se connecte au vrai portail des bibliothèques.
 
 ## 0.7.0
+
+Mise en production : 2026-10-27
 
 ### Nouveautés
 
@@ -69,12 +97,16 @@
 
 ## 0.6.1
 
+Mise en production : 2026-10-23
+
 ### Correctifs
 
 - Notifications : le thème sombre vient du CSS. La notification du mode démonstration s’affiche bien au premier chargement, et sombre dès ce moment.
 - Notification du mode démonstration : message reformulé, plus positif sur la démarche avec la Ville de Lévis.
 
 ## 0.6.0
+
+Mise en production : 2026-10-22
 
 ### Nouveautés
 
@@ -87,6 +119,8 @@
 - Sur téléphone et tablette, le clavier ne cache plus les suggestions de recherche : le champ remonte sous l’en-tête et la liste s’ajuste à la partie visible de l’écran.
 
 ## 0.5.0
+
+Mise en production : 2026-10-22
 
 ### Nouveautés
 
@@ -102,6 +136,8 @@
 
 ## 0.4.0
 
+Mise en production : 2026-10-22
+
 ### Nouveautés
 
 - Fiche d'une œuvre : le résumé du livre s'affiche quand Google Livres en a un, avec un lien vers sa fiche Google Livres.
@@ -113,17 +149,23 @@
 
 ## 0.3.0
 
+Mise en production : 2026-10-21
+
 ### Nouveautés
 
 - Mon dossier : le résultat des actions s'affiche en notifications (10 secondes, avec une barre de temps restant, en pause au survol). Pour un résultat mixte, une notification pour les documents renouvelés et une pour les refus, avec leur motif et la date de retour. Renouveler un emprunt ou modifier une réservation n'affiche plus « session expirée » à tort.
 
 ## 0.2.0
 
+Mise en production : 2026-10-21
+
 ### Nouveautés
 
 - Recherche dans le catalogue et nouvelle page d'accueil : suggestions dès la saisie (séries, auteurs, œuvres), éditions regroupées en œuvres, séries réunies tome par tome, filtres par type, année, disponibilité et succursale, fiches d'œuvre et de série. Disponibilités simulées en attendant l'accès officiel.
 
 ## 0.1.1
+
+Mise en production : 2026-10-20
 
 ### Correctifs
 

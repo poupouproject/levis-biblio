@@ -7,6 +7,10 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Écran assez large et assez haut : le récapitulatif devient une carte au format story, posée
+   sur un fond d'ambiance, plutôt qu'une colonne entre deux bandes noires. */
+@custom-variant cadre (@media (min-width: 640px) and (min-height: 640px));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -90,6 +94,251 @@ html.dark {
 @media (prefers-reduced-motion: reduce) {
   [data-skeleton] * {
     animation: none !important;
+  }
+}
+
+/* ─── Récapitulatif de l'année (src/components/recap) ───
+   Animations déclenchées à l'affichage de chaque écran, suspendues avec le récit
+   ([data-paused]) et supprimées si l'usager réduit les animations. */
+@property --recap-count {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+/* Compteur sans JavaScript : la propriété animée --recap-count est affichée par un compteur CSS.
+   Le compteur est posé sur l'élément (la propriété n'est pas héritée par ::after). */
+.recap-count {
+  counter-reset: recap var(--recap-count);
+}
+
+.recap-count::after {
+  content: counter(recap);
+}
+
+@keyframes recap-count {
+  from {
+    --recap-count: 0;
+  }
+}
+
+@keyframes recap-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes recap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes recap-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes recap-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes recap-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes recap-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14rem) rotate(var(--recap-tilt, 0deg));
+  }
+}
+
+@keyframes recap-light {
+  from {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+/* Couvertures floues de l'écran d'ouverture : elles apparaissent et se précisent un peu. */
+@keyframes recap-unblur {
+  from {
+    opacity: 0;
+    filter: blur(28px);
+    transform: scale(1.15);
+  }
+}
+
+/* Dérive lente du fond, en continu ; l'indice du geste qui pousse vers la droite. */
+.recap-drift {
+  animation: recap-drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes recap-drift {
+  to {
+    transform: translateY(-12%);
+  }
+}
+
+/* Écran d'ouverture : couvertures qui arrivent, halos, lettres, phrases qui se précisent,
+   rouleaux de l'année, étincelles, reflet et respiration du bouton. Sans animation, l'état de
+   repos de chaque élément suffit (étincelles, éclair et reflet invisibles). */
+/* Fond d'ambiance du grand écran : il change en fondu avec l'écran. */
+@keyframes recap-ambiance {
+  from {
+    opacity: 0.35;
+  }
+}
+
+@keyframes recap-tile {
+  from {
+    opacity: 0;
+    transform: translateY(40%) scale(0.5) rotate(8deg);
+  }
+}
+
+.recap-orb {
+  animation: recap-orb 14s ease-in-out infinite alternate;
+}
+
+@keyframes recap-orb {
+  to {
+    transform: translate(18%, -12%) scale(1.25);
+  }
+}
+
+@keyframes recap-letter {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(0.6em) rotate(-12deg) scale(0.4);
+  }
+  60% {
+    filter: blur(0);
+    transform: translateY(-0.08em) rotate(2deg) scale(1.1);
+  }
+}
+
+@keyframes recap-focus {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    letter-spacing: 0.08em;
+    transform: translateY(0.75rem);
+  }
+}
+
+@keyframes recap-reel {
+  from {
+    transform: translateY(0);
+  }
+}
+
+.recap-flash {
+  opacity: 0;
+}
+
+@keyframes recap-flash {
+  from {
+    opacity: 1;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.recap-spark {
+  opacity: 0;
+  transform: rotate(var(--spark-angle)) translateX(var(--spark-distance)) scale(0.2);
+}
+
+@keyframes recap-spark {
+  from {
+    opacity: 1;
+    transform: rotate(var(--spark-angle)) translateX(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+}
+
+.recap-shine {
+  transform: skewX(-20deg);
+  animation: recap-shine 3.5s ease-in-out 6s infinite;
+}
+
+@keyframes recap-shine {
+  0% {
+    transform: translateX(0) skewX(-20deg);
+  }
+  35%,
+  100% {
+    transform: translateX(500%) skewX(-20deg);
+  }
+}
+
+.recap-breathe {
+  animation: recap-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes recap-breathe {
+  50% {
+    box-shadow: 0 0 36px 6px rgb(240 201 135 / 0.55);
+  }
+}
+
+/* Téléphone tourné : l'icône montre le geste, de l'horizontale à la verticale. */
+.recap-turn {
+  animation: recap-turn 2.2s ease-in-out infinite;
+}
+
+@keyframes recap-turn {
+  0%,
+  20% {
+    transform: rotate(-90deg);
+  }
+  55%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.recap-nudge {
+  animation: recap-nudge 1.4s ease-in-out infinite;
+}
+
+@keyframes recap-nudge {
+  50% {
+    transform: translateX(0.4rem);
+  }
+}
+
+/* Récit suspendu : tout s'arrête, sauf l'icône qui invite à redresser le téléphone. */
+[data-recap][data-paused] *:not(.recap-turn) {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-recap] *,
+  [data-recap] *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 
