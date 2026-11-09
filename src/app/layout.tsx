@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/Toaster';
 import { isDemoBadgeVisible } from '@/lib/account/demo';
 import { RECHERCHES_POPULAIRES } from '@/lib/catalog/curation';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { APP_VERSION } from '@/lib/version';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -53,9 +54,14 @@ export default function RootLayout({
                     Lévis<span className="text-[#d4a853]">Biblio</span>
                   </span>
                 </Link>
-                <span className="shrink-0 rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase dark:text-[#d4a853]">
+                {/* Provisoire : la pastille mène aux nouveautés en attendant mieux. */}
+                <Link
+                  href="/nouveautes"
+                  title={`Nouveautés — version ${APP_VERSION}`}
+                  className="shrink-0 rounded-full border border-[#d4a853]/60 bg-[#d4a853]/10 px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-amber-800 uppercase hover:bg-[#d4a853]/25 dark:text-[#d4a853]"
+                >
                   Bêta
-                </span>
+                </Link>
                 {/* Lu au rendu du serveur : sur Vercel, la variable est fixée au déploiement. */}
                 {isDemoBadgeVisible() && <DemoBadge />}
               </div>
@@ -91,12 +97,18 @@ export default function RootLayout({
               Indépendant de la Ville de Lévis. Ce service agit comme une interface par-dessus les
               outils existants.
             </p>
-            <p className="mt-3 text-xs">
+            <p className="mt-3 flex items-center justify-center gap-3 text-xs">
               <Link
                 href="/confidentialite"
                 className="text-zinc-600 underline underline-offset-2 hover:text-[#8a6a2c] dark:text-zinc-400 dark:hover:text-[#d4a853]"
               >
                 Confidentialité
+              </Link>
+              <Link
+                href="/nouveautes"
+                className="text-zinc-600 underline underline-offset-2 hover:text-[#8a6a2c] dark:text-zinc-400 dark:hover:text-[#d4a853]"
+              >
+                Nouveautés · v{APP_VERSION}
               </Link>
             </p>
           </div>

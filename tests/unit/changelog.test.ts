@@ -1,0 +1,117 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { parseChangelog } from '@/lib/changelog';
+
+const JOURNAL = `# levis-biblio
+
+## 0.2.0
+
+Mise en production : 2026-11-04
+
+### Nouveautés
+
+- Première nouveauté.
+- Une entrée sur
+  deux lignes.
+
+### Correctifs
+
+- Un correctif.
+
+## 0.1.0
+
+### Correctifs
+
+- Ancien correctif, version pas encore datée.
+`;
+
+describe('parseChangelog', () => {
+  const releases = parseChangelog(JOURNAL);
+
+  it('liste les versions de la plus récente à la plus ancienne', () => {
+    expect(releases.map((r) => r.version)).toEqual(['0.2.0', '0.1.0']);
+  });
+
+  it('lit la date de mise en production, ou null', () => {
+    expect(releases[0]?.date).toBe('2026-11-04');
+    expect(releases[1]?.date).toBeNull();
+  });
+
+  it('range les entrées par rubrique et rejoint les entrées sur plusieurs lignes', () => {
+    expect(releases[0]?.sections).toEqual([
+      {
+        title: 'Nouveautés',
+        items: [
+          { paragraphs: ['Première nouveauté.'], subitems: [] },
+          { paragraphs: ['Une entrée sur deux lignes.'], subitems: [] },
+        ],
+      },
+      { title: 'Correctifs', items: [{ paragraphs: ['Un correctif.'], subitems: [] }] },
+    ]);
+  });
+
+  it('garde les sous-listes et les paragraphes séparés', () => {
+    const [release] = parseChangelog(
+      [
+        '## 1.0.0',
+        '',
+        '### Nouveautés',
+        '',
+        '- Point',
+        '  - sous-point A',
+        '  - sous-point B, long',
+        '    sur deux lignes',
+        '',
+        '  Second paragraphe.',
+        '- Autre point',
+      ].join('\n'),
+    );
+    expect(release?.sections[0]?.items).toEqual([
+      {
+        paragraphs: ['Point', 'Second paragraphe.'],
+        subitems: ['sous-point A', 'sous-point B, long sur deux lignes'],
+      },
+      { paragraphs: ['Autre point'], subitems: [] },
+    ]);
+  });
+
+  it('ne perd pas un texte libre sans « - »', () => {
+    const [release] = parseChangelog('## 1.0.0\n\n### Correctifs\n\nTexte libre.\n');
+    expect(release?.sections[0]?.items).toEqual([{ paragraphs: ['Texte libre.'], subitems: [] }]);
+  });
+
+  it('accepte les fins de ligne Windows', () => {
+    expect(parseChangelog(JOURNAL.replaceAll('\n', '\r\n'))).toEqual(releases);
+  });
+
+  it('ignore le texte avant la première version', () => {
+    expect(parseChangelog('# titre\n\n- orphelin\n')).toEqual([]);
+  });
+});
+
+describe('scripts/journal-en-francais.mjs', () => {
+  const script = path.resolve('scripts/journal-en-francais.mjs');
+
+  function lancer(contenu: string, version: string, date: string): string {
+    const fichier = path.join(mkdtempSync(path.join(tmpdir(), 'journal-')), 'CHANGELOG.md');
+    writeFileSync(fichier, contenu);
+    execFileSync('node', [script, fichier, version, date]);
+    return readFileSync(fichier, 'utf8');
+  }
+
+  it('date la version et traduit les titres de Changesets', () => {
+    const brut =
+      '# x\n\n## 0.3.0\n\n### Minor Changes\n\n- Neuf.\n\n## 0.2.0\n\nMise en production : 2026-11-04\n';
+    const sortie = lancer(brut, '0.3.0', '2026-11-08');
+    expect(sortie).toContain('## 0.3.0\n\nMise en production : 2026-11-08\n\n### Nouveautés');
+    expect(parseChangelog(sortie).map((r) => r.date)).toEqual(['2026-11-08', '2026-11-04']);
+  });
+
+  it('ne date pas deux fois la même version', () => {
+    const datee = '## 0.3.0\n\nMise en production : 2026-11-08\n\n### Correctifs\n\n- Un.\n';
+    expect(lancer(datee, '0.3.0', '2026-12-25')).toBe(datee);
+  });
+});
