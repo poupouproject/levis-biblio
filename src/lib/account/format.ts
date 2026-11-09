@@ -32,7 +32,7 @@ export function relativeDue(iso: string, today = todayIso()): string {
   return `Dans ${String(days)} jours`;
 }
 
-/** « 25 octobre 2026 » ; l'année est omise si c'est l'année courante (`short`). */
+/** « 25 octobre 2026 », « 1er novembre 2026 » ; l'année est omise si c'est l'année courante (`short`). */
 export function formatDate(
   iso: string | null,
   style: 'long' | 'short' = 'long',
@@ -42,12 +42,14 @@ export function formatDate(
   const date = new Date(`${iso}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return iso;
   const sameYear = iso.slice(0, 4) === today.slice(0, 4);
-  return date.toLocaleDateString('fr-CA', {
+  const text = date.toLocaleDateString('fr-CA', {
     timeZone: 'UTC',
     day: 'numeric',
     month: style === 'long' ? 'long' : 'short',
     ...(style === 'long' || !sameYear ? { year: 'numeric' } : {}),
   });
+  // Intl écrit « 1 novembre » ; la typographie française veut « 1er novembre ».
+  return text.replace(/^1 /, '1er ');
 }
 
 /**

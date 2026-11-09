@@ -2,7 +2,7 @@
 
 ## 0.11.0
 
-Mise en production : 2026-11-04
+Mise en production : 2026-11-07
 
 ### Nouveautés
 
@@ -19,7 +19,7 @@ Mise en production : 2026-11-04
 
 ## 0.10.0
 
-Mise en production : 2026-11-02
+Mise en production : 2026-11-01
 
 ### Nouveautés
 
@@ -59,7 +59,7 @@ Mise en production : 2026-10-29
 
 ## 0.7.1
 
-Mise en production : 2026-10-29
+Mise en production : 2026-10-28
 
 ### Correctifs
 
@@ -81,7 +81,7 @@ Mise en production : 2026-10-27
 
 ## 0.6.1
 
-Mise en production : 2026-10-24
+Mise en production : 2026-10-23
 
 ### Correctifs
 
@@ -90,7 +90,7 @@ Mise en production : 2026-10-24
 
 ## 0.6.0
 
-Mise en production : 2026-10-23
+Mise en production : 2026-10-22
 
 ### Nouveautés
 
@@ -104,7 +104,7 @@ Mise en production : 2026-10-23
 
 ## 0.5.0
 
-Mise en production : 2026-10-23
+Mise en production : 2026-10-22
 
 ### Nouveautés
 
@@ -120,7 +120,7 @@ Mise en production : 2026-10-23
 
 ## 0.4.0
 
-Mise en production : 2026-10-23
+Mise en production : 2026-10-22
 
 ### Nouveautés
 
@@ -133,7 +133,7 @@ Mise en production : 2026-10-23
 
 ## 0.3.0
 
-Mise en production : 2026-10-22
+Mise en production : 2026-10-21
 
 ### Nouveautés
 
@@ -149,7 +149,7 @@ Mise en production : 2026-10-21
 
 ## 0.1.1
 
-Mise en production : 2026-10-21
+Mise en production : 2026-10-20
 
 ### Correctifs
 

@@ -2,7 +2,8 @@ import type { JSX } from 'react';
 import type { Metadata } from 'next';
 import { MessageSquarePlus, Sparkles, Tag } from 'lucide-react';
 import { Card, PageHeader } from '@/components/account/PageParts';
-import { formatReleaseDate, readChangelog } from '@/lib/changelog';
+import { formatDate } from '@/lib/account/format';
+import { readChangelog } from '@/lib/changelog';
 import { REPO_URL } from '@/lib/site';
 import { APP_VERSION } from '@/lib/version';
 
@@ -71,7 +72,7 @@ export default function NouveautesPage(): JSX.Element {
           <div className="flex flex-col gap-4">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {release.date
-                ? `Mise en production le ${formatReleaseDate(release.date)}`
+                ? `Mise en production le ${formatDate(release.date, 'long')}`
                 : 'Date de mise en production à venir'}
               {release.version === APP_VERSION && ' · version actuelle'}
             </p>
@@ -81,8 +82,21 @@ export default function NouveautesPage(): JSX.Element {
                   {section.title}
                 </h3>
                 <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {section.items.map((item) => (
-                    <li key={item}>{item}</li>
+                  {section.items.map((item, index) => (
+                    <li key={`${release.version}-${section.title}-${String(index)}`}>
+                      {item.paragraphs.map((paragraph, n) => (
+                        <p key={n} className={n > 0 ? 'mt-1.5' : undefined}>
+                          {paragraph}
+                        </p>
+                      ))}
+                      {item.subitems.length > 0 && (
+                        <ul className="mt-1 list-[circle] space-y-1 pl-5">
+                          {item.subitems.map((sub, n) => (
+                            <li key={n}>{sub}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </div>

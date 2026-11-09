@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatReleaseDate, parseChangelog } from '@/lib/changelog';
+import { parseChangelog } from '@/lib/changelog';
 
 const JOURNAL = `# levis-biblio
 
@@ -42,24 +42,53 @@ describe('parseChangelog', () => {
 
   it('range les entrées par rubrique et rejoint les entrées sur plusieurs lignes', () => {
     expect(releases[0]?.sections).toEqual([
-      { title: 'Nouveautés', items: ['Première nouveauté.', 'Une entrée sur deux lignes.'] },
-      { title: 'Correctifs', items: ['Un correctif.'] },
+      {
+        title: 'Nouveautés',
+        items: [
+          { paragraphs: ['Première nouveauté.'], subitems: [] },
+          { paragraphs: ['Une entrée sur deux lignes.'], subitems: [] },
+        ],
+      },
+      { title: 'Correctifs', items: [{ paragraphs: ['Un correctif.'], subitems: [] }] },
     ]);
   });
 
+  it('garde les sous-listes et les paragraphes séparés', () => {
+    const [release] = parseChangelog(
+      [
+        '## 1.0.0',
+        '',
+        '### Nouveautés',
+        '',
+        '- Point',
+        '  - sous-point A',
+        '  - sous-point B, long',
+        '    sur deux lignes',
+        '',
+        '  Second paragraphe.',
+        '- Autre point',
+      ].join('\n'),
+    );
+    expect(release?.sections[0]?.items).toEqual([
+      {
+        paragraphs: ['Point', 'Second paragraphe.'],
+        subitems: ['sous-point A', 'sous-point B, long sur deux lignes'],
+      },
+      { paragraphs: ['Autre point'], subitems: [] },
+    ]);
+  });
+
+  it('ne perd pas un texte libre sans « - »', () => {
+    const [release] = parseChangelog('## 1.0.0\n\n### Correctifs\n\nTexte libre.\n');
+    expect(release?.sections[0]?.items).toEqual([{ paragraphs: ['Texte libre.'], subitems: [] }]);
+  });
+
   it('accepte les fins de ligne Windows', () => {
-    expect(parseChangelog(JOURNAL.replaceAll('\n', '\r\n'))[0]?.sections[0]?.items).toHaveLength(2);
+    expect(parseChangelog(JOURNAL.replaceAll('\n', '\r\n'))).toEqual(releases);
   });
 
   it('ignore le texte avant la première version', () => {
     expect(parseChangelog('# titre\n\n- orphelin\n')).toEqual([]);
-  });
-});
-
-describe('formatReleaseDate', () => {
-  it('écrit le jour civil en français, sans décalage de fuseau', () => {
-    expect(formatReleaseDate('2026-11-04')).toBe('4 novembre 2026');
-    expect(formatReleaseDate('2026-01-01')).toBe('1 janvier 2026');
   });
 });
 
