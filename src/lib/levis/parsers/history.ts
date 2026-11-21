@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 import type { HistoryEntry } from '@/types';
-import { cleanText, parsePortalDate, textOrNull } from './common';
+import { cleanText, parsePortalDate, textOrNull, titleIdFrom } from './common';
 
 /** Historique des emprunts, à partir du HTML de la zone `checkoutHistoryAjax`. */
 export function parseHistory(html: string): HistoryEntry[] {
@@ -10,7 +10,10 @@ export function parseHistory(html: string): HistoryEntry[] {
     const cells = $(el).find('td');
     const title = cleanText(cells.eq(0).text());
     if (!title) return;
+    // Un lien vers la fiche, s'il y en a un, donne l'ID du titre (comme pour les emprunts)
+    const link = cells.eq(0).find('a').first();
     entries.push({
+      titleId: titleIdFrom(link.attr('onclick')) ?? titleIdFrom(link.attr('href')),
       title,
       author: textOrNull(cells.eq(1).text()),
       checkedOut: parsePortalDate(cells.eq(2).text()),

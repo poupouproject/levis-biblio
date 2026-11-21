@@ -98,6 +98,14 @@ tome, rythme (documents rendus), mois consécutifs, puis un écran de partage.
 - **Retour après la connexion** : `?suite=` sur la connexion et après une session expirée,
   limité aux pages du récapitulatif (`return-path.ts`) : jamais de redirection vers un autre site.
 
+### Sur la fiche d'une œuvre
+
+Connecté, la fiche `/oeuvre/[id]` indique ce que l'usager a de l'œuvre, une seule mention par ordre de priorité : **en main** (date de retour, retard), **réservée** (prête, en transit, en attente avec le rang dans la file, suspendue ; succursale de retrait), **déjà empruntée** (dernière date, nombre de fois). Lien vers la page de Mon dossier concernée.
+
+- La fiche reste statique et identique pour tous : `WorkStatusBadge` demande l'état après l'affichage à `GET /compte/etat-oeuvre?oeuvre=<id>`, seul chemin où le cookie (`Path=/compte`) est envoyé. Hors connexion, la route répond `{ status: null }` sans requête au portail ; elle ne renvoie que l'état de l'œuvre demandée.
+- Lecture : `getAccountLoans` (emprunts, réservations, historique en parallèle, sans couvertures), refaite à chaque fiche ; rien n'est gardé. Un historique illisible ou désactivé ne bloque pas le reste.
+- Correspondance (`work-status.ts`, fonction pure) : emprunts et réservations par `titleId` de n'importe quelle édition. L'historique n'a pas toujours l'ID du titre (`HistoryEntry.titleId`, lu d'un lien s'il y en a un) : à défaut, titre et auteur comparés avec `groupKey`, comme le catalogue regroupe ses éditions. Une réservation annulée inscrite à l'historique est écartée (`isCancelledHold`).
+
 Hors de portée, volontairement : paiement en ligne, changement de NIP, placer une nouvelle réservation (part d'une fiche du catalogue, protégée par Cloudflare).
 
 ## 2. Architecture
@@ -138,6 +146,8 @@ src/lib/account/
   dal.ts                       requireAccount, withAccount (avec la page où revenir)
   return-path.ts               pages permises après la connexion (`?suite=`)
   recap.ts                     récapitulatif de l'année (calcul pur)
+  work-status.ts                état personnel d'une œuvre sur sa fiche (calcul pur)
+  work-status-label.ts         libellés de cet état (partagé client/serveur)
   share-image.tsx              image du récapitulatif à partager (next/og)
   demo.ts                      mode démonstration : dossier fictif et actions simulées
   rate-limit.ts                limite des tentatives de connexion
@@ -233,15 +243,16 @@ Avec la seule pastille (`LEVIS_BANNIERE_DEMO=1`, sans `LEVIS_DEMO`), la page de 
 
 ## 7. À valider
 
-| Point                                                                                   | Comment                                              |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Renouvellement réel (succès, refus pour réservation d'un autre usager, limite atteinte) | Renouveler un document admissible depuis l'interface |
-| Suspendre puis réactiver une réservation                                                | Suspendre quelques jours, puis réactiver             |
-| Changer de succursale                                                                   | Changer, vérifier, remettre la succursale d'origine  |
-| Annuler une réservation                                                                 | Sur une réservation dont on n'a plus besoin          |
-| Statuts rares (en transit, prête, suspendue) et leur libellé exact                      | Observer au fil du temps ; ajuster `holdStatusFrom`  |
-| Durée de session du portail                                                             | Laisser la session inactive et observer l'expiration |
-| Session et adresses IP variables de Vercel                                              | Premier déploiement                                  |
+| Point                                                                                   | Comment                                                                        |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Renouvellement réel (succès, refus pour réservation d'un autre usager, limite atteinte) | Renouveler un document admissible depuis l'interface                           |
+| Suspendre puis réactiver une réservation                                                | Suspendre quelques jours, puis réactiver                                       |
+| Changer de succursale                                                                   | Changer, vérifier, remettre la succursale d'origine                            |
+| Annuler une réservation                                                                 | Sur une réservation dont on n'a plus besoin                                    |
+| Statuts rares (en transit, prête, suspendue) et leur libellé exact                      | Observer au fil du temps ; ajuster `holdStatusFrom`                            |
+| L'historique porte-t-il un lien vers la fiche (`titleId`) ?                             | Lire la zone `checkoutHistoryAjax` ; sinon, correspondance par titre et auteur |
+| Durée de session du portail                                                             | Laisser la session inactive et observer l'expiration                           |
+| Session et adresses IP variables de Vercel                                              | Premier déploiement                                                            |
 
 ## 8. Pour la Ville
 

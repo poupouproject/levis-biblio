@@ -63,10 +63,32 @@ export interface HoldsSummary {
 }
 
 export interface HistoryEntry {
+  /** ID du titre, si la ligne du portail porte un lien vers la fiche (sinon `null`). */
+  titleId: string | null;
   title: string;
   author: string | null;
   checkedOut: string | null;
   returned: string | null;
+}
+
+/**
+ * Ce que l'usager connecté a d'une œuvre du catalogue, affiché sur sa fiche. Une seule mention,
+ * par ordre de priorité : en main, puis réservée, puis déjà empruntée.
+ */
+export type WorkStatus =
+  | { kind: 'checkout'; dueDate: string | null; overdue: boolean }
+  | {
+      kind: 'hold';
+      status: HoldStatus;
+      queuePosition: number | null;
+      pickupLibrary: string;
+      date: string | null; // Retirer avant le (réservation prête), fin de suspension…
+    }
+  | { kind: 'history'; lastCheckedOut: string | null; count: number };
+
+/** Réponse de `GET /compte/etat-oeuvre` : `null` hors connexion ou si rien ne correspond. */
+export interface WorkStatusResponse {
+  status: WorkStatus | null;
 }
 
 export interface FineLine {

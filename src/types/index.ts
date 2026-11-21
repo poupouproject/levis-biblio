@@ -32,6 +32,8 @@ export type {
   CoverMap,
   CoverStreams,
   SessionStatus,
+  WorkStatus,
+  WorkStatusResponse,
 } from './account';
 
 export type { CantookItem, CantookAuthor, CantookFormat, CantookAvailability } from './cantook';
