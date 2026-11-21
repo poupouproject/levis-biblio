@@ -16,6 +16,7 @@ import { BookSummary, BookSummarySkeleton } from '@/components/catalog/BookSumma
 import { googleBooksEnabled } from '@/lib/catalog/google-books';
 import { Shelf } from '@/components/catalog/Shelf';
 import { WorkCard } from '@/components/catalog/WorkCard';
+import { WorkStatusBadge } from '@/components/catalog/WorkStatusBadge';
 import { BranchButton } from '@/components/branches/BranchButton';
 
 type Params = Promise<{ id: string }>;
@@ -105,6 +106,7 @@ export default async function WorkPage({ params }: { params: Params }): Promise<
               ))}
             </p>
           )}
+          <WorkStatusBadge workId={work.id} />
           <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             {work.year && (
               <div>

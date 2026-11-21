@@ -66,6 +66,7 @@ export function placeholderHolds(count = 3): Hold[] {
 export function placeholderHistory(count = 6): HistoryEntry[] {
   const today = todayIso();
   return Array.from({ length: count }, (_, i) => ({
+    titleId: null,
     title: pick(i),
     author: 'Nom, Prénom de l’auteur',
     checkedOut: addDays(today, -30 * (i + 1)),

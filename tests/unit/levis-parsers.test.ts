@@ -193,12 +193,20 @@ describe('historique, amendes et profil', () => {
     const history = parseHistory(historyZoneHtml);
     expect(history.map((h) => h.title)).toEqual(['Livre récent', 'Ancien livre']);
     expect(history[1]).toEqual({
+      titleId: null,
       title: 'Ancien livre',
       author: 'Vieil, Auteur',
       checkedOut: '2023-03-23',
       returned: '2023-04-13',
     });
     expect(history[0]?.author).toBeNull();
+  });
+
+  it('tire l’ID du titre d’un lien vers la fiche, s’il y en a un', () => {
+    const html = `<table id="checkoutsHistoryList_table"><tbody><tr>
+      <td><a href="#" onclick="return detail('/x/detailclick/ent:$002f$002fSD_ILS$002f0$002fSD_ILS:123456/0/T');">Avec lien</a></td>
+      <td>Nom, Prénom</td><td>25-01-21</td><td>25-02-15</td></tr></tbody></table>`;
+    expect(parseHistory(html)[0]).toMatchObject({ titleId: '123456', title: 'Avec lien' });
   });
 
   it('lit les montants et le détail des amendes', () => {

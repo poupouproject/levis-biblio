@@ -27,7 +27,7 @@ import {
 const ODA = 'Oda, Eiichirô, 1975-';
 
 function entry(title: string, author: string | null, out: string, back: string): HistoryEntry {
-  return { title, author, checkedOut: out, returned: back };
+  return { titleId: null, title, author, checkedOut: out, returned: back };
 }
 
 function checkout(title: string, dueDate: string, renewals = 0): Checkout {

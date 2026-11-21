@@ -20,7 +20,7 @@ import { injectNotices, injectionEnabled } from '@/lib/catalog/injection';
 import { getCatalog, type CatalogSourceName } from '@/lib/catalog/source';
 import type { LevisClient } from './client';
 import { LEVIS_ACCOUNT_PATH, branchName } from './config';
-import { LevisError, ParseError } from './errors';
+import { LevisError, ParseError, SessionExpiredError } from './errors';
 import {
   parseCheckoutMessages,
   parseCheckouts,
@@ -481,4 +481,27 @@ export interface YearLoans {
 export async function getYearLoans(client: LevisClient): Promise<YearLoans> {
   const [history, { checkouts }] = await Promise.all([getHistory(client), loadCheckouts(client)]);
   return { history, checkouts: checkouts.map(publicCheckout) };
+}
+
+export interface AccountLoans {
+  checkouts: Checkout[];
+  holds: Hold[];
+  history: HistoryEntry[];
+}
+
+/**
+ * Emprunts, réservations et historique, sans les couvertures : de quoi dire sur la fiche d'une
+ * œuvre si l'usager l'a en main, réservée ou déjà empruntée. L'historique est un plus : s'il
+ * échoue (désactivé, zone vide…), la fiche garde les emprunts et les réservations.
+ */
+export async function getAccountLoans(client: LevisClient): Promise<AccountLoans> {
+  const [{ checkouts }, { holds }, history] = await Promise.all([
+    loadCheckouts(client),
+    loadHolds(client),
+    getHistory(client).catch((error: unknown) => {
+      if (error instanceof SessionExpiredError) throw error;
+      return [];
+    }),
+  ]);
+  return { checkouts: checkouts.map(publicCheckout), holds, history };
 }

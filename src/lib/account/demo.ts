@@ -11,6 +11,7 @@ import type {
   Profile,
 } from '@/types';
 import {
+  getAccountLoans,
   getCheckouts,
   getFines,
   getHistory,
@@ -18,6 +19,7 @@ import {
   getOverview,
   getProfile,
   getYearLoans,
+  type AccountLoans,
   type CheckoutsResult,
   type HoldAction,
   type HoldsResult,
@@ -272,6 +274,7 @@ function baseHolds(today: string): DemoHold[] {
 
 function baseHistory(today: string): HistoryEntry[] {
   const item = (title: string, author: string, out: number, back: number): HistoryEntry => ({
+    titleId: null,
     title,
     author,
     checkedOut: addDays(today, -out),
@@ -491,6 +494,14 @@ const DEMO_READS = new Map<Read, (state: DemoState) => unknown>([
     (state): YearLoans => ({
       history: baseHistory(todayIso()),
       checkouts: demoCheckouts(state).checkouts,
+    }),
+  ],
+  [
+    getAccountLoans,
+    (state): AccountLoans => ({
+      checkouts: demoCheckouts(state).checkouts,
+      holds: demoHolds(state).holds,
+      history: baseHistory(todayIso()),
     }),
   ],
   [getFines, () => NO_FINES],
