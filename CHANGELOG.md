@@ -1,5 +1,13 @@
 # levis-biblio
 
+## 0.12.1
+
+Mise en production : 2026-11-21
+
+### Correctifs
+
+- Mise à jour de sécurité du moteur du site et de ses composants : correctifs de failles touchant le cache des pages, l'optimisation des images et la protection des témoins de connexion.
+
 ## 0.12.0
 
 Mise en production : 2026-11-08
